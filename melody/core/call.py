@@ -1,9 +1,10 @@
 """
-📞 Voice call management — PyTgCalls 3.x wrapper
+📞 Voice call management — pytgcalls 3.0.0.dev / GroupCallFactory API
 """
 import asyncio
-from pytgcalls import PyTgCalls
-from pytgcalls.types import MediaStream
+import os
+import glob
+from pytgcalls import GroupCallFactory
 from melody.logging import LOGGER, send_error_log
 from melody.core.queue import (
     get_current, set_current, pop_next, clear_queue,
@@ -11,43 +12,40 @@ from melody.core.queue import (
 )
 from melody import assistant
 
-call_py = PyTgCalls(assistant)
+# One factory per bot session
+_factory = GroupCallFactory(assistant)
 
-# Active chats
-_active: dict[int, bool] = {}
+# Per-chat active GroupCallFile instances and play state
+_calls: dict = {}       # chat_id -> GroupCallFile
+_active: dict = {}      # chat_id -> bool
 
 
 async def start_call_py():
-    """Start PyTgCalls listener."""
-    await call_py.start()
+    """GroupCallFactory needs no global start — calls are created per-chat."""
+    LOGGER.info("PyTgCalls (GroupCallFactory) ready.")
 
 
-# ─── Stream finished handler ──────────────────────────────────────────────────
+# ─── Internal helpers ─────────────────────────────────────────────────────────
 
-@call_py.on_update()
-async def stream_end_handler(_, update):
-    # Handle stream ended events (audio and/or video stream end)
-    try:
-        from pytgcalls.types import StreamVideoEnded, StreamAudioEnded
-        if isinstance(update, (StreamVideoEnded, StreamAudioEnded)):
-            chat_id = update.chat_id
-            await _play_next(chat_id)
-            return
-    except ImportError:
-        pass
+def _make_call(chat_id: int):
+    """Create a new GroupCallFile for a chat and register its end-handler."""
+    call = _factory.get_file_group_call(input_filename=None, play_on_repeat=False)
 
-    # Fallback: check by class name for forward compatibility
-    cls_name = type(update).__name__
-    if "StreamEnd" in cls_name or "Ended" in cls_name:
-        try:
-            chat_id = update.chat_id
-            await _play_next(chat_id)
-        except AttributeError:
-            pass
+    @call.on_playout_ended
+    async def _on_ended(gc, filename):
+        # Delete the finished audio file to save /tmp space
+        if filename:
+            try:
+                os.unlink(filename)
+            except Exception:
+                pass
+        await _play_next(chat_id)
+
+    return call
 
 
 async def _play_next(chat_id: int):
-    """Play next track from queue, or handle autoplay."""
+    """Advance queue or handle autoplay/stop."""
     from melody.core.autoplay import try_autoplay
 
     next_track = pop_next(chat_id)
@@ -55,13 +53,49 @@ async def _play_next(chat_id: int):
         await _stream_track(chat_id, next_track)
     else:
         _active.pop(chat_id, None)
+        call = _calls.pop(chat_id, None)
+        if call:
+            try:
+                await call.stop()
+            except Exception:
+                pass
         if await is_autoplay_on(chat_id):
             await try_autoplay(chat_id)
 
 
+async def _stream_track(chat_id: int, track, video: bool = False):
+    """Download and play a track. Reuses existing call if already in voice chat."""
+    try:
+        from melody.core.ytdl import download_audio
+        filepath = await download_audio(track.video_id)
+
+        if _active.get(chat_id):
+            # Already in voice chat — change the file (triggers restart_playout)
+            _calls[chat_id].input_filename = filepath
+        else:
+            call = _make_call(chat_id)
+            _calls[chat_id] = call
+            call.input_filename = filepath
+            await call.start(chat_id)
+            _active[chat_id] = True
+
+            # Apply stored volume
+            vol = get_volume(chat_id)
+            if vol != 100:
+                try:
+                    await call.set_my_volume(vol)
+                except Exception:
+                    pass
+
+    except Exception as exc:
+        _active.pop(chat_id, None)
+        _calls.pop(chat_id, None)
+        await send_error_log(f"_stream_track failed in {chat_id}", exc)
+
+
 # ─── Public API ───────────────────────────────────────────────────────────────
 
-async def play_stream(chat_id: int, track, video: bool = False):
+async def play_stream(chat_id: int, track, video: bool = False) -> bool:
     """Start or queue a track. Returns True if playing now, False if queued."""
     from melody.core.queue import add_to_queue
 
@@ -74,73 +108,60 @@ async def play_stream(chat_id: int, track, video: bool = False):
     return True  # playing now
 
 
-async def _stream_track(chat_id: int, track, video: bool = False):
-    try:
-        stream = MediaStream(track.stream_url)
-
-        if _active.get(chat_id):
-            await call_py.change_stream(chat_id, stream)
-        else:
-            await call_py.join_group_call(chat_id, stream)
-            _active[chat_id] = True
-
-        vol = get_volume(chat_id)
-        await call_py.change_volume_call(chat_id, vol)
-
-    except Exception as exc:
-        _active.pop(chat_id, None)
-        await send_error_log(f"_stream_track failed in {chat_id}", exc)
-
-
 async def pause_stream(chat_id: int):
-    try:
-        await call_py.pause_stream(chat_id)
-    except Exception as exc:
-        await send_error_log(f"pause_stream failed in {chat_id}", exc)
+    call = _calls.get(chat_id)
+    if call:
+        try:
+            call.pause_playout()
+        except Exception as exc:
+            await send_error_log(f"pause_stream failed in {chat_id}", exc)
 
 
 async def resume_stream(chat_id: int):
-    try:
-        await call_py.resume_stream(chat_id)
-    except Exception as exc:
-        await send_error_log(f"resume_stream failed in {chat_id}", exc)
+    call = _calls.get(chat_id)
+    if call:
+        try:
+            call.resume_playout()
+        except Exception as exc:
+            await send_error_log(f"resume_stream failed in {chat_id}", exc)
 
 
 async def skip_stream(chat_id: int):
+    """Skip current track and play next."""
     await _play_next(chat_id)
 
 
 async def stop_stream(chat_id: int):
+    """Stop playback, clear queue, and leave voice chat."""
     try:
         clear_queue(chat_id)
         _active.pop(chat_id, None)
-        await call_py.leave_group_call(chat_id)
+        call = _calls.pop(chat_id, None)
+        if call:
+            await call.stop()
     except Exception as exc:
         await send_error_log(f"stop_stream failed in {chat_id}", exc)
 
 
 async def change_volume(chat_id: int, volume: int):
-    # Clamp: allow 0 (mute) up to 200
+    """Set volume (0 = mute, 1-200 = normal range)."""
     volume = max(0, min(200, volume))
     set_volume_local(chat_id, volume)
-    try:
-        await call_py.change_volume_call(chat_id, volume)
-    except Exception as exc:
-        await send_error_log(f"change_volume failed in {chat_id}", exc)
+    call = _calls.get(chat_id)
+    if call:
+        try:
+            if volume == 0:
+                await call.set_is_mute(True)
+            else:
+                await call.set_is_mute(False)
+                await call.set_my_volume(volume)
+        except Exception as exc:
+            await send_error_log(f"change_volume failed in {chat_id}", exc)
 
 
 async def seek_stream(chat_id: int, seconds: int):
-    """Seek forward (positive) or rewind (negative) by seconds."""
-    try:
-        if seconds < 0:
-            # pytgcalls does not support negative seek directly;
-            # seek to 0 as safe fallback for rewind beyond start
-            LOGGER.warning("Negative seek requested (%ds) — seeking to 0", seconds)
-            await call_py.seek_stream(chat_id, 0)
-        else:
-            await call_py.seek_stream(chat_id, seconds)
-    except Exception as exc:
-        await send_error_log(f"seek_stream failed in {chat_id}", exc)
+    """Seek is not supported in GroupCallFile API — silently no-op."""
+    LOGGER.warning("seek_stream: not supported in pytgcalls 3.0.0.dev (file API), seconds=%d", seconds)
 
 
 async def is_active(chat_id: int) -> bool:

@@ -3,9 +3,9 @@
 """
 import asyncio
 import base64
+import glob
 import os
 import re
-import aiofiles
 from yt_dlp import YoutubeDL
 from melody.config import Config
 from melody.logging import LOGGER, send_error_log
@@ -34,7 +34,6 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         "no_warnings": True,
         "noplaylist": True,
         "format": "bestaudio/best" if audio_only else "best[height<=720]",
-        "outtmpl": "/tmp/melody_%(id)s.%(ext)s",
         "postprocessors": [],
     }
     if os.path.exists(COOKIES_FILE):
@@ -76,7 +75,8 @@ async def get_video_info(url_or_query: str) -> dict | None:
     query = url_or_query if is_url else f"ytsearch1:{url_or_query}"
 
     def _info():
-        with YoutubeDL({**_ydl_opts(), "extract_flat": False}) as ydl:
+        opts = {**_ydl_opts(), "extract_flat": False}
+        with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(query, download=False)
             if "entries" in info:
                 info = info["entries"][0]
@@ -90,7 +90,7 @@ async def get_video_info(url_or_query: str) -> dict | None:
             "title": info.get("title", "Unknown"),
             "duration": info.get("duration", 0),
             "url": info.get("webpage_url") or f"https://www.youtube.com/watch?v={info.get('id','')}",
-            "stream_url": info.get("url") or _get_stream_url(info),
+            "stream_url": "",  # not used; audio is downloaded at play time via download_audio()
             "thumbnail": info.get("thumbnail") or f"https://i.ytimg.com/vi/{info.get('id','')}/hqdefault.jpg",
             "uploader": info.get("uploader", "Unknown"),
         }
@@ -99,13 +99,42 @@ async def get_video_info(url_or_query: str) -> dict | None:
         return None
 
 
-def _get_stream_url(info: dict) -> str:
-    """Extract best audio stream URL from format list."""
-    formats = info.get("formats", [])
-    audio_formats = [f for f in formats if f.get("acodec") != "none" and f.get("vcodec") == "none"]
-    if audio_formats:
-        return audio_formats[-1]["url"]
-    return formats[-1]["url"] if formats else ""
+async def download_audio(video_id: str) -> str:
+    """Download audio for a video_id to /tmp/ and return the local file path.
+
+    Uses a cache: if the file is already downloaded, returns the cached path.
+    Files are deleted by call.py after each track finishes to save /tmp space.
+    """
+    # Check cache first
+    cached = glob.glob(f"/tmp/melody_{video_id}.*")
+    if cached:
+        return cached[0]
+
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    outtmpl = f"/tmp/melody_{video_id}.%(ext)s"
+
+    def _download():
+        opts = {
+            **_ydl_opts(audio_only=True),
+            "outtmpl": outtmpl,
+            "extract_flat": False,
+        }
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            return ydl.prepare_filename(info)
+
+    loop = asyncio.get_running_loop()
+    filepath = await loop.run_in_executor(None, _download)
+
+    # prepare_filename may not include the actual ext if postprocessing renamed it
+    if not os.path.exists(filepath):
+        found = glob.glob(f"/tmp/melody_{video_id}.*")
+        if found:
+            filepath = found[0]
+        else:
+            raise FileNotFoundError(f"Downloaded file not found for video_id={video_id}")
+
+    return filepath
 
 
 async def get_related_videos(video_id: str, exclude_ids: list[str] = None) -> list[dict]:
@@ -117,8 +146,7 @@ async def get_related_videos(video_id: str, exclude_ids: list[str] = None) -> li
         opts = {**_ydl_opts(), "extract_flat": True, "playlist_items": "1:10"}
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            entries = info.get("entries", []) if info else []
-            return entries
+            return info.get("entries", []) if info else []
 
     try:
         loop = asyncio.get_running_loop()
