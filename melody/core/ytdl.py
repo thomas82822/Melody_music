@@ -18,7 +18,7 @@ def _write_cookies():
     """Decode base64 YT_COOKIES and write to file if provided."""
     if Config.YT_COOKIES:
         try:
-            decoded = base64.b64decode(Config.YT_COOKIES).decode("utf-8")
+            decoded = base64.b64decode(Config.YT_COOKIES).decode("utf-8", errors="replace")
             with open(COOKIES_FILE, "w") as f:
                 f.write(decoded)
         except Exception as e:

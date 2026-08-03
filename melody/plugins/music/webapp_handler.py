@@ -1,5 +1,8 @@
 """
 🌐 Web App data handler — handles colored button actions from mini app
+
+Note: filters.web_app_data is not available in Pyrogram 2.0.106, so we use
+a custom filter that checks message.web_app_data directly.
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -11,8 +14,11 @@ from melody.core.queue import (
     set_loop, shuffle_queue, get_volume, set_autoplay
 )
 
+# Custom filter — pyrogram 2.0.106 has no filters.web_app_data attribute
+_web_app_filter = filters.create(lambda _, __, m: bool(getattr(m, "web_app_data", None)))
 
-@bot.on_message(filters.web_app_data)
+
+@bot.on_message(_web_app_filter)
 async def handle_webapp(client: Client, message: Message):
     chat_id = message.chat.id
     action = message.web_app_data.data
