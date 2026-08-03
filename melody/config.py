@@ -1,0 +1,48 @@
+"""
+🔑 Configuration — reads from .env only, NEVER hardcoded
+"""
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class Config:
+    # Telegram API credentials
+    API_ID: int = int(os.environ.get("API_ID", 0))
+    API_HASH: str = os.environ.get("API_HASH", "")
+    BOT_TOKEN: str = os.environ.get("BOT_TOKEN", "")
+    STRING_SESSION: str = os.environ.get("STRING_SESSION", "")
+
+    # Database
+    MONGO_DB_URI: str = os.environ.get("MONGO_DB_URI", "")
+
+    # Owner settings (alias only — real identity NEVER exposed)
+    OWNER_ID: int = int(os.environ.get("OWNER_ID", 0))
+    OWNER_NAME: str = os.environ.get("OWNER_NAME", "Maestro")
+
+    # Logging
+    LOG_GROUP_ID: int = int(os.environ.get("LOG_GROUP_ID", 0))
+
+    # YouTube
+    YT_COOKIES: str = os.environ.get("YT_COOKIES", "")
+
+    # Lyrics
+    GENIUS_API_TOKEN: str = os.environ.get("GENIUS_API_TOKEN", "")
+
+    # Bot settings
+    MAX_DURATION: int = int(os.environ.get("MAX_DURATION", 3600))
+    AUTOPLAY: bool = os.environ.get("AUTOPLAY", "true").lower() == "true"
+    BOT_USERNAME: str = os.environ.get("BOT_USERNAME", "")
+    WEBAPP_URL: str = os.environ.get("WEBAPP_URL", "")
+
+    # Theme colors (Modi-Meloni)
+    COLORS = {
+        "saffron": "#FF6600",
+        "gold": "#FFD700",
+        "green": "#009246",
+        "red": "#CE2B37",
+        "white": "#FFFFFF",
+        "dark": "#1A0500",
+        "overlay": "rgba(0,0,0,0.55)",
+    }
