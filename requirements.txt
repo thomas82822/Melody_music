@@ -1,6 +1,6 @@
 pyrogram==2.0.106
 tgcrypto
-pytgcalls==3.0.0.dev24 --no-deps
+pytgcalls==3.0.0.dev24
 tgcalls==3.0.0.dev6
 yt-dlp>=2024.1.1
 Pillow>=10.0.0
