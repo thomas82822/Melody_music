@@ -76,13 +76,7 @@ async def varsFunc(client, message):
         token = "No"
     else:
         token = "Yes"
-    if (
-        not config.SPOTIFY_CLIENT_ID
-        and not config.SPOTIFY_CLIENT_SECRET
-    ):
-        sotify = "No"
-    else:
-        sotify = "Yes"
+    cookies_set = "Yes" if config.COOKIES else "No"
     owners = [str(ids) for ids in config.OWNER_ID]
     owner_id = " ,".join(owners)
     tg_aud = convert_bytes(config.TG_AUDIO_FILESIZE_LIMIT)
@@ -116,9 +110,8 @@ async def varsFunc(client, message):
 `SERVER_PLAYLIST_LIMIT` :** {playlist_limit}**
 `PLAYLIST_FETCH_LIMIT` :** {fetch_playlist}**
 
-**<u>Spotify Vars:</u>**
-`SPOTIFY_CLIENT_ID` :** {sotify}**
-`SPOTIFY_CLIENT_SECRET` : **{sotify}**
+`COOKIES` (YT Cookies): ** {cookies_set}**
+
 
 **<u>Playsize Vars:</u>**
 `TG_AUDIO_FILESIZE_LIMIT` :** {tg_aud}**

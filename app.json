@@ -1,17 +1,11 @@
 {
   "name": "MelodiXMusicBot",
-  "description": "𝙈𝙚𝙡𝙤𝙙𝙞𝙓 🎧 — High quality Telegram Group Calls music streaming bot, written in Python with Pyrogram and Py-TgCalls. Supports YouTube, Spotify, Apple Music, SoundCloud, Resso and M3u8 links.",
+  "description": "𝙈𝙚𝙡𝙤𝙙𝙞𝙓 🎧 — High quality Telegram Group Calls music bot. YouTube-only with cookie support. Built with Pyrogram and Py-TgCalls.",
   "logo": "https://telegra.ph/file/c0e014ff34f34d1056627.png",
   "keywords": [
-    "python3",
-    "telegram",
-    "music-bot",
-    "melodix",
-    "MelodiXMusicBot",
-    "telegram-bot",
-    "pyrogram",
-    "pytgcalls",
-    "voice-chat"
+    "python3", "telegram", "music-bot", "melodix",
+    "MelodiXMusicBot", "telegram-bot", "pyrogram",
+    "pytgcalls", "youtube", "voice-chat"
   ],
   "stack": "container",
   "env": {
@@ -36,22 +30,22 @@
       "required": true
     },
     "LOG_GROUP_ID": {
-      "description": "Your Log Group Chat ID (add bot as admin with full rights)",
+      "description": "Your private log group chat ID (add bot as admin with full rights). Must be a group, not a channel.",
       "value": "",
       "required": true
     },
     "OWNER_ID": {
-      "description": "Your Telegram User ID (multiple IDs separated by space)",
+      "description": "Your Telegram User ID. Multiple IDs separated by space.",
       "value": "",
       "required": true
     },
     "MUSIC_BOT_NAME": {
-      "description": "Name for your music bot (ASCII only e.g. MelodiX)",
+      "description": "Name for your music bot (use ASCII only, e.g. MelodiX)",
       "value": "MelodiX",
       "required": true
     },
     "STRING1": {
-      "description": "Pyrogram String Session for Assistant 1. Get from @StringFatherBot",
+      "description": "Pyrogram String Session for Assistant 1. Get from @StringFatherBot. At least one is required.",
       "value": "",
       "required": true
     },
@@ -75,13 +69,18 @@
       "value": "",
       "required": false
     },
+    "COOKIES": {
+      "description": "YouTube cookies in Netscape format (cookies.txt). Export using 'Get cookies.txt LOCALLY' browser extension while logged into YouTube. Fixes age-restriction and bot-detection errors.",
+      "value": "",
+      "required": false
+    },
     "HEROKU_API_KEY": {
       "description": "Your Heroku account API key from https://dashboard.heroku.com/account",
       "value": "",
       "required": false
     },
     "HEROKU_APP_NAME": {
-      "description": "Your Heroku app name",
+      "description": "Your Heroku app name (same as what you deploy this as)",
       "value": "",
       "required": false
     },
@@ -95,18 +94,13 @@
       "value": "master",
       "required": true
     },
-    "SPOTIFY_CLIENT_ID": {
-      "description": "Spotify Client ID from https://developer.spotify.com/dashboard",
-      "value": "",
-      "required": false
-    },
-    "SPOTIFY_CLIENT_SECRET": {
-      "description": "Spotify Client Secret from https://developer.spotify.com/dashboard",
-      "value": "",
+    "DURATION_LIMIT": {
+      "description": "Max song duration in minutes (default 60)",
+      "value": "60",
       "required": false
     },
     "AUTO_LEAVING_ASSISTANT": {
-      "description": "Set True if you want assistant to auto-leave chats",
+      "description": "Set True if you want assistant to auto-leave chats after a while",
       "value": "True",
       "required": false
     },
@@ -122,12 +116,8 @@
     }
   },
   "buildpacks": [
-    {
-      "url": "heroku/python"
-    },
-    {
-      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
-    }
+    { "url": "heroku/python" },
+    { "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git" }
   ],
   "formation": {
     "worker": {

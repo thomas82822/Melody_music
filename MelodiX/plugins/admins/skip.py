@@ -196,7 +196,7 @@ async def skip(cli, message: Message, _, chat_id):
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
-        elif videoid == "soundcloud":
+        elif videoid == "soundcloud":  # soundcloud removed
             button = telegram_markup(_, chat_id)
             run = await message.reply_photo(
                 photo=config.SOUNCLOUD_IMG_URL
