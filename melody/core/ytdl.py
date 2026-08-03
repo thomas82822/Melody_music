@@ -51,7 +51,8 @@ async def search_youtube(query: str, limit: int = 5) -> list[dict]:
             return info.get("entries", [])
 
     try:
-        results = await asyncio.get_event_loop().run_in_executor(None, _search)
+        loop = asyncio.get_running_loop()
+        results = await loop.run_in_executor(None, _search)
         return [
             {
                 "id": e.get("id", ""),
@@ -82,7 +83,8 @@ async def get_video_info(url_or_query: str) -> dict | None:
             return info
 
     try:
-        info = await asyncio.get_event_loop().run_in_executor(None, _info)
+        loop = asyncio.get_running_loop()
+        info = await loop.run_in_executor(None, _info)
         return {
             "id": info.get("id", ""),
             "title": info.get("title", "Unknown"),
@@ -109,5 +111,31 @@ def _get_stream_url(info: dict) -> str:
 async def get_related_videos(video_id: str, exclude_ids: list[str] = None) -> list[dict]:
     """Fetch related videos for autoplay (skip excluded IDs)."""
     exclude = set(exclude_ids or [])
-    results = await search_youtube(f"https://www.youtube.com/watch?v={video_id}", limit=20)
-    return [r for r in results if r["id"] not in exclude][:5]
+
+    def _related():
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        opts = {**_ydl_opts(), "extract_flat": True, "playlist_items": "1:10"}
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            entries = info.get("entries", []) if info else []
+            return entries
+
+    try:
+        loop = asyncio.get_running_loop()
+        entries = await loop.run_in_executor(None, _related)
+        results = []
+        for e in entries:
+            vid = e.get("id", "")
+            if vid and vid not in exclude:
+                results.append({
+                    "id": vid,
+                    "title": e.get("title", "Unknown"),
+                    "duration": e.get("duration", 0),
+                    "url": f"https://www.youtube.com/watch?v={vid}",
+                    "thumbnail": e.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+                    "uploader": e.get("uploader", "Unknown"),
+                })
+        return results
+    except Exception as exc:
+        await send_error_log("get_related_videos failed", exc)
+        return []

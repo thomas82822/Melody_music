@@ -24,7 +24,7 @@ class Track:
 _queues: dict[int, list[Track]] = {}
 _current: dict[int, Track] = {}
 _loop: dict[int, str] = {}       # "none" | "single" | "all"
-_volume: dict[int, int] = {}     # 1-200
+_volume: dict[int, int] = {}     # 0-200 (0 = muted)
 
 
 def get_queue(chat_id: int) -> list[Track]:
@@ -101,7 +101,8 @@ def get_volume(chat_id: int) -> int:
 
 
 def set_volume_local(chat_id: int, vol: int):
-    _volume[chat_id] = max(1, min(200, vol))
+    # Allow 0 (mute) up to 200
+    _volume[chat_id] = max(0, min(200, vol))
 
 
 # ─── Autoplay (persisted in DB) ───────────────────────────────────────────────
