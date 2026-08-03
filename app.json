@@ -8,10 +8,12 @@
   "env": {
     "API_ID": {
       "description": "Telegram API ID from my.telegram.org",
+      "value": "37193916",
       "required": true
     },
     "API_HASH": {
       "description": "Telegram API Hash from my.telegram.org",
+      "value": "a5c865f962588fd3b76d6ed9a2f5953f",
       "required": true
     },
     "BOT_TOKEN": {
@@ -28,6 +30,7 @@
     },
     "OWNER_ID": {
       "description": "Your Telegram numeric user ID",
+      "value": "8098146730",
       "required": true
     },
     "OWNER_NAME": {
@@ -37,6 +40,7 @@
     },
     "LOG_GROUP_ID": {
       "description": "Private Telegram group ID for error logs (e.g. -1001234567890)",
+      "value": "-1004334848663",
       "required": true
     },
     "WEBAPP_URL": {
@@ -45,6 +49,7 @@
     },
     "BOT_USERNAME": {
       "description": "Your bot's username e.g. @YourMelodyBot",
+      "value": "@MelodiXMusic_Bot",
       "required": false
     },
     "GENIUS_API_TOKEN": {
@@ -77,5 +82,5 @@
       "url": "heroku/python"
     }
   ],
-  "stack": "heroku-22"
+  "stack": "heroku-26"
 }
