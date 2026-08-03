@@ -1,5 +1,6 @@
 """
 ⏩ Seek and rewind commands
+BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -10,8 +11,8 @@ from utils.decorators import admin_or_auth, error_handler
 
 
 @bot.on_message(filters.command("seek") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def seek_cmd(client: Client, message: Message):
     args = message.command
     if len(args) < 2 or not args[1].isdigit():
@@ -33,8 +34,8 @@ async def seek_cmd(client: Client, message: Message):
 
 
 @bot.on_message(filters.command("rewind") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def rewind_cmd(client: Client, message: Message):
     await message.reply(
         "⚠️ **Rewind is not supported** by the voice call engine.\n"

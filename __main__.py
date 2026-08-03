@@ -19,7 +19,7 @@ async def main():
     validate_config()
 
     from melody import bot, assistant
-    from melody.core.call import call_py, start_call_py
+    from melody.core.call import start_call_py  # BUG FIX: removed non-existent 'call_py' import
 
     LOGGER.info("Starting Melody Music Bot...")
 

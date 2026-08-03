@@ -1,5 +1,6 @@
 """
 🎛 Playback controls — pause, resume, skip, stop + inline button handlers
+BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message, CallbackQuery
@@ -13,32 +14,32 @@ from utils.formatters import format_duration
 # ─── Message commands ─────────────────────────────────────────────────────────
 
 @bot.on_message(filters.command("pause") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def pause_cmd(client: Client, message: Message):
     await pause_stream(message.chat.id)
     await message.reply("⏸ **Paused.**")
 
 
 @bot.on_message(filters.command("resume") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def resume_cmd(client: Client, message: Message):
     await resume_stream(message.chat.id)
     await message.reply("▶️ **Resumed.**")
 
 
 @bot.on_message(filters.command(["skip", "s"]) & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def skip_cmd(client: Client, message: Message):
     await skip_stream(message.chat.id)
     await message.reply("⏭ **Skipped.**")
 
 
 @bot.on_message(filters.command("stop") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def stop_cmd(client: Client, message: Message):
     await stop_stream(message.chat.id)
     await message.reply("⏹ **Music stopped and queue cleared.**")
@@ -47,24 +48,28 @@ async def stop_cmd(client: Client, message: Message):
 # ─── Inline button callbacks ──────────────────────────────────────────────────
 
 @bot.on_callback_query(filters.regex("^pause$"))
+@error_handler
 async def pause_callback(client: Client, cb: CallbackQuery):
     await cb.answer("⏸ Paused")
     await pause_stream(cb.message.chat.id)
 
 
 @bot.on_callback_query(filters.regex("^resume$"))
+@error_handler
 async def resume_callback(client: Client, cb: CallbackQuery):
     await cb.answer("▶️ Resumed")
     await resume_stream(cb.message.chat.id)
 
 
 @bot.on_callback_query(filters.regex("^skip$"))
+@error_handler
 async def skip_callback(client: Client, cb: CallbackQuery):
     await cb.answer("⏭ Skipped")
     await skip_stream(cb.message.chat.id)
 
 
 @bot.on_callback_query(filters.regex("^stop$"))
+@error_handler
 async def stop_callback(client: Client, cb: CallbackQuery):
     await cb.answer("⏹ Stopped")
     await stop_stream(cb.message.chat.id)
@@ -75,6 +80,7 @@ async def stop_callback(client: Client, cb: CallbackQuery):
 
 
 @bot.on_callback_query(filters.regex("^queue$"))
+@error_handler
 async def queue_callback(client: Client, cb: CallbackQuery):
     await cb.answer()
     text = format_queue(cb.message.chat.id)
@@ -82,6 +88,7 @@ async def queue_callback(client: Client, cb: CallbackQuery):
 
 
 @bot.on_callback_query(filters.regex("^lyrics$"))
+@error_handler
 async def lyrics_callback(client: Client, cb: CallbackQuery):
     await cb.answer("🎵 Fetching lyrics...")
     track = get_current(cb.message.chat.id)

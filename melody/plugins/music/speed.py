@@ -1,5 +1,6 @@
 """
 ⚡ /speed command — playback speed (0.5–2.0)
+BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -8,8 +9,8 @@ from utils.decorators import admin_or_auth, error_handler
 
 
 @bot.on_message(filters.command("speed") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def speed_cmd(client: Client, message: Message):
     args = message.command
     if len(args) < 2:

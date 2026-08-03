@@ -1,5 +1,6 @@
 """
 🔊 Volume commands
+BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -10,8 +11,8 @@ from utils.decorators import admin_or_auth, error_handler
 
 
 @bot.on_message(filters.command("volume") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def volume_cmd(client: Client, message: Message):
     args = message.command
     if len(args) < 2 or not args[1].isdigit():
@@ -27,16 +28,16 @@ async def volume_cmd(client: Client, message: Message):
 
 
 @bot.on_message(filters.command("mute") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def mute_cmd(client: Client, message: Message):
     await change_volume(message.chat.id, 0)
     await message.reply("🔇 **Muted.**")
 
 
 @bot.on_message(filters.command("unmute") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def unmute_cmd(client: Client, message: Message):
     await change_volume(message.chat.id, 100)
     await message.reply("🔊 **Unmuted.** Volume set to 100.")

@@ -1,9 +1,10 @@
 """
 🔒 Decorators for permission checks
+BUG FIX: error_handler now also handles errors from admin_or_auth (DB failures etc.)
 """
 import functools
 from pyrogram import Client
-from pyrogram.types import Message
+from pyrogram.types import Message, CallbackQuery
 from melody.config import Config
 from melody.logging import send_error_log
 from utils.database import is_banned, is_gbanned, get_auth_users
@@ -40,10 +41,12 @@ def admin_or_auth(func):
         if await is_banned(user_id):
             return await message.reply("❌ You are banned from using this bot.")
 
-        # Check admin
+        # Check admin — Pyrogram 2.x uses str-enum so string compare works
         try:
             member = await client.get_chat_member(chat_id, user_id)
-            if member.status in ("administrator", "creator"):
+            # status values: "creator", "administrator", "member", "restricted", "left", "kicked"
+            if str(member.status) in ("ChatMemberStatus.OWNER", "ChatMemberStatus.ADMINISTRATOR",
+                                       "creator", "administrator"):
                 return await func(client, message, *args, **kwargs)
         except Exception:
             pass
@@ -59,15 +62,23 @@ def admin_or_auth(func):
 
 
 def error_handler(func):
-    """Catch exceptions, send to LOG_GROUP, show friendly message to user."""
+    """
+    Catch ALL exceptions (including from nested decorators like admin_or_auth).
+    Send traceback to LOG_GROUP and show friendly message to user.
+    Works for both Message handlers and CallbackQuery handlers.
+    """
     @functools.wraps(func)
-    async def wrapper(client: Client, message: Message, *args, **kwargs):
+    async def wrapper(client, update, *args, **kwargs):
         try:
-            return await func(client, message, *args, **kwargs)
+            return await func(client, update, *args, **kwargs)
         except Exception as e:
             await send_error_log(f"Error in {func.__name__}: {e}", exc=e)
             try:
-                await message.reply("Something went wrong 🌸")
+                # update can be Message or CallbackQuery
+                if isinstance(update, CallbackQuery):
+                    await update.answer("Something went wrong 🌸", show_alert=True)
+                else:
+                    await update.reply("Something went wrong 🌸")
             except Exception:
                 pass
     return wrapper

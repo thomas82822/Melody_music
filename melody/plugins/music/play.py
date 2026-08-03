@@ -1,5 +1,6 @@
 """
 ▶️ /play and /vplay commands
+BUG FIX: @error_handler moved OUTSIDE @admin_or_auth so DB errors are also caught
 """
 import urllib.parse
 from pyrogram import Client, filters
@@ -17,7 +18,7 @@ from utils.thumbnails import make_thumbnail
 
 def get_play_buttons(chat_title: str) -> InlineKeyboardMarkup:
     encoded_title = urllib.parse.quote(chat_title[:30])
-    webapp_url = f"{Config.WEBAPP_URL}?chat={encoded_title}"
+    webapp_url = f"{Config.WEBAPP_URL}?chat={encoded_title}" if Config.WEBAPP_URL else "https://t.me"
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("⏸ Pause",  callback_data="pause"),
@@ -26,7 +27,7 @@ def get_play_buttons(chat_title: str) -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton("🎛 Colored Controls", web_app=WebAppInfo(url=webapp_url)),
-        ],
+        ] if Config.WEBAPP_URL else [],
         [
             InlineKeyboardButton("📋 Queue",  callback_data="queue"),
             InlineKeyboardButton("🎵 Lyrics", callback_data="lyrics"),
@@ -100,16 +101,17 @@ async def _play_core(client: Client, message: Message, video: bool = False):
         )
 
 
+# BUG FIX: @error_handler is now OUTER decorator — catches errors from admin_or_auth too
 @bot.on_message(filters.command("play") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def play_cmd(client: Client, message: Message):
     await _play_core(client, message, video=False)
 
 
 @bot.on_message(filters.command("vplay") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def vplay_cmd(client: Client, message: Message):
     await _play_core(client, message, video=True)
 
@@ -117,6 +119,7 @@ async def vplay_cmd(client: Client, message: Message):
 # ─── Callback query handlers ──────────────────────────────────────────────────
 
 @bot.on_callback_query(filters.regex("^pause$"))
+@error_handler
 async def cb_pause(client, cb):
     from melody.core.call import pause_stream
     await pause_stream(cb.message.chat.id)
@@ -124,6 +127,7 @@ async def cb_pause(client, cb):
 
 
 @bot.on_callback_query(filters.regex("^resume$"))
+@error_handler
 async def cb_resume(client, cb):
     from melody.core.call import resume_stream
     await resume_stream(cb.message.chat.id)
@@ -131,6 +135,7 @@ async def cb_resume(client, cb):
 
 
 @bot.on_callback_query(filters.regex("^skip$"))
+@error_handler
 async def cb_skip(client, cb):
     from melody.core.call import skip_stream
     await skip_stream(cb.message.chat.id)
@@ -138,6 +143,7 @@ async def cb_skip(client, cb):
 
 
 @bot.on_callback_query(filters.regex("^stop$"))
+@error_handler
 async def cb_stop(client, cb):
     from melody.core.call import stop_stream
     await stop_stream(cb.message.chat.id)
@@ -146,6 +152,7 @@ async def cb_stop(client, cb):
 
 
 @bot.on_callback_query(filters.regex("^queue$"))
+@error_handler
 async def cb_queue(client, cb):
     from melody.core.queue import format_queue
     text = format_queue(cb.message.chat.id)
@@ -154,12 +161,12 @@ async def cb_queue(client, cb):
 
 
 @bot.on_callback_query(filters.regex("^lyrics$"))
+@error_handler
 async def cb_lyrics(client, cb):
     from melody.core.queue import get_current
     track = get_current(cb.message.chat.id)
     if track:
         await cb.answer()
         await cb.message.reply(f"🔍 Searching lyrics for: `{track.title}`...")
-        # Lyrics fetched by lyrics plugin
     else:
         await cb.answer("Nothing is playing!", show_alert=True)

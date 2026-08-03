@@ -1,5 +1,6 @@
 """
 🔀 /shuffle command
+BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -9,8 +10,8 @@ from utils.decorators import admin_or_auth, error_handler
 
 
 @bot.on_message(filters.command("shuffle") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def shuffle_cmd(client: Client, message: Message):
     shuffle_queue(message.chat.id)
     await message.reply("🔀 **Queue shuffled!**")

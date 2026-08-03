@@ -1,5 +1,6 @@
 """
 📋 Queue commands
+BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -16,16 +17,16 @@ async def queue_cmd(client: Client, message: Message):
 
 
 @bot.on_message(filters.command("clearqueue") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def clearqueue_cmd(client: Client, message: Message):
     clear_queue(message.chat.id)
     await message.reply("🗑 **Queue cleared.**")
 
 
 @bot.on_message(filters.command("remove") & filters.group)
-@admin_or_auth
 @error_handler
+@admin_or_auth
 async def remove_cmd(client: Client, message: Message):
     args = message.command
     if len(args) < 2 or not args[1].isdigit():
