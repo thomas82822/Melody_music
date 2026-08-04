@@ -232,7 +232,7 @@ async def sync_log_group_peer(bot, assistant):
             # `id` must be the full signed integer Pyrogram uses as the chat key,
             # i.e. -(1_000_000_000_000 + channel_id) — same value as LOG_GROUP_ID.
             await bot.storage.update_peers([
-                (Config.LOG_GROUP_ID, peer.access_hash, 2, None, None)
+                (Config.LOG_GROUP_ID, peer.access_hash, "channel", None, None)
             ])
             LOGGER.info(
                 "bot: synced LOG_GROUP_ID peer (access_hash injected) from assistant cache"
