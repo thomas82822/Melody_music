@@ -109,48 +109,92 @@ def _is_netscape_cookies(text: str) -> bool:
 
 
 def _write_cookies():
+    """Load YT_COOKIES into COOKIES_FILE.
+
+    ROOT-CAUSE FIX (previous bug):
+    The old code ALWAYS ran base64.b64decode() first, even when YT_COOKIES
+    already contained plain-text cookies.txt content (the most common way
+    people paste it into Heroku config vars). Python's base64 decoder does
+    NOT error on arbitrary text — it silently mangles it into garbage bytes,
+    which then fail the UTF-8 decode and get logged as "binary data" and
+    thrown away. This is why cookies never worked even when pasted correctly.
+
+    NEW ORDER:
+    1. Check if the raw value is ALREADY plain Netscape text or a JSON cookie
+       array (no decoding needed) — use it directly.
+    2. Only if that fails, attempt strict base64 decoding (validate=True so
+       non-base64 text raises immediately instead of being silently corrupted).
+    """
     if not Config.YT_COOKIES:
+        LOGGER.warning(
+            "⚠️ YT_COOKIES is not set — bot will run WITHOUT a YouTube login. "
+            "Heroku IPs are heavily bot-checked; cookies are strongly recommended."
+        )
         return
+
+    raw = Config.YT_COOKIES.strip()
+
+    # ── Path 1: already plain text (most common case) ──────────────────────
+    if raw.startswith("["):
+        netscape = _json_cookies_to_netscape(raw)
+        if _is_netscape_cookies(netscape):
+            with open(COOKIES_FILE, "w", encoding="utf-8") as f:
+                f.write(netscape)
+            LOGGER.info("✅ YT_COOKIES (plain JSON→Netscape) written to %s", COOKIES_FILE)
+            return
+    if raw.startswith("#") or _is_netscape_cookies(raw):
+        with open(COOKIES_FILE, "w", encoding="utf-8") as f:
+            f.write(raw)
+        LOGGER.info("✅ YT_COOKIES (plain Netscape text) written to %s", COOKIES_FILE)
+        return
+
+    # ── Path 2: base64-encoded (strict — fail loudly instead of corrupting) ─
     try:
-        raw_bytes = base64.b64decode(Config.YT_COOKIES)
+        raw_bytes = base64.b64decode(raw, validate=True)
     except Exception as e:
-        LOGGER.warning("YT_COOKIES is not valid base64 — skipping cookies: %s", e)
+        LOGGER.warning(
+            "❌ YT_COOKIES is neither plain cookies.txt text nor valid base64 — "
+            "skipping cookies: %s", e
+        )
         return
     try:
         decoded = raw_bytes.decode("utf-8")
     except UnicodeDecodeError:
         LOGGER.warning(
-            "YT_COOKIES base64 decodes to binary data (not a text cookie file). "
-            "Provide a Netscape-formatted cookies.txt exported from your browser. "
-            "Skipping cookies — yt-dlp will run without authentication."
+            "❌ YT_COOKIES base64 decodes to binary data (not a text cookie file). "
+            "Paste the raw cookies.txt content directly into the config var — "
+            "no base64 encoding needed. Skipping cookies."
         )
-        return
-    if "\ufffd" in decoded:
-        LOGGER.warning("YT_COOKIES contains non-UTF-8 bytes (binary file). Skipping cookies.")
         return
     decoded = decoded.strip()
     if decoded.startswith("["):
         netscape = _json_cookies_to_netscape(decoded)
         if not _is_netscape_cookies(netscape):
-            LOGGER.warning("YT_COOKIES JSON conversion produced no valid entries — skipping.")
+            LOGGER.warning("❌ YT_COOKIES JSON conversion produced no valid entries — skipping.")
             return
         with open(COOKIES_FILE, "w", encoding="utf-8") as f:
             f.write(netscape)
-        LOGGER.info("YT_COOKIES (JSON→Netscape) written to %s", COOKIES_FILE)
+        LOGGER.info("✅ YT_COOKIES (base64 JSON→Netscape) written to %s", COOKIES_FILE)
         return
     if _is_netscape_cookies(decoded):
         with open(COOKIES_FILE, "w", encoding="utf-8") as f:
             f.write(decoded)
-        LOGGER.info("YT_COOKIES (Netscape) written to %s", COOKIES_FILE)
+        LOGGER.info("✅ YT_COOKIES (base64 Netscape) written to %s", COOKIES_FILE)
         return
     LOGGER.warning(
-        "YT_COOKIES format not recognised (not JSON array, not Netscape). "
-        "Export cookies using a browser extension like 'Get cookies.txt LOCALLY'. "
+        "❌ YT_COOKIES format not recognised (not JSON array, not Netscape). "
+        "Export cookies using a browser extension like 'Get cookies.txt LOCALLY' "
+        "while logged into youtube.com, then paste the file content as-is. "
         "Skipping cookies — yt-dlp will run without authentication."
     )
 
 
 _write_cookies()
+_HAS_COOKIES = os.path.exists(COOKIES_FILE)
+if _HAS_COOKIES:
+    LOGGER.info("🍪 Cookie-authenticated YouTube session ACTIVE — using logged-in requests")
+else:
+    LOGGER.warning("🍪 No cookies loaded — running as anonymous guest (more likely to be blocked on Heroku)")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -179,6 +223,31 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         if audio_only
         else "best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]/best"
     )
+    has_cookies = os.path.exists(COOKIES_FILE)
+
+    # STRICT COOKIE MODE:
+    # android_music/ios/tv_embedded clients authenticate via their own
+    # embedded API keys and IGNORE a cookiefile entirely — cookies only take
+    # effect on the "web"/"mweb" client paths. So when cookies are present we
+    # put "web" FIRST (uses the logged-in session, bypasses bot-detection and
+    # age/sign-in walls) and keep the others only as a safety-net fallback.
+    player_client = (
+        ["web", "mweb", "tv_embedded", "android_music", "ios", "android"]
+        if has_cookies
+        else ["tv_embedded", "android_music", "ios", "android", "mweb", "web"]
+    )
+    # A cookies.txt file is exported from a real desktop/mobile browser
+    # session — pairing it with a matching browser User-Agent (instead of the
+    # generic mobile UA) keeps the request fingerprint consistent and avoids
+    # extra bot-detection flags.
+    user_agent = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        if has_cookies
+        else "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 "
+             "(KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+    )
+
     opts: dict = {
         "quiet": True,
         "no_warnings": True,
@@ -192,28 +261,20 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         "fragment_retries": 5,
         "check_formats": False,
         "concurrent_fragment_downloads": 1,
-        # tv_embedded is the most reliable no-auth client on cloud/Heroku IPs.
-        # android_music + ios as backups.
         "extractor_args": {
             "youtube": {
-                "player_client": ["tv_embedded", "android_music", "ios", "android", "mweb", "web"],
+                "player_client": player_client,
             }
         },
         "http_headers": {
-            "User-Agent": (
-                "Mozilla/5.0 (Linux; Android 13; SM-S908B) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/112.0.0.0 Mobile Safari/537.36"
-            ),
+            "User-Agent": user_agent,
             "Referer": "https://www.youtube.com/",
         },
     }
     # NOTE: curl_cffi "impersonate" intentionally removed.
     # The impersonate target varies by installed version and crashes yt-dlp
     # with "Impersonate target not available" on older curl_cffi builds.
-    # Android/iOS player_client entries in extractor_args are sufficient to
-    # bypass bot-detection on Heroku without TLS fingerprinting.
-    if os.path.exists(COOKIES_FILE):
+    if has_cookies:
         opts["cookiefile"] = COOKIES_FILE
     return opts
 
@@ -577,9 +638,26 @@ def _start_pipe_download(video_id: str, audio_only: bool = True) -> str:
     # Build a self-contained Python script that writes audio to stdout.
     # Running as a subprocess subprocess inherits sys.path but is isolated,
     # which avoids blocking the asyncio event loop.
+    #
+    # STRICT COOKIE MODE (kept in sync with _ydl_opts()):
+    # android/ios/tv_embedded clients ignore cookiefile entirely — only the
+    # "web"/"mweb" client paths use the logged-in session. So when cookies
+    # exist, "web" goes first and the UA matches a real desktop browser.
+    has_cookies = os.path.exists(COOKIES_FILE)
     cookie_line = (
-        f'    opts["cookiefile"] = {repr(COOKIES_FILE)}\n'
-        if os.path.exists(COOKIES_FILE) else ""
+        f'    opts["cookiefile"] = {repr(COOKIES_FILE)}\n' if has_cookies else ""
+    )
+    player_client_list = (
+        ["web", "mweb", "tv_embedded", "android_music", "ios", "android"]
+        if has_cookies
+        else ["android_music", "ios", "android", "tv_embedded", "mweb", "web"]
+    )
+    user_agent = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        if has_cookies
+        else "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 "
+             "(KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
     )
     script = (
         "import sys, yt_dlp\n"
@@ -599,11 +677,11 @@ def _start_pipe_download(video_id: str, audio_only: bool = True) -> str:
         '    "concurrent_fragment_downloads": 1,\n'
         '    "extractor_args": {\n'
         '        "youtube": {\n'
-        '            "player_client": ["android_music", "ios", "android", "tv_embedded", "mweb", "web"],\n'
+        f'            "player_client": {repr(player_client_list)},\n'
         '        }\n'
         '    },\n'
         '    "http_headers": {\n'
-        '        "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",\n'
+        f'        "User-Agent": {repr(user_agent)},\n'
         '        "Referer": "https://www.youtube.com/",\n'
         '    },\n'
         "}\n"
