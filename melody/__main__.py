@@ -98,10 +98,25 @@ async def warm_bot_peer_cache(bot):
     seen before, so we pre-warm using the chat IDs we already persist in
     MongoDB every time the bot is added to a group (see add_chat()).
     """
-    try:
-        chats = await get_all_chats()
-    except Exception as exc:
-        LOGGER.warning("bot: could not load chats from DB to warm cache: %s", exc)
+    chats = None
+    for attempt in range(1, 4):
+        try:
+            chats = await get_all_chats()
+            break
+        except Exception as exc:
+            LOGGER.warning(
+                "bot: could not load chats from DB to warm cache (attempt %d/3): %s",
+                attempt, exc,
+            )
+            if attempt < 3:
+                await asyncio.sleep(5 * attempt)
+
+    if chats is None:
+        LOGGER.warning(
+            "bot: giving up warming peer cache — DB unreachable after 3 attempts. "
+            "Commands in groups the bot hasn't seen yet this run may not respond "
+            "until MongoDB connectivity is restored."
+        )
         return
 
     warmed = 0
