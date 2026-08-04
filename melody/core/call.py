@@ -1,10 +1,11 @@
 """
-📞 Voice call management — pytgcalls 3.0.0.dev / GroupCallFactory API
+📞 Voice call management — pytgcalls 2.x (PyTgCalls API)
 """
 import asyncio
 import os
 import glob
-from pytgcalls import GroupCallFactory
+from pytgcalls import PyTgCalls
+from pytgcalls.types import AudioPiped, AudioParameters
 from melody.logging import LOGGER, send_error_log
 from melody.core.queue import (
     get_current, set_current, pop_next, clear_queue,
@@ -12,37 +13,38 @@ from melody.core.queue import (
 )
 from melody import assistant
 
-# One factory per bot session
-_factory = GroupCallFactory(assistant)
+# One PyTgCalls instance for the assistant client
+_pytgcalls = PyTgCalls(assistant)
 
-# Per-chat active GroupCallFile instances and play state
-_calls: dict = {}       # chat_id -> GroupCallFile
-_active: dict = {}      # chat_id -> bool
+# Per-chat play state
+_active: dict = {}   # chat_id -> bool
 
 
 async def start_call_py():
-    """GroupCallFactory needs no global start — calls are created per-chat."""
-    LOGGER.info("PyTgCalls (GroupCallFactory) ready.")
+    """Start the PyTgCalls service. Must be called once on bot startup."""
+    await _pytgcalls.start()
+    LOGGER.info("PyTgCalls (2.x) started.")
+
+
+# ─── Stream-end event ─────────────────────────────────────────────────────────
+
+@_pytgcalls.on_stream_end()
+async def _on_stream_end(_, update):
+    chat_id = update.chat_id if hasattr(update, "chat_id") else None
+    if chat_id is None:
+        return
+    # Delete finished audio file to save /tmp space
+    current = get_current(chat_id)
+    if current:
+        for f in glob.glob(f"/tmp/melody_{current.video_id}.*"):
+            try:
+                os.unlink(f)
+            except Exception:
+                pass
+    await _play_next(chat_id)
 
 
 # ─── Internal helpers ─────────────────────────────────────────────────────────
-
-def _make_call(chat_id: int):
-    """Create a new GroupCallFile for a chat and register its end-handler."""
-    call = _factory.get_file_group_call(input_filename=None, play_on_repeat=False)
-
-    @call.on_playout_ended
-    async def _on_ended(gc, filename):
-        # Delete the finished audio file to save /tmp space
-        if filename:
-            try:
-                os.unlink(filename)
-            except Exception:
-                pass
-        await _play_next(chat_id)
-
-    return call
-
 
 async def _play_next(chat_id: int):
     """Advance queue or handle autoplay/stop."""
@@ -53,12 +55,10 @@ async def _play_next(chat_id: int):
         await _stream_track(chat_id, next_track)
     else:
         _active.pop(chat_id, None)
-        call = _calls.pop(chat_id, None)
-        if call:
-            try:
-                await call.stop()
-            except Exception:
-                pass
+        try:
+            await _pytgcalls.leave_group_call(chat_id)
+        except Exception:
+            pass
         if await is_autoplay_on(chat_id):
             await try_autoplay(chat_id)
 
@@ -69,27 +69,26 @@ async def _stream_track(chat_id: int, track, video: bool = False):
         from melody.core.ytdl import download_audio
         filepath = await download_audio(track.video_id)
 
+        audio_params = AudioParameters(bitrate=128)
+        stream = AudioPiped(filepath, audio_parameters=audio_params)
+
         if _active.get(chat_id):
-            # Already in voice chat — change the file (triggers restart_playout)
-            _calls[chat_id].input_filename = filepath
+            # Already in voice chat — change the stream
+            await _pytgcalls.change_stream(chat_id, stream)
         else:
-            call = _make_call(chat_id)
-            _calls[chat_id] = call
-            call.input_filename = filepath
-            await call.start(chat_id)
+            await _pytgcalls.join_group_call(chat_id, stream)
             _active[chat_id] = True
 
             # Apply stored volume
             vol = get_volume(chat_id)
             if vol != 100:
                 try:
-                    await call.set_my_volume(vol)
+                    await _pytgcalls.change_volume_call(chat_id, vol)
                 except Exception:
                     pass
 
     except Exception as exc:
         _active.pop(chat_id, None)
-        _calls.pop(chat_id, None)
         await send_error_log(f"_stream_track failed in {chat_id}", exc)
 
 
@@ -109,21 +108,17 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
 
 
 async def pause_stream(chat_id: int):
-    call = _calls.get(chat_id)
-    if call:
-        try:
-            call.pause_playout()
-        except Exception as exc:
-            await send_error_log(f"pause_stream failed in {chat_id}", exc)
+    try:
+        await _pytgcalls.pause_stream(chat_id)
+    except Exception as exc:
+        await send_error_log(f"pause_stream failed in {chat_id}", exc)
 
 
 async def resume_stream(chat_id: int):
-    call = _calls.get(chat_id)
-    if call:
-        try:
-            call.resume_playout()
-        except Exception as exc:
-            await send_error_log(f"resume_stream failed in {chat_id}", exc)
+    try:
+        await _pytgcalls.resume_stream(chat_id)
+    except Exception as exc:
+        await send_error_log(f"resume_stream failed in {chat_id}", exc)
 
 
 async def skip_stream(chat_id: int):
@@ -136,32 +131,28 @@ async def stop_stream(chat_id: int):
     try:
         clear_queue(chat_id)
         _active.pop(chat_id, None)
-        call = _calls.pop(chat_id, None)
-        if call:
-            await call.stop()
+        await _pytgcalls.leave_group_call(chat_id)
     except Exception as exc:
         await send_error_log(f"stop_stream failed in {chat_id}", exc)
 
 
 async def change_volume(chat_id: int, volume: int):
-    """Set volume (0 = mute, 1-200 = normal range)."""
+    """Set volume (0-200)."""
     volume = max(0, min(200, volume))
     set_volume_local(chat_id, volume)
-    call = _calls.get(chat_id)
-    if call:
-        try:
-            if volume == 0:
-                await call.set_is_mute(True)
-            else:
-                await call.set_is_mute(False)
-                await call.set_my_volume(volume)
-        except Exception as exc:
-            await send_error_log(f"change_volume failed in {chat_id}", exc)
+    try:
+        if volume == 0:
+            await _pytgcalls.mute_stream(chat_id)
+        else:
+            await _pytgcalls.unmute_stream(chat_id)
+            await _pytgcalls.change_volume_call(chat_id, volume)
+    except Exception as exc:
+        await send_error_log(f"change_volume failed in {chat_id}", exc)
 
 
 async def seek_stream(chat_id: int, seconds: int):
-    """Seek is not supported in GroupCallFile API — silently no-op."""
-    LOGGER.warning("seek_stream: not supported in pytgcalls 3.0.0.dev (file API), seconds=%d", seconds)
+    """Seek is not natively supported in pytgcalls 2.x file streaming — no-op."""
+    LOGGER.warning("seek_stream: not supported in pytgcalls 2.x, seconds=%d", seconds)
 
 
 async def is_active(chat_id: int) -> bool:

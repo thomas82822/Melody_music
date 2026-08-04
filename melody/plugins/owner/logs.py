@@ -1,23 +1,17 @@
 """
 📋 /logs — send bot logs (owner only)
 """
-import os
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from melody import bot
 from utils.decorators import owner_only, error_handler
-
-LOG_FILE = "melody.log"
 
 
 @bot.on_message(filters.command("logs") & filters.private)
 @owner_only
 @error_handler
 async def logs_cmd(client: Client, message: Message):
-    if os.path.exists(LOG_FILE):
-        await message.reply_document(LOG_FILE, caption="📋 **Bot Logs**")
-    else:
-        await message.reply("❌ No log file found.")
+    await message.reply("📋 **Bot Logs** are streamed to the LOG_GROUP channel.\nUse `/chatlist` to see all served chats.")
 
 
 @bot.on_message(filters.command("chatlist") & filters.private)
@@ -48,7 +42,6 @@ async def maintenance_cmd(client: Client, message: Message):
 
     state = args[1].lower()
     if state == "on":
-        # Set maintenance flag
         import melody
         melody._maintenance = True
         await message.reply("🔧 **Maintenance mode ON.** Regular users can't use the bot.")
