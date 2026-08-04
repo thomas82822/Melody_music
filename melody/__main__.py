@@ -186,29 +186,67 @@ async def register_slash_commands(bot):
         LOGGER.warning("Could not register slash commands: %s", exc)
 
 
-async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_names: list):
+async def sync_log_group_peer(bot, assistant):
     """
-    Send a detailed startup message to the log channel.
+    ROOT-CAUSE FIX for "Peer id invalid: LOG_GROUP_ID" on bot client.
 
-    ROOT-CAUSE FIX: the bot client raises "Peer id invalid" for LOG_GROUP_ID
-    on every cold start. This is NOT the same issue warm_bot_peer_cache()
-    solves — that one warms peers the bot has *previously* seen via
-    add_chat() in MongoDB. The log group is usually never a "chat" the bot
-    receives ordinary commands from, so it's never persisted to the chats
-    collection and never gets warmed. Since Heroku wipes the bot's local
-    peer-storage file on every restart, a numeric channel ID the bot has
-    never resolved *this process* can't be resolved at all — Pyrogram
-    requires either a prior incoming update from that chat or an existing
-    cached access_hash, and a bot account has no way to fetch either for a
-    private supergroup/channel out of thin air.
+    WHY IT HAPPENS
+    ══════════════
+    Heroku wipes every dyno's ephemeral filesystem on restart, which
+    destroys Pyrogram's local SQLite session files.  Pyrogram resolves a
+    raw chat ID (e.g. -1004334848663) to an InputPeerChannel only when it
+    has previously cached that channel's access_hash — without it the call
+    raises "Peer id invalid".  The bot cannot self-populate this cache
+    because:
+      • get_dialogs() → Telegram rejects it with BOT_METHOD_INVALID
+      • get_chat(int_id) internally calls resolve_peer which fails the
+        same way
+    So the bot ALWAYS starts with an empty peer DB and ALWAYS fails to
+    send to any channel it hasn't received a live update from yet.
 
-    The assistant (userbot) account, however, already re-resolves every
-    chat it's a member of via get_dialogs() on every startup (see
-    warm_peer_cache()), so its peer cache for LOG_GROUP_ID is reliable.
-    Send the startup log with the assistant instead of the bot, and only
-    fall back to the bot if that also fails (e.g. assistant isn't a member
-    of the log group).
+    WHY THE LOG CHANNEL SPECIFICALLY
+    ═════════════════════════════════
+    The log channel is a broadcast channel (only admins can post).  The
+    bot is an admin; the assistant is a subscriber.  Swapping the sender
+    to the assistant fails with CHAT_ADMIN_REQUIRED.  So we must keep the
+    bot as the sender — we just need to give it the access_hash.
+
+    THE FIX
+    ═══════
+    The assistant already called get_dialogs() on startup and has the log
+    channel's access_hash in its SQLite cache.  We call
+    assistant.resolve_peer(LOG_GROUP_ID) — which succeeds — and then write
+    the resulting (id, access_hash, type) tuple directly into the bot
+    client's SQLite peer table via bot.storage.update_peers().  From that
+    point forward, bot.resolve_peer(LOG_GROUP_ID) succeeds for this
+    process lifetime, so bot.send_message() works without any incoming
+    update from the channel.
     """
+    if not Config.LOG_GROUP_ID:
+        return
+    try:
+        from pyrogram.raw.types import InputPeerChannel, InputPeerChat
+        peer = await assistant.resolve_peer(Config.LOG_GROUP_ID)
+        if isinstance(peer, InputPeerChannel):
+            # update_peers signature: list of (id, access_hash, type, username, phone)
+            # `id` must be the full signed integer Pyrogram uses as the chat key,
+            # i.e. -(1_000_000_000_000 + channel_id) — same value as LOG_GROUP_ID.
+            await bot.storage.update_peers([
+                (Config.LOG_GROUP_ID, peer.access_hash, "channel", None, None)
+            ])
+            LOGGER.info(
+                "bot: synced LOG_GROUP_ID peer (access_hash injected) from assistant cache"
+            )
+        else:
+            # Ordinary group chat — Pyrogram resolves plain group IDs by chat_id
+            # without needing an access_hash, so no injection required.
+            LOGGER.debug("bot: log group is a plain group — no peer injection needed")
+    except Exception as exc:
+        LOGGER.warning("bot: could not sync log group peer from assistant: %s", exc)
+
+
+async def send_startup_log(bot, loaded: int, failed: int, failed_names: list):
+    """Send a detailed startup message to the log channel (bot client only)."""
     if not Config.LOG_GROUP_ID:
         return
     try:
@@ -233,14 +271,7 @@ async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_name
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "✅ All systems operational. Ready to receive commands!"
         )
-        try:
-            await assistant.send_message(Config.LOG_GROUP_ID, text)
-        except Exception as assistant_exc:
-            LOGGER.warning(
-                "Could not send startup log via assistant (%s); trying bot client",
-                assistant_exc,
-            )
-            await bot.send_message(Config.LOG_GROUP_ID, text)
+        await bot.send_message(Config.LOG_GROUP_ID, text)
     except Exception as exc:
         LOGGER.warning("Could not send startup log: %s", exc)
 
@@ -278,8 +309,13 @@ async def main():
     # Register slash commands with BotFather
     await register_slash_commands(bot)
 
-    # Detailed startup log to log channel
-    await send_startup_log(bot, assistant, loaded, failed, failed_names)
+    # Copy log-group access_hash from assistant's warm cache into bot's
+    # storage so bot.send_message(LOG_GROUP_ID) can resolve the peer.
+    # Must run AFTER warm_peer_cache(assistant) above.
+    await sync_log_group_peer(bot, assistant)
+
+    # Detailed startup log to log channel (bot is channel admin — correct sender)
+    await send_startup_log(bot, loaded, failed, failed_names)
 
     LOGGER.info("🎶 Melody is live!")
     await asyncio.Event().wait()  # Keep running
