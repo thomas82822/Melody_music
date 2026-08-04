@@ -29,7 +29,11 @@ async def seek_cmd(client: Client, message: Message):
     if seconds > track.duration:
         await message.reply(f"❌ Cannot seek past track duration ({track.duration}s).")
         return
-    await seek_stream(message.chat.id, seconds)
+    try:
+        await seek_stream(message.chat.id, seconds)
+    except NotImplementedError:
+        await message.reply("⚠️ Seeking isn't supported by the voice call engine right now.")
+        return
     await message.reply(f"⏩ Seeked to `{seconds}s`")
 
 

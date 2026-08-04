@@ -151,7 +151,7 @@ async def _play_next(chat_id: int):
         _active.pop(chat_id, None)
         _silence_playing.pop(chat_id, None)
         try:
-            await _pytgcalls.leave_group_call(chat_id)
+            await _pytgcalls.leave_call(chat_id)
         except Exception:
             pass
         if await is_autoplay_on(chat_id):
@@ -177,12 +177,15 @@ async def _stream_track(chat_id: int, track, video: bool = False):
         # from now on are treated as the real song finishing.
         _silence_playing.pop(chat_id, None)
 
-        if _active.get(chat_id):
-            await _pytgcalls.change_stream(chat_id, stream)
-        else:
-            await _pytgcalls.join_group_call(chat_id, stream)
-            _active[chat_id] = True
+        # py-tgcalls 2.x has a single `play()` entrypoint: it joins the call
+        # if not already active, or swaps the stream source in-place if the
+        # chat is already in a call. There is no separate join_group_call()/
+        # change_stream() pair like older 1.x releases.
+        was_active = _active.get(chat_id)
+        await _pytgcalls.play(chat_id, stream)
+        _active[chat_id] = True
 
+        if not was_active:
             vol = get_volume(chat_id)
             if vol != 100:
                 try:
@@ -225,7 +228,7 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
             sstream = MediaStream(silence, audio_parameters=audio_quality)
             _silence_playing[chat_id] = True
             await asyncio.wait_for(
-                _pytgcalls.join_group_call(chat_id, sstream),
+                _pytgcalls.play(chat_id, sstream),
                 timeout=8.0,
             )
             _active[chat_id] = True
@@ -246,14 +249,14 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
 
 async def pause_stream(chat_id: int):
     try:
-        await _pytgcalls.pause_stream(chat_id)
+        await _pytgcalls.pause(chat_id)
     except Exception as exc:
         await send_error_log(f"pause_stream failed in {chat_id}", exc)
 
 
 async def resume_stream(chat_id: int):
     try:
-        await _pytgcalls.resume_stream(chat_id)
+        await _pytgcalls.resume(chat_id)
     except Exception as exc:
         await send_error_log(f"resume_stream failed in {chat_id}", exc)
 
@@ -268,16 +271,17 @@ async def stop_stream(chat_id: int):
     _active.pop(chat_id, None)
     _silence_playing.pop(chat_id, None)
     try:
-        await _pytgcalls.leave_group_call(chat_id)
+        await _pytgcalls.leave_call(chat_id)
     except Exception:
         pass
 
 
 async def seek_stream(chat_id: int, seconds: int):
-    try:
-        await _pytgcalls.seek_stream(chat_id, seconds)
-    except Exception as exc:
-        await send_error_log(f"seek_stream failed in {chat_id}", exc)
+    # py-tgcalls 2.1.1 does not expose a seek/time-offset API (no seek_stream,
+    # no set_time). Report failure instead of silently pretending to succeed.
+    raise NotImplementedError(
+        "Seeking is not supported by the installed py-tgcalls version"
+    )
 
 
 async def change_volume(chat_id: int, volume: int):
