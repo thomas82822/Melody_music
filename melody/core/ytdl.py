@@ -218,8 +218,12 @@ def _ydl_opts(audio_only: bool = True) -> dict:
       starvation → ntgcalls EOF → Broken pipe.
     """
     fmt = (
-        # Prefer streamable container first, then anything
-        "bestaudio[ext=webm]/bestaudio[ext=opus]/bestaudio[ext=m4a]/bestaudio/best"
+        # Use broad selector — ext constraints removed since FIFO pipe was
+        # removed; full file download supports any container.  YouTube
+        # occasionally does not serve a specific ext (region/age restrictions),
+        # causing "Requested format is not available".  bestaudio/best lets
+        # yt-dlp pick whatever is actually available.
+        "bestaudio/best"
         if audio_only
         else "best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]/best"
     )
@@ -630,7 +634,9 @@ def _start_pipe_download(video_id: str, audio_only: bool = True) -> str:
 
     url = f"https://www.youtube.com/watch?v={video_id}"
     fmt = (
-        "bestaudio[ext=webm]/bestaudio[ext=opus]/bestaudio/best"
+        # Broad selector — same rationale as _ydl_opts(): ext constraints
+        # removed to avoid "Requested format is not available" crashes.
+        "bestaudio/best"
         if audio_only
         else "best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]/best"
     )
