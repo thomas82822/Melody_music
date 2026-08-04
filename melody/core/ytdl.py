@@ -803,11 +803,25 @@ def _download_audio_sync(video_id: str, audio_only: bool = True) -> str:
 async def download_audio(video_id: str, audio_only: bool = True) -> str:
     """Return a path to play audio from.
 
-    Strategy:
-    1. Check /tmp cache (already downloaded file) — instant.
-    2. On cloud/Heroku: use FIFO pipe streaming (music starts before full download).
-       • FIFO lets PyTgCalls read audio as yt-dlp writes → ~2-3 s to first sound.
-    3. If FIFO not supported (rare): fall back to full file download.
+    Strategy: always do a full file download to /tmp, then hand the finished
+    file's path to PyTgCalls.
+
+    FIFO pipe streaming was REMOVED (root-cause fix): PyTgCalls' MediaStream
+    always calls ffmpeg.check_stream() before playback, which runs `ffprobe`
+    on the given path and reads it start-to-EOF to inspect the stream. A
+    named pipe (FIFO) only supports being drained ONCE — after ffprobe
+    finishes reading it for the probe, there is nothing left in the pipe for
+    the real ffmpeg playback process that follows, and by then our writer
+    thread has already deleted the tmp directory. This is exactly what was
+    causing `_stream_track failed ... FileNotFoundError` / "No such file" in
+    the logs: check_stream() drained (or outright missed, on a slow/slotted
+    writer) the pipe before real playback could read anything from it.
+
+    A one-shot FIFO simply cannot survive being read twice (probe + play),
+    so the "instant streaming" pipe trick is fundamentally incompatible with
+    this pytgcalls version and has to go. The bot still starts fast because
+    the VC join (pre_join) and the download both run concurrently — only the
+    download itself is no longer piped.
 
     Files written to /tmp/melody_<video_id>.* are cleaned up by call.py after
     each track finishes to avoid filling the 512 MB /tmp on Heroku.
@@ -817,15 +831,6 @@ async def download_audio(video_id: str, audio_only: bool = True) -> str:
     if cached:
         return cached[0]
 
-    # ⚡ STREAMING: try FIFO pipe first — returns instantly, yt-dlp runs in background
-    try:
-        pipe_path = _start_pipe_download(video_id, audio_only=audio_only)
-        LOGGER.info("⚡ Streaming via FIFO pipe | %s", video_id)
-        return pipe_path
-    except OSError:
-        LOGGER.info("FIFO unavailable — falling back to full file download | %s", video_id)
-
-    # Fallback: full file download (blocks until complete)
     loop = asyncio.get_running_loop()
     filepath = await loop.run_in_executor(None, _download_audio_sync, video_id, audio_only)
     return filepath

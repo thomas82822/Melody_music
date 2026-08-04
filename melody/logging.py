@@ -27,6 +27,32 @@ logging.basicConfig(level=logging.INFO, handlers=[handler])
 LOGGER = logging.getLogger("Melody")
 
 
+async def log_activity(text: str):
+    """
+    A2Z activity logger — sends every notable bot action (not just errors) to
+    LOG_GROUP_ID: commands used, songs played, joins/leaves, admin actions,
+    ban/auth changes, startup/shutdown, etc.
+
+    Kept completely separate from send_error_log() so a logging failure here
+    never raises into command handlers. Never blocks the caller for long —
+    callers should fire this with asyncio.create_task() when on a latency
+    sensitive path (e.g. /play).
+    """
+    try:
+        from melody import bot
+        from melody.config import Config
+        if not Config.LOG_GROUP_ID:
+            return
+        await bot.send_message(
+            Config.LOG_GROUP_ID,
+            text,
+            parse_mode=enums.ParseMode.HTML,
+            disable_web_page_preview=True,
+        )
+    except Exception as exc:
+        LOGGER.debug("log_activity failed to deliver: %s | text=%s", exc, text)
+
+
 async def send_error_log(text: str, exc: Exception = None):
     """Send error traceback to LOG_GROUP_ID only — never to users.
 

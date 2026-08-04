@@ -201,48 +201,97 @@ async def _stream_track(chat_id: int, track, video: bool = False):
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
+async def pre_join(chat_id: int) -> bool:
+    """
+    ⚡ Requirement #4 — join the voice chat with silence THE INSTANT the
+    command arrives, before we even know which track we're looking for.
+
+    Call this from the command handler in parallel with (not after) the
+    yt-dlp search, e.g.:
+
+        asyncio.create_task(pre_join(chat.id))
+        info = await get_video_info(query)   # runs concurrently
+
+    Previously the VC join only happened inside play_stream(), which itself
+    only ran AFTER get_video_info() resolved — meaning the multi-second
+    search always happened before the bot ever appeared in the call. Calling
+    pre_join() up front removes the search from the critical path entirely:
+    the bot joins in the time it takes one Telegram RPC round-trip, and the
+    real song swaps in via change_stream the moment yt-dlp resolves it.
+
+    Idempotent / safe to call even if the chat is already active (either
+    mid silence-join or already playing a real track) — no-ops in that case.
+    """
+    if _active.get(chat_id):
+        return False
+
+    silence = await _get_silence_file()
+    if not silence or not _pytgcalls:
+        return False
+
+    try:
+        audio_quality = _get_audio_quality()
+        sstream = MediaStream(silence, audio_parameters=audio_quality)
+        _silence_playing[chat_id] = True
+        await asyncio.wait_for(_pytgcalls.play(chat_id, sstream), timeout=8.0)
+        _active[chat_id] = True
+        LOGGER.debug("⚡ pre_join: instant VC join done for %d", chat_id)
+        return True
+    except asyncio.TimeoutError:
+        LOGGER.debug("pre_join timed out for %d — real song will join VC normally", chat_id)
+        _silence_playing.pop(chat_id, None)
+        return False
+    except Exception as e:
+        LOGGER.debug("pre_join failed for %d: %s — real song will join VC normally", chat_id, e)
+        _silence_playing.pop(chat_id, None)
+        return False
+
+
+async def abort_prejoin_if_idle(chat_id: int):
+    """
+    If we optimistically pre_join()'d a chat with silence but the search
+    afterwards failed (song not found / too long / etc.), leave the call
+    instead of leaving the bot sitting silently in the voice chat forever.
+    No-ops if a real track ended up playing.
+    """
+    if _silence_playing.get(chat_id) and not get_current(chat_id):
+        _active.pop(chat_id, None)
+        _silence_playing.pop(chat_id, None)
+        try:
+            await _pytgcalls.leave_call(chat_id)
+        except Exception:
+            pass
+
+
 async def play_stream(chat_id: int, track, video: bool = False) -> bool:
     """
     Start or queue a track.
     Returns True if playing now, False if queued.
 
     ⚡ INSTANT VC JOIN:
-    If the bot is not yet in VC, we join immediately with a short silence
-    stream so the user sees the bot appear in the call right away.  The real
-    song download runs concurrently; when it finishes, change_stream() swaps
-    in the audio (~instant swap vs. slow initial join).
+    If pre_join() already got the bot into the call with silence, this skips
+    straight to streaming the real track (near-instant change_stream swap).
+    If pre_join() was never called or failed, this falls back to joining
+    with silence itself before streaming, exactly as before.
     """
     from melody.core.queue import add_to_queue
 
-    if _active.get(chat_id):
+    # A real track is already playing (not just our silence placeholder) —
+    # queue this one instead of interrupting it.
+    if _active.get(chat_id) and not _silence_playing.get(chat_id):
         add_to_queue(chat_id, track)
         return False
 
     set_current(chat_id, track)
 
-    # ⚡ Step 1: Join VC immediately with silence (non-blocking)
-    silence = await _get_silence_file()
-    if silence and _pytgcalls:
-        try:
-            audio_quality = _get_audio_quality()
-            sstream = MediaStream(silence, audio_parameters=audio_quality)
-            _silence_playing[chat_id] = True
-            await asyncio.wait_for(
-                _pytgcalls.play(chat_id, sstream),
-                timeout=8.0,
-            )
-            _active[chat_id] = True
-            LOGGER.debug("⚡ Instant VC join done for %d", chat_id)
-        except asyncio.TimeoutError:
-            LOGGER.debug("Instant VC join timed out for %d — will join with real song", chat_id)
-            _silence_playing.pop(chat_id, None)
-        except Exception as e:
-            LOGGER.debug("Instant VC join failed for %d: %s — will join with real song", chat_id, e)
-            _silence_playing.pop(chat_id, None)
+    # If nobody pre-joined for us yet, do it now (keeps old callers working).
+    if not _active.get(chat_id):
+        await pre_join(chat_id)
 
-    # ⚡ Step 2: Download / pipe-stream the real song concurrently
-    # If silence join succeeded, change_stream swaps in audio when ready.
-    # If silence join failed, _stream_track joins VC normally with the real song.
+    # ⚡ Download / pipe-stream the real song concurrently. If silence join
+    # succeeded (either here or via an earlier pre_join()), change_stream
+    # swaps in the audio the instant it's ready. If silence join failed,
+    # _stream_track joins VC normally with the real song.
     asyncio.create_task(_stream_track(chat_id, track, video=video))
     return True
 

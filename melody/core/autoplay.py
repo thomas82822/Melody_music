@@ -14,7 +14,7 @@ async def try_autoplay(chat_id: int):
         from melody.core.call import play_stream, is_active
         from melody import bot
 
-        if await is_active(chat_id):
+        if is_active(chat_id):
             return
 
         history = await get_history(chat_id)
