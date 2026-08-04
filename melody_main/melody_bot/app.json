@@ -1,0 +1,82 @@
+{
+  "name": "Melody Music Bot",
+  "description": "🎶 Premium Telegram Music Bot — YouTube streaming, AutoPlay, Lyrics, Colored Controls",
+  "keywords": ["telegram", "music", "bot", "youtube", "pyrogram"],
+  "repository": "https://github.com/thomas82822/Melody_music",
+  "logo": "https://i.imgur.com/xvFgXuG.png",
+  "success_url": "/",
+  "env": {
+    "API_ID": {
+      "description": "Telegram API ID from my.telegram.org",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "Telegram API Hash from my.telegram.org",
+      "required": true
+    },
+    "BOT_TOKEN": {
+      "description": "Bot token from @BotFather",
+      "required": true
+    },
+    "MONGO_DB_URI": {
+      "description": "MongoDB Atlas connection string (mongodb+srv://...)",
+      "required": true
+    },
+    "STRING_SESSION": {
+      "description": "Pyrogram string session of assistant/userbot account",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "Your Telegram numeric user ID",
+      "required": true
+    },
+    "OWNER_NAME": {
+      "description": "Alias shown in play cards (e.g. Maestro) — NOT your real name",
+      "value": "Maestro",
+      "required": false
+    },
+    "LOG_GROUP_ID": {
+      "description": "Private Telegram group ID for error logs (e.g. -1001234567890). Must be a group where YOUR bot is an admin -- do not reuse an example/old ID.",
+      "required": true
+    },
+    "WEBAPP_URL": {
+      "description": "HTTPS URL where web_app/index.html is hosted (GitHub Pages / Vercel)",
+      "required": false
+    },
+    "BOT_USERNAME": {
+      "description": "Your bot's username e.g. @YourMelodyBot",
+      "value": "@MelodiXMusic_Bot",
+      "required": false
+    },
+    "GENIUS_API_TOKEN": {
+      "description": "Genius API token from genius.com/api-clients (for lyrics)",
+      "required": false
+    },
+    "YT_COOKIES": {
+      "description": "Base64-encoded YouTube cookies.txt (optional, for age-restricted content)",
+      "required": false
+    },
+    "MAX_DURATION": {
+      "description": "Maximum song duration in seconds",
+      "value": "3600",
+      "required": false
+    },
+    "AUTOPLAY": {
+      "description": "Enable autoplay by default (true/false)",
+      "value": "true",
+      "required": false
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "stack": "heroku-26"
+}
