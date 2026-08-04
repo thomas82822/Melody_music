@@ -19,6 +19,9 @@ HELP_PAGES = {
         "<blockquote>🟢 <b>Play Commands</b></blockquote>\n\n"
         "<code>/play [song/url]</code> — ▶️ Play from YouTube\n"
         "<code>/vplay [song/url]</code> — 🎬 Video stream\n"
+        "<code>/playforce [song/url]</code> — ⚡ Force-play now (skips queue)\n"
+        "<code>/vplayforce [song/url]</code> — ⚡ Force-play video now\n"
+        "<code>/playlist [playlist url]</code> — 📃 Queue a whole playlist\n"
         "<code>/search [query]</code> — 🔍 Search &amp; pick a song\n\n"
         "<i>Tip: Works with YouTube links or just the song name!</i>"
     ),
@@ -36,8 +39,21 @@ HELP_PAGES = {
         "<code>/resume</code> — ▶️ Resume playback\n"
         "<code>/stop</code> — ⏹ Stop &amp; clear queue\n"
         "<code>/seek [sec]</code> — ⏩ Seek forward\n"
-        "<code>/rewind [sec]</code> — ⏪ Seek backward\n"
+        "<code>/seekback [sec]</code> — ⏪ Seek backward\n"
+        "<code>/rewind [sec]</code> — ⏪ Alias of /seekback\n"
         "<code>/np</code> — 🎶 Now playing info"
+    ),
+    "cplay": (
+        "<blockquote>🟣 <b>Channel Play</b></blockquote>\n\n"
+        "Use these directly inside a channel that has a voice chat — the "
+        "bot streams straight into the channel's own voice chat.\n\n"
+        "<code>/cplay [song/url]</code> — ▶️ Play in this channel\n"
+        "<code>/cvplay [song/url]</code> — 🎬 Video stream in this channel\n"
+        "<code>/cpause</code> — ⏸ Pause\n"
+        "<code>/cresume</code> — ▶️ Resume\n"
+        "<code>/cskip</code> — ⏭ Skip\n"
+        "<code>/cstop</code> — ⏹ Stop &amp; clear queue\n\n"
+        "<i>Only channel admins (or authorized users) can use these.</i>"
     ),
     "loop": (
         "<blockquote>🔵 <b>Loop Commands</b></blockquote>\n\n"
@@ -55,9 +71,10 @@ HELP_PAGES = {
     ),
     "seek": (
         "<blockquote>🟢 <b>Seek &amp; Navigation</b></blockquote>\n\n"
-        "<code>/seek [seconds]</code> — ⏩ Seek forward\n"
-        "<code>/rewind [seconds]</code> — ⏪ Seek backward\n\n"
-        "<i>Example: /seek 30 → skips 30 seconds forward</i>"
+        "<code>/seek [seconds]</code> — ⏩ Jump to an absolute position\n"
+        "<code>/seekback [seconds]</code> — ⏪ Go back N seconds from now\n"
+        "<code>/rewind [seconds]</code> — ⏪ Alias of /seekback\n\n"
+        "<i>Example: /seek 30 → jumps to 0:30. /seekback 15 → 15s earlier.</i>"
     ),
     "ping": (
         "<blockquote>🔵 <b>Info Commands</b></blockquote>\n\n"
@@ -114,7 +131,7 @@ def main_help_kb() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(btn("Admin", BLUE),  callback_data="help_admin"),
             InlineKeyboardButton(btn("Auth", BLUE),   callback_data="help_admin"),
-            InlineKeyboardButton(btn("C-Play", RED),  callback_data="help_controls"),
+            InlineKeyboardButton(btn("C-Play", RED),  callback_data="help_cplay"),
         ],
         [
             InlineKeyboardButton(btn("Loop", BLUE),   callback_data="help_loop"),

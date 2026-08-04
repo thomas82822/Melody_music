@@ -1,47 +1,91 @@
 """
-⏩ Seek and rewind commands
-BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
+⏩⏪ /seek, /seekback, /rewind — position control inside the current track
+
+Real seeking, not a stub: seek_stream() (melody/core/call.py) re-issues the
+voice-call stream with an ffmpeg `-ss <seconds>` input offset, which is the
+only seek mechanism py-tgcalls 2.1.1 exposes. /seekback and /rewind compute
+the new absolute position from get_playback_position() and delegate to the
+same seek_stream().
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from melody import bot
-from melody.core.call import seek_stream
+from melody.core.call import seek_stream, get_playback_position
 from melody.core.queue import get_current
 from utils.decorators import admin_or_auth, error_handler
+
+
+def _parse_seconds(args: list[str]) -> "int | None":
+    if len(args) < 2:
+        return None
+    try:
+        seconds = int(args[1])
+    except ValueError:
+        return None
+    return seconds if seconds >= 0 else None
 
 
 @bot.on_message(filters.command("seek") & filters.group)
 @error_handler
 @admin_or_auth
 async def seek_cmd(client: Client, message: Message):
-    args = message.command
-    if len(args) < 2 or not args[1].isdigit():
+    seconds = _parse_seconds(message.command)
+    if seconds is None:
         await message.reply("**Usage:** `/seek <seconds>`\nExample: `/seek 60` → jump to 1 minute")
         return
-    seconds = int(args[1])
-    if seconds < 0:
-        await message.reply("❌ Seek value must be a positive number of seconds.")
-        return
+
     track = get_current(message.chat.id)
     if not track:
         await message.reply("❌ Nothing is playing right now.")
         return
-    if seconds > track.duration:
+    if track.duration and seconds > track.duration:
         await message.reply(f"❌ Cannot seek past track duration ({track.duration}s).")
         return
+
     try:
-        await seek_stream(message.chat.id, seconds)
-    except NotImplementedError:
-        await message.reply("⚠️ Seeking isn't supported by the voice call engine right now.")
+        new_pos = await seek_stream(message.chat.id, seconds)
+    except RuntimeError:
+        await message.reply("❌ Nothing is playing right now.")
         return
-    await message.reply(f"⏩ Seeked to `{seconds}s`")
+    except Exception:
+        await message.reply("⚠️ Could not seek — could not reload the audio stream.")
+        return
+
+    await message.reply(f"⏩ Seeked to `{new_pos}s`")
+
+
+@bot.on_message(filters.command("seekback") & filters.group)
+@error_handler
+@admin_or_auth
+async def seekback_cmd(client: Client, message: Message):
+    seconds = _parse_seconds(message.command)
+    if seconds is None:
+        await message.reply("**Usage:** `/seekback <seconds>`\nExample: `/seekback 15` → go back 15 seconds")
+        return
+
+    track = get_current(message.chat.id)
+    if not track:
+        await message.reply("❌ Nothing is playing right now.")
+        return
+
+    current_pos = get_playback_position(message.chat.id)
+    new_target = max(0, current_pos - seconds)
+
+    try:
+        new_pos = await seek_stream(message.chat.id, new_target)
+    except RuntimeError:
+        await message.reply("❌ Nothing is playing right now.")
+        return
+    except Exception:
+        await message.reply("⚠️ Could not seek — could not reload the audio stream.")
+        return
+
+    await message.reply(f"⏪ Seeked back to `{new_pos}s`")
 
 
 @bot.on_message(filters.command("rewind") & filters.group)
 @error_handler
 @admin_or_auth
 async def rewind_cmd(client: Client, message: Message):
-    await message.reply(
-        "⚠️ **Rewind is not supported** by the voice call engine.\n"
-        "Use `/seek <seconds>` to jump to a specific position instead."
-    )
+    """Alias of /seekback for anyone used to the old naming."""
+    await seekback_cmd(client, message)

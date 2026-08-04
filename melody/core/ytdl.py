@@ -373,6 +373,54 @@ async def search_youtube(query: str, limit: int = 5) -> list[dict]:
         return []
 
 
+async def get_playlist_entries(url_or_query: str, limit: int = 50) -> list[dict]:
+    """Extract lightweight metadata for every entry in a YouTube playlist URL.
+
+    Used by /playlist. Like search_youtube(), this stays on the
+    extract_flat metadata path only (no streamingData / format resolution)
+    so it doesn't trip YouTube's cloud-IP bot-detection — each track's real
+    stream is only resolved later, at play time, by download_audio().
+    """
+    def _extract():
+        opts = {
+            **_ydl_opts(),
+            "extract_flat": "in_playlist",
+            "noplaylist": False,
+            "playlist_items": f"1:{max(1, limit)}",
+            "ignoreerrors": True,
+        }
+        opts.pop("format", None)
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url_or_query, download=False)
+            if not info:
+                return []
+            if "entries" in info:
+                return [e for e in info["entries"] if e]
+            # A single-video URL was passed instead of a real playlist.
+            return [info] if info.get("id") else []
+
+    try:
+        loop = asyncio.get_running_loop()
+        entries = await loop.run_in_executor(None, _extract)
+        results = []
+        for e in entries:
+            vid = e.get("id", "")
+            if not vid:
+                continue
+            results.append({
+                "id": vid,
+                "title": e.get("title", "Unknown"),
+                "duration": int(e.get("duration") or 0),
+                "url": f"https://www.youtube.com/watch?v={vid}",
+                "thumbnail": e.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+                "uploader": e.get("uploader", "Unknown"),
+            })
+        return results
+    except Exception as exc:
+        await send_error_log("get_playlist_entries failed", exc)
+        return []
+
+
 def _extract_video_id(url: str) -> str | None:
     """Extract YouTube video ID from various URL formats."""
     import re

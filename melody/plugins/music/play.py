@@ -29,10 +29,10 @@ from melody import bot
 from melody.config import Config
 from melody.core.ytdl import get_video_info
 from melody.core.queue import Track, add_to_queue
-from melody.core.call import play_stream, pre_join, abort_prejoin_if_idle
+from melody.core.call import play_stream, force_play_stream, pre_join, abort_prejoin_if_idle
 from melody.logging import log_activity
 from utils.database import add_history
-from utils.decorators import admin_or_auth, error_handler
+from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
 from utils.formatters import format_duration
 from utils.thumbnails import make_thumbnail, fetch_dp, get_bot_dp
 from utils.animation import AnimatedStatus
@@ -58,14 +58,21 @@ def get_play_buttons(chat_title: str) -> InlineKeyboardMarkup:
     ])
 
 
-async def _play_core(client: Client, message: Message, video: bool = False):
+async def _play_core(client: Client, message: Message, video: bool = False, force: bool = False):
     query = " ".join(message.command[1:]) if len(message.command) > 1 else None
     chat = message.chat
     user = message.from_user
 
     if not query:
-        await message.reply("**Usage:** `/play <song name or YouTube URL>`")
+        usage_cmd = "/cplay" if chat.type == enums.ChatType.CHANNEL else "/play"
+        await message.reply(f"**Usage:** `{usage_cmd} <song name or YouTube URL>`")
         return
+
+    # Channel posts have no from_user — attribute the request to the channel
+    # itself so requester_id/name/mention/dp fetching all stay well-defined.
+    requester_id = user.id if user else chat.id
+    requester_name = user.first_name if user else (chat.title or "Channel")
+    requester_mention = user.mention if user else html.escape(requester_name)
 
     processing = await message.reply("🔥 Getting your vibe ready...")
     anim = AnimatedStatus(processing, "Getting your vibe ready").start()
@@ -74,7 +81,7 @@ async def _play_core(client: Client, message: Message, video: bool = False):
     # parallel with the yt-dlp search — none of this waits on the others.
     join_task = asyncio.create_task(pre_join(chat.id))
     bot_dp_task = asyncio.create_task(get_bot_dp(client))
-    user_dp_task = asyncio.create_task(fetch_dp(client, user.id))
+    user_dp_task = asyncio.create_task(fetch_dp(client, requester_id))
 
     try:
         info = await get_video_info(query)
@@ -98,8 +105,8 @@ async def _play_core(client: Client, message: Message, video: bool = False):
             stream_url=info["stream_url"],
             thumbnail=info["thumbnail"],
             uploader=info["uploader"],
-            requester_id=user.id,
-            requester_name=user.first_name,
+            requester_id=requester_id,
+            requester_name=requester_name,
             requested_in=chat.id,
         )
 
@@ -108,17 +115,22 @@ async def _play_core(client: Client, message: Message, video: bool = False):
         # well before the search above resolves.
         await join_task
 
-        playing_now = await play_stream(chat.id, track, video=video)
+        if force:
+            await force_play_stream(chat.id, track, video=video)
+            playing_now = True
+        else:
+            playing_now = await play_stream(chat.id, track, video=video)
         await add_history(chat.id, info["id"], info["title"])
 
+        activity_label = "Force Played" if force else ("Now Playing" if playing_now else "Queued")
         asyncio.create_task(log_activity(
-            f"🎵 <b>{'Now Playing' if playing_now else 'Queued'}</b>\n"
+            f"🎵 <b>{activity_label}</b>\n"
             f"• Song: <code>{html.escape(info['title'][:60])}</code>\n"
-            f"• Requested by: {html.escape(user.first_name or 'Unknown')} (<code>{user.id}</code>)\n"
+            f"• Requested by: {html.escape(requester_name or 'Unknown')} (<code>{requester_id}</code>)\n"
             f"• Chat: {html.escape(chat.title or 'Private')} (<code>{chat.id}</code>)"
         ))
 
-        status_label = "Now Playing" if playing_now else "Added to Queue"
+        status_label = "Force Played" if force else ("Now Playing" if playing_now else "Added to Queue")
         safe_title    = html.escape(info["title"][:50])
         safe_uploader = html.escape(info["uploader"])
         safe_duration = html.escape(format_duration(info["duration"]))
@@ -130,7 +142,7 @@ async def _play_core(client: Client, message: Message, video: bool = False):
                 song_title=info["title"],
                 artist=info["uploader"],
                 duration=format_duration(info["duration"]),
-                requester_name=user.first_name,
+                requester_name=requester_name,
                 group_name=chat.title or "Private",
                 owner_name=Config.OWNER_NAME,
                 yt_thumbnail_url=info["thumbnail"],
@@ -141,7 +153,7 @@ async def _play_core(client: Client, message: Message, video: bool = False):
                 f"🎶 <b>{html.escape(status_label)}</b>\n\n"
                 f"<b>{safe_title}</b>\n"
                 f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
-                f"🙋 Requested by {user.mention}"
+                f"🙋 Requested by {requester_mention}"
             )
             await anim.stop()
             await processing.delete()
@@ -152,7 +164,7 @@ async def _play_core(client: Client, message: Message, video: bool = False):
                 reply_markup=get_play_buttons(chat.title or ""),
             )
         except Exception:
-            status = "Now Playing ▶️" if playing_now else "Added to Queue 📋"
+            status = "Force Played ⚡" if force else ("Now Playing ▶️" if playing_now else "Added to Queue 📋")
             await anim.stop()
             await processing.edit(
                 f"🎵 <b>{html.escape(status)}</b>\n\n"
@@ -177,4 +189,40 @@ async def play_cmd(client: Client, message: Message):
 @error_handler
 @admin_or_auth
 async def vplay_cmd(client: Client, message: Message):
+    await _play_core(client, message, video=True)
+
+
+# ─── Force play — interrupts whatever is currently playing/queued ────────────
+
+@bot.on_message(filters.command("playforce") & filters.group)
+@error_handler
+@admin_or_auth
+async def playforce_cmd(client: Client, message: Message):
+    await _play_core(client, message, video=False, force=True)
+
+
+@bot.on_message(filters.command("vplayforce") & filters.group)
+@error_handler
+@admin_or_auth
+async def vplayforce_cmd(client: Client, message: Message):
+    await _play_core(client, message, video=True, force=True)
+
+
+# ─── Channel play — /play and /vplay usable directly inside a channel ────────
+# Channels can host a voice chat exactly like groups (py-tgcalls joins by
+# chat_id either way); only the permission model differs, since a channel
+# "message" is usually a post authored by the channel itself rather than a
+# specific user. channel_admin_or_auth() handles that distinction.
+
+@bot.on_message(filters.command("cplay") & filters.channel)
+@error_handler
+@channel_admin_or_auth
+async def cplay_cmd(client: Client, message: Message):
+    await _play_core(client, message, video=False)
+
+
+@bot.on_message(filters.command("cvplay") & filters.channel)
+@error_handler
+@channel_admin_or_auth
+async def cvplay_cmd(client: Client, message: Message):
     await _play_core(client, message, video=True)

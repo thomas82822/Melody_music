@@ -10,7 +10,7 @@ from melody import bot
 from melody.core.call import pause_stream, resume_stream, skip_stream, stop_stream
 from melody.core.queue import format_queue, get_current
 from melody.logging import log_activity
-from utils.decorators import admin_or_auth, error_handler
+from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
 from utils.formatters import format_duration
 
 
@@ -65,6 +65,54 @@ async def stop_cmd(client: Client, message: Message):
     )
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏹ <b>Stopped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
+
+
+# ─── Channel controls — same actions, usable directly inside a channel ───────
+# Channels can host a voice chat exactly like groups; the auth model differs
+# (channel_admin_or_auth trusts channel-authored posts), so these get their
+# own command set rather than broadening the group filters above.
+
+@bot.on_message(filters.command("cpause") & filters.channel)
+@error_handler
+@channel_admin_or_auth
+async def cpause_cmd(client: Client, message: Message):
+    await pause_stream(message.chat.id)
+    await message.reply("<blockquote>⏸ <b>Paused.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"⏸ <b>Paused (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
+
+
+@bot.on_message(filters.command("cresume") & filters.channel)
+@error_handler
+@channel_admin_or_auth
+async def cresume_cmd(client: Client, message: Message):
+    await resume_stream(message.chat.id)
+    await message.reply("<blockquote>▶️ <b>Resumed.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"▶️ <b>Resumed (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
+
+
+@bot.on_message(filters.command(["cskip", "cs"]) & filters.channel)
+@error_handler
+@channel_admin_or_auth
+async def cskip_cmd(client: Client, message: Message):
+    await skip_stream(message.chat.id)
+    await message.reply("<blockquote>⏭ <b>Skipped.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"⏭ <b>Skipped (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
+
+
+@bot.on_message(filters.command("cstop") & filters.channel)
+@error_handler
+@channel_admin_or_auth
+async def cstop_cmd(client: Client, message: Message):
+    await stop_stream(message.chat.id)
+    await message.reply(
+        "<blockquote>⏹ <b>Music stopped and queue cleared.</b></blockquote>",
+        parse_mode=enums.ParseMode.HTML,
+    )
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"⏹ <b>Stopped (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
 
 # ─── Inline button callbacks ──────────────────────────────────────────────────

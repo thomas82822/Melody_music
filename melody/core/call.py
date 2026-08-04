@@ -40,6 +40,9 @@ _pytgcalls: "PyTgCalls | None" = None
 # Per-chat play state
 _active: dict = {}             # chat_id → bool
 _silence_playing: dict = {}    # chat_id → bool; True while silence stream is active
+_is_video: dict = {}           # chat_id → bool; True if current track is streaming as video
+_play_start_time: dict = {}    # chat_id → float (time.time()) when current track started/last sought
+_seek_offset: dict = {}        # chat_id → int seconds; playback position baked into the last stream swap
 
 
 # ─── Audio quality helper ─────────────────────────────────────────────────────
@@ -150,6 +153,9 @@ async def _play_next(chat_id: int):
     else:
         _active.pop(chat_id, None)
         _silence_playing.pop(chat_id, None)
+        _is_video.pop(chat_id, None)
+        _play_start_time.pop(chat_id, None)
+        _seek_offset.pop(chat_id, None)
         try:
             await _pytgcalls.leave_call(chat_id)
         except Exception:
@@ -184,6 +190,9 @@ async def _stream_track(chat_id: int, track, video: bool = False):
         was_active = _active.get(chat_id)
         await _pytgcalls.play(chat_id, stream)
         _active[chat_id] = True
+        _is_video[chat_id] = video
+        _play_start_time[chat_id] = time.time()
+        _seek_offset[chat_id] = 0
 
         if not was_active:
             vol = get_volume(chat_id)
@@ -271,6 +280,20 @@ async def abort_prejoin_if_idle(chat_id: int):
             pass
 
 
+async def force_play_stream(chat_id: int, track, video: bool = False) -> None:
+    """Immediately play `track`, interrupting whatever is currently playing
+    (used by /playforce and /vplayforce). Unlike play_stream(), this NEVER
+    queues — it always jumps straight to streaming this track right now,
+    regardless of what else is active or queued.
+    """
+    set_current(chat_id, track)
+
+    if not _active.get(chat_id):
+        await pre_join(chat_id)
+
+    await _stream_track(chat_id, track, video=video)
+
+
 async def play_stream(chat_id: int, track, video: bool = False) -> bool:
     """
     Start or queue a track.
@@ -327,18 +350,70 @@ async def stop_stream(chat_id: int):
     clear_queue(chat_id)
     _active.pop(chat_id, None)
     _silence_playing.pop(chat_id, None)
+    _is_video.pop(chat_id, None)
+    _play_start_time.pop(chat_id, None)
+    _seek_offset.pop(chat_id, None)
     try:
         await _pytgcalls.leave_call(chat_id)
     except Exception:
         pass
 
 
-async def seek_stream(chat_id: int, seconds: int):
-    # py-tgcalls 2.1.1 does not expose a seek/time-offset API (no seek_stream,
-    # no set_time). Report failure instead of silently pretending to succeed.
-    raise NotImplementedError(
-        "Seeking is not supported by the installed py-tgcalls version"
+def get_playback_position(chat_id: int) -> int:
+    """Best-effort elapsed seconds into the current track (baked-in seek
+    offset + wall-clock time since the stream last started/was sought).
+    Returns 0 if nothing is playing.
+    """
+    if chat_id not in _play_start_time:
+        return 0
+    elapsed = _seek_offset.get(chat_id, 0) + int(time.time() - _play_start_time[chat_id])
+    track = get_current(chat_id)
+    if track and track.duration:
+        elapsed = min(elapsed, track.duration)
+    return max(elapsed, 0)
+
+
+async def seek_stream(chat_id: int, seconds: int) -> int:
+    """Seek to an absolute position (in seconds) into the currently playing
+    track.
+
+    py-tgcalls 2.1.1 has no native seek/time-offset API (no seek_stream, no
+    set_time), so real seeking is implemented by re-issuing play() with a
+    fresh MediaStream whose ffmpeg command carries an input-side `-ss
+    <seconds>` — this makes ffmpeg start decoding from that offset instead
+    of from the beginning. Because play() on an already-active call swaps
+    the stream in place (see _stream_track's docstring), this behaves like a
+    real seek from the listener's perspective.
+
+    Returns the resulting position in seconds. Raises RuntimeError if
+    nothing is currently playing in this chat.
+    """
+    track = get_current(chat_id)
+    if not track or not _pytgcalls or not _active.get(chat_id):
+        raise RuntimeError("Nothing is playing right now.")
+
+    seconds = max(0, int(seconds))
+    if track.duration:
+        seconds = min(seconds, max(track.duration - 1, 0))
+
+    from melody.core.ytdl import download_audio
+
+    video = _is_video.get(chat_id, False)
+    filepath = await download_audio(track.video_id, audio_only=not video)
+
+    audio_quality = _get_audio_quality()
+    stream = MediaStream(
+        filepath,
+        audio_parameters=audio_quality,
+        ffmpeg_parameters=f"-ss {seconds}",
     )
+
+    _silence_playing.pop(chat_id, None)
+    await _pytgcalls.play(chat_id, stream)
+    _active[chat_id] = True
+    _seek_offset[chat_id] = seconds
+    _play_start_time[chat_id] = time.time()
+    return seconds
 
 
 async def change_volume(chat_id: int, volume: int):

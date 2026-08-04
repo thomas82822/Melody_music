@@ -1,0 +1,104 @@
+"""
+📃 /playlist — queue an entire YouTube playlist in one go
+
+Uses get_playlist_entries() (melody/core/ytdl.py, extract_flat metadata
+only — no per-video download here) to pull up to MAX_PLAYLIST_TRACKS
+entries, plays the first immediately (or queues it behind whatever's
+already playing) and queues the rest in order.
+"""
+import asyncio
+import html
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from melody import bot
+from melody.config import Config
+from melody.core.ytdl import get_playlist_entries
+from melody.core.queue import Track, add_to_queue
+from melody.core.call import play_stream, pre_join, abort_prejoin_if_idle
+from melody.logging import log_activity
+from utils.database import add_history
+from utils.decorators import admin_or_auth, error_handler
+
+MAX_PLAYLIST_TRACKS = 50
+
+
+@bot.on_message(filters.command("playlist") & filters.group)
+@error_handler
+@admin_or_auth
+async def playlist_cmd(client: Client, message: Message):
+    query = " ".join(message.command[1:]) if len(message.command) > 1 else None
+    chat = message.chat
+    user = message.from_user
+
+    if not query:
+        await message.reply(
+            "**Usage:** `/playlist <YouTube playlist URL>`\n"
+            "Example: `/playlist https://youtube.com/playlist?list=XXXXXXXX`"
+        )
+        return
+
+    requester_id = user.id if user else chat.id
+    requester_name = user.first_name if user else (chat.title or "Channel")
+
+    msg = await message.reply("📃 Loading playlist...")
+
+    join_task = asyncio.create_task(pre_join(chat.id))
+    entries = await get_playlist_entries(query, limit=MAX_PLAYLIST_TRACKS)
+
+    if not entries:
+        await join_task
+        await abort_prejoin_if_idle(chat.id)
+        await msg.edit("❌ Playlist load nahi ho payi — link check karo ya baad me try karo.")
+        return
+
+    queued = 0
+    skipped = 0
+    first_title = None
+    first_playing = False
+
+    for i, info in enumerate(entries):
+        if Config.MAX_DURATION and info["duration"] and info["duration"] > Config.MAX_DURATION:
+            skipped += 1
+            continue
+
+        track = Track(
+            video_id=info["id"],
+            title=info["title"],
+            duration=info["duration"],
+            stream_url="",
+            thumbnail=info["thumbnail"],
+            uploader=info["uploader"],
+            requester_id=requester_id,
+            requester_name=requester_name,
+            requested_in=chat.id,
+        )
+
+        if queued == 0:
+            await join_task
+            first_playing = await play_stream(chat.id, track)
+            first_title = info["title"]
+        else:
+            add_to_queue(chat.id, track)
+
+        await add_history(chat.id, info["id"], info["title"])
+        queued += 1
+
+    if queued == 0:
+        await msg.edit("❌ Koi bhi track queue nahi ho payi (sab duration limit se bade the).")
+        return
+
+    status = "▶️ Now Playing + " if first_playing else "📋 Added "
+    safe_first_title = html.escape((first_title or "")[:50])
+    skipped_note = f"\n⚠️ Skipped `{skipped}` (too long)." if skipped else ""
+    await msg.edit(
+        f"📃 **Playlist Queued**\n"
+        f"{status}`{queued}` track(s) to the queue.\n"
+        f"First: `{safe_first_title}`{skipped_note}"
+    )
+
+    asyncio.create_task(log_activity(
+        f"📃 <b>Playlist Queued</b>\n"
+        f"• Tracks: <code>{queued}</code>\n"
+        f"• By: {html.escape(requester_name or 'Unknown')} (<code>{requester_id}</code>)\n"
+        f"• Chat: {html.escape(chat.title or 'Private')} (<code>{chat.id}</code>)"
+    ))

@@ -211,7 +211,11 @@ async def register_slash_commands(bot):
         BotCommand("shuffle",   "🔀 Shuffle queue"),
         BotCommand("clearqueue","🗑 Clear the queue"),
         BotCommand("remove",    "❌ Remove song from queue"),
+        BotCommand("playforce", "⚡ Force-play now (skips queue)"),
+        BotCommand("vplayforce","⚡ Force-play video now"),
+        BotCommand("playlist",  "📃 Queue an entire playlist"),
         BotCommand("seek",      "⏩ Seek to position (seconds)"),
+        BotCommand("seekback",  "⏪ Seek backward (seconds)"),
         BotCommand("speed",     "⚡ Set playback speed (0.5-2.0)"),
         BotCommand("search",    "🔍 Search YouTube"),
         BotCommand("lyrics",    "🎤 Get song lyrics"),
@@ -223,6 +227,20 @@ async def register_slash_commands(bot):
         BotCommand("unban",     "✅ Unban user"),
         BotCommand("ping",      "🏓 Check bot latency"),
         BotCommand("stats",     "📊 Bot statistics"),
+        BotCommand("help",      "📖 Help menu"),
+    ]
+
+    # Commands shown when the bot is added as admin in a channel (channel
+    # play). Telegram has no BotCommandScopeAllChannels, so we register
+    # these with the default scope, which channels also fall back to.
+    from pyrogram.types import BotCommandScopeDefault
+    channel_commands = [
+        BotCommand("cplay",     "▶️ Play in this channel's voice chat"),
+        BotCommand("cvplay",    "🎬 Play video in this channel's voice chat"),
+        BotCommand("cpause",    "⏸ Pause (channel)"),
+        BotCommand("cresume",   "▶️ Resume (channel)"),
+        BotCommand("cskip",     "⏭ Skip (channel)"),
+        BotCommand("cstop",     "⏹ Stop (channel)"),
         BotCommand("help",      "📖 Help menu"),
     ]
 
@@ -238,8 +256,12 @@ async def register_slash_commands(bot):
     try:
         await bot.set_bot_commands(group_commands, scope=BotCommandScopeAllGroupChats())
         await bot.set_bot_commands(private_commands, scope=BotCommandScopeAllPrivateChats())
-        LOGGER.info("Slash commands registered: %d group, %d private",
-                    len(group_commands), len(private_commands))
+        # Groups/private already have more specific scopes above, so the
+        # default scope only applies where nothing else matches — i.e.
+        # channels, which Pyrogram/Telegram has no dedicated scope for.
+        await bot.set_bot_commands(channel_commands, scope=BotCommandScopeDefault())
+        LOGGER.info("Slash commands registered: %d group, %d private, %d channel",
+                    len(group_commands), len(private_commands), len(channel_commands))
     except Exception as exc:
         LOGGER.warning("Could not register slash commands: %s", exc)
 

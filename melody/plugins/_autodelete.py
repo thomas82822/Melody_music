@@ -31,16 +31,25 @@ from melody.logging import log_activity, LOGGER
 
 ALL_COMMANDS = [
     "start", "help", "about", "ping", "stats",
-    "play", "vplay", "pause", "resume", "skip", "s", "stop",
+    "play", "vplay", "playforce", "vplayforce", "playlist",
+    "pause", "resume", "skip", "s", "stop",
     "queue", "q", "np", "volume", "mute", "unmute",
     "loop", "loopall", "noloop", "shuffle", "clearqueue", "remove",
-    "seek", "rewind", "speed", "search", "lyrics", "autoplay",
+    "seek", "seekback", "rewind", "speed", "search", "lyrics", "autoplay",
     "auth", "unauth", "authlist", "ban", "unban", "gban", "ungban",
     "broadcast", "chatlist", "maintenance",
     "reboot", "restart", "reload", "update", "logs", "panel",
     "activevc", "setpic", "delpic",
     "eval", "py", "shell", "sh", "bash", "exec",
 ]
+
+# Channel-play commands are authored via channel posts (filters.channel),
+# which `_delete_and_log_command` below intentionally does not touch —
+# channels don't let the bot "delete a channel post" the same way group
+# messages work, and only admins could post it in the first place, so
+# there's no spam to hide. Logged separately isn't needed either since
+# _delete_and_log_command only runs on filters.group.
+CHANNEL_COMMANDS = ["cplay", "cvplay", "cpause", "cresume", "cskip", "cs", "cstop"]
 
 
 async def _safe_delete(message: Message):
