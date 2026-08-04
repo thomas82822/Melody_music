@@ -54,7 +54,7 @@
 | `/skip` or `/s` | Skip current song |
 | `/pause` | Pause playback |
 | `/resume` | Resume playback |
-| `/stop` | Stop music + clear queue |
+| `/stop`, `/end` | Stop music + clear queue |
 | `/seek [sec]` | Seek forward N seconds |
 | `/rewind [sec]` | Rewind N seconds |
 | `/np` | Now playing info |

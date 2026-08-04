@@ -54,7 +54,7 @@ async def skip_cmd(client: Client, message: Message):
     asyncio.create_task(log_activity(f"⏭ <b>Skipped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
 
-@bot.on_message(filters.command("stop") & filters.group)
+@bot.on_message(filters.command(["stop", "end"]) & filters.group)
 @error_handler
 @admin_or_auth
 async def stop_cmd(client: Client, message: Message):
@@ -102,7 +102,7 @@ async def cskip_cmd(client: Client, message: Message):
     asyncio.create_task(log_activity(f"⏭ <b>Skipped (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
 
-@bot.on_message(filters.command("cstop") & filters.channel)
+@bot.on_message(filters.command(["cstop", "cend"]) & filters.channel)
 @error_handler
 @channel_admin_or_auth
 async def cstop_cmd(client: Client, message: Message):

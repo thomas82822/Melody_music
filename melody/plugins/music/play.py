@@ -79,7 +79,7 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
 
     # ⚡ Kick off the VC join AND the profile-photo downloads immediately, in
     # parallel with the yt-dlp search — none of this waits on the others.
-    join_task = asyncio.create_task(pre_join(chat.id))
+    join_task = asyncio.create_task(pre_join(chat.id, video=video))
     bot_dp_task = asyncio.create_task(get_bot_dp(client))
     user_dp_task = asyncio.create_task(fetch_dp(client, requester_id))
 
@@ -162,6 +162,7 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                 caption=caption,
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=get_play_buttons(chat.title or ""),
+                has_spoiler=True,
             )
         except Exception:
             status = "Force Played ⚡" if force else ("Now Playing ▶️" if playing_now else "Added to Queue 📋")

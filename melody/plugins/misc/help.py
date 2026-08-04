@@ -37,7 +37,7 @@ HELP_PAGES = {
         "<blockquote>🔴 <b>Control Commands</b></blockquote>\n\n"
         "<code>/pause</code> — ⏸ Pause playback\n"
         "<code>/resume</code> — ▶️ Resume playback\n"
-        "<code>/stop</code> — ⏹ Stop &amp; clear queue\n"
+        "<code>/stop</code> <code>/end</code> — ⏹ Stop &amp; clear queue\n"
         "<code>/seek [sec]</code> — ⏩ Seek forward\n"
         "<code>/seekback [sec]</code> — ⏪ Seek backward\n"
         "<code>/rewind [sec]</code> — ⏪ Alias of /seekback\n"

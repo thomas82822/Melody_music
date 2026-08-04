@@ -53,6 +53,12 @@ def _get_audio_quality():
     return getattr(AudioQuality, "HIGH_QUALITY", None) or getattr(AudioQuality, "STUDIO", None)
 
 
+def _get_video_quality():
+    """Return the VideoQuality used for /vplay-style video streams."""
+    from pytgcalls.types import VideoQuality
+    return VideoQuality.HD_720p
+
+
 # ─── Silence file (instant VC join) ──────────────────────────────────────────
 
 _SILENCE_PATH: str | None = None
@@ -177,7 +183,21 @@ async def _stream_track(chat_id: int, track, video: bool = False):
         filepath = await download_audio(track.video_id, audio_only=not video)
 
         audio_quality = _get_audio_quality()
-        stream = MediaStream(filepath, audio_parameters=audio_quality)
+        if video:
+            # ROOT-CAUSE FIX (/vplay not showing video): MediaStream only
+            # auto-detects the video track from `filepath` when it isn't
+            # explicitly told to ignore it, but the call must be *joined*
+            # with video capability negotiated from the start — see
+            # pre_join()'s `video` flag, which skips the audio-only silence
+            # join for video requests specifically so this first play() call
+            # is the one that establishes the call and always carries video.
+            stream = MediaStream(
+                filepath,
+                audio_parameters=audio_quality,
+                video_parameters=_get_video_quality(),
+            )
+        else:
+            stream = MediaStream(filepath, audio_parameters=audio_quality)
 
         # Clear silence flag before change_stream so any stream_end events
         # from now on are treated as the real song finishing.
@@ -218,7 +238,7 @@ async def _stream_track(chat_id: int, track, video: bool = False):
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
-async def pre_join(chat_id: int) -> bool:
+async def pre_join(chat_id: int, video: bool = False) -> bool:
     """
     ⚡ Requirement #4 — join the voice chat with silence THE INSTANT the
     command arrives, before we even know which track we're looking for.
@@ -238,7 +258,20 @@ async def pre_join(chat_id: int) -> bool:
 
     Idempotent / safe to call even if the chat is already active (either
     mid silence-join or already playing a real track) — no-ops in that case.
+
+    ROOT-CAUSE FIX (/vplay video never showing): this silence trick always
+    joined with an AUDIO-ONLY file (no camera track). Telegram/py-tgcalls
+    negotiate whether a participant is broadcasting video at *join* time —
+    swapping in a video MediaStream afterwards via play() does not upgrade
+    an already-audio-only join to a video one, which is why /vplay used to
+    play sound with no picture. For video requests we skip the silence
+    pre-join entirely so the very first play() call (in _stream_track) is
+    the one that joins the call, and it always carries the real video —
+    fixing the join at the source instead of trying to patch it after.
     """
+    if video:
+        return False
+
     if _active.get(chat_id):
         return False
 
@@ -289,7 +322,7 @@ async def force_play_stream(chat_id: int, track, video: bool = False) -> None:
     set_current(chat_id, track)
 
     if not _active.get(chat_id):
-        await pre_join(chat_id)
+        await pre_join(chat_id, video=video)
 
     await _stream_track(chat_id, track, video=video)
 
@@ -317,7 +350,7 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
 
     # If nobody pre-joined for us yet, do it now (keeps old callers working).
     if not _active.get(chat_id):
-        await pre_join(chat_id)
+        await pre_join(chat_id, video=video)
 
     # ⚡ Download / pipe-stream the real song concurrently. If silence join
     # succeeded (either here or via an earlier pre_join()), change_stream
@@ -402,11 +435,19 @@ async def seek_stream(chat_id: int, seconds: int) -> int:
     filepath = await download_audio(track.video_id, audio_only=not video)
 
     audio_quality = _get_audio_quality()
-    stream = MediaStream(
-        filepath,
-        audio_parameters=audio_quality,
-        ffmpeg_parameters=f"-ss {seconds}",
-    )
+    if video:
+        stream = MediaStream(
+            filepath,
+            audio_parameters=audio_quality,
+            video_parameters=_get_video_quality(),
+            ffmpeg_parameters=f"-ss {seconds}",
+        )
+    else:
+        stream = MediaStream(
+            filepath,
+            audio_parameters=audio_quality,
+            ffmpeg_parameters=f"-ss {seconds}",
+        )
 
     _silence_playing.pop(chat_id, None)
     await _pytgcalls.play(chat_id, stream)

@@ -200,6 +200,7 @@ async def register_slash_commands(bot):
         BotCommand("resume",    "▶️ Resume playback"),
         BotCommand("skip",      "⏭ Skip current song"),
         BotCommand("stop",      "⏹ Stop music & clear queue"),
+        BotCommand("end",       "⏹ Stop music & clear queue"),
         BotCommand("queue",     "📋 Show current queue"),
         BotCommand("np",        "🎵 Now playing info"),
         BotCommand("volume",    "🔊 Set volume (1-200)"),
@@ -241,6 +242,7 @@ async def register_slash_commands(bot):
         BotCommand("cresume",   "▶️ Resume (channel)"),
         BotCommand("cskip",     "⏭ Skip (channel)"),
         BotCommand("cstop",     "⏹ Stop (channel)"),
+        BotCommand("cend",      "⏹ Stop (channel)"),
         BotCommand("help",      "📖 Help menu"),
     ]
 
