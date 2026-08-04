@@ -55,6 +55,26 @@ def load_plugins():
     return loaded, failed, failed_names
 
 
+async def warm_peer_cache(client, label: str):
+    """
+    BUG FIX: Heroku dynos have an ephemeral filesystem, so Pyrogram's local
+    SQLite peer cache is wiped on every restart/redeploy. Until a chat's
+    peer is resolved again, ANY incoming update from that chat makes
+    Pyrogram's internal handle_updates() raise
+    'ValueError: Peer id invalid: ...' before your command handlers ever
+    run — so commands look like they do nothing. Iterating dialogs once
+    on startup re-resolves every chat the account is already in and
+    prevents this.
+    """
+    try:
+        count = 0
+        async for _ in client.get_dialogs():
+            count += 1
+        LOGGER.info("%s: warmed peer cache for %d chats", label, count)
+    except Exception as exc:
+        LOGGER.warning("%s: could not warm peer cache: %s", label, exc)
+
+
 async def register_slash_commands(bot):
     """Register all slash commands with BotFather via set_my_commands()."""
     from pyrogram.types import BotCommand, BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
@@ -159,6 +179,10 @@ async def main():
 
     await assistant.start()
     LOGGER.info("Assistant client started.")
+
+    # Re-resolve peers for chats we're already in (see warm_peer_cache docstring)
+    await warm_peer_cache(bot, "bot")
+    await warm_peer_cache(assistant, "assistant")
 
     await start_call_py()
     LOGGER.info("PyTgCalls started.")
