@@ -1,5 +1,10 @@
 """
 🔁 /reboot, /reload — owner only
+
+FIX: Removed duplicate `filters.command(["reboot", "restart"])` — /restart
+     is already registered in restart.py. Having two handlers for the same
+     command causes Pyrogram to fire both, which sent two replies and called
+     os.execv() twice (second call would fail with a race condition).
 """
 import asyncio
 import os
@@ -13,7 +18,7 @@ from utils.decorators import owner_only, error_handler
 from melody.logging import LOGGER
 
 
-@bot.on_message(filters.command(["reboot", "restart"]) & filters.private)
+@bot.on_message(filters.command("reboot") & filters.private)
 @owner_only
 @error_handler
 async def reboot_cmd(client: Client, message: Message):

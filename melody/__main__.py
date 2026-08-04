@@ -294,6 +294,16 @@ async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_name
 async def main():
     validate_config()
 
+    # FIX: Create Pyrogram clients AFTER validate_config() passes.
+    # melody/__init__.py intentionally does NOT create clients at import time
+    # because `python -m melody` imports the melody package (runs __init__.py)
+    # BEFORE any code here executes — i.e. before validate_config() runs.
+    # Creating clients with empty/invalid env vars (especially session_string="")
+    # raises ValueError silently and kills the process with zero log output.
+    from melody import create_clients
+    create_clients()
+    LOGGER.info("Pyrogram clients created.")
+
     # Load all plugins BEFORE starting clients so decorators register handlers
     loaded, failed, failed_names = load_plugins()
     LOGGER.info("All plugins loaded.")
