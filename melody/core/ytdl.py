@@ -25,9 +25,48 @@ import tempfile
 import threading
 import time
 
+# The build hook (bin/post_compile) installs the bgutil yt-dlp PO-token
+# provider plugin under vendor/. Add that namespace to sys.path BEFORE
+# importing yt_dlp so its plugin discovery picks it up. This is the real
+# fix for YouTube's "Sign in to confirm you're not a bot" wall on Heroku —
+# a Proof-of-Origin token, not a proxy, is what YouTube actually checks for
+# on cloud/datacenter IPs.
+_BGUTIL_PLUGIN_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "..", "vendor", "bgutil-ytdlp-pot-provider", "plugin",
+)
+_BGUTIL_PLUGIN_DIR = os.path.normpath(_BGUTIL_PLUGIN_DIR)
+if os.path.isdir(_BGUTIL_PLUGIN_DIR) and _BGUTIL_PLUGIN_DIR not in sys.path:
+    sys.path.insert(0, _BGUTIL_PLUGIN_DIR)
+
 from yt_dlp import YoutubeDL
 from melody.config import Config
 from melody.logging import LOGGER, send_error_log
+
+_BGUTIL_STATUS_LOGGED = False
+
+
+def _bgutil_server_home() -> str:
+    """Return the build-bundled bgutil PO-token provider server directory."""
+    return os.path.normpath(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "..", "vendor", "bgutil-ytdlp-pot-provider", "server",
+    ))
+
+
+def _deno_path() -> str:
+    """Return the build-bundled (or system) Deno binary path.
+
+    yt-dlp's YouTube extractor needs a JS runtime to solve the player
+    challenge and to run the bgutil PO-token generator script.
+    """
+    bundled = os.path.normpath(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "..", "vendor", "deno", "bin", "deno",
+    ))
+    if os.path.isfile(bundled):
+        return bundled
+    return shutil.which("deno") or "deno"
 
 # Check whether curl_cffi is available (enables Chrome TLS impersonation,
 # which bypasses YouTube's bot-detection on Heroku / cloud IPs).
@@ -229,17 +268,6 @@ def _ydl_opts(audio_only: bool = True) -> dict:
     )
     has_cookies = os.path.exists(COOKIES_FILE)
 
-    # STRICT COOKIE MODE:
-    # android_music/ios/tv_embedded clients authenticate via their own
-    # embedded API keys and IGNORE a cookiefile entirely — cookies only take
-    # effect on the "web"/"mweb" client paths. So when cookies are present we
-    # put "web" FIRST (uses the logged-in session, bypasses bot-detection and
-    # age/sign-in walls) and keep the others only as a safety-net fallback.
-    player_client = (
-        ["web", "mweb", "tv_embedded", "android_music", "ios", "android"]
-        if has_cookies
-        else ["tv_embedded", "android_music", "ios", "android", "mweb", "web"]
-    )
     # A cookies.txt file is exported from a real desktop/mobile browser
     # session — pairing it with a matching browser User-Agent (instead of the
     # generic mobile UA) keeps the request fingerprint consistent and avoids
@@ -251,6 +279,34 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         else "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 "
              "(KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
     )
+
+    # Do not force specific mobile clients — YouTube now gates most of their
+    # formats behind a Proof-of-Origin (PO) token regardless of client.
+    # "default" lets yt-dlp pick whatever client combo currently works, and
+    # the bgutil provider below supplies the PO token those clients need.
+    extractor_args: dict = {
+        "player_client": ["default"],
+    }
+    provider_args: dict = {"youtube": extractor_args}
+
+    bgutil_server = _bgutil_server_home()
+    bgutil_script = os.path.join(bgutil_server, "src", "generate_once.ts")
+    global _BGUTIL_STATUS_LOGGED
+    if os.path.isfile(bgutil_script):
+        provider_args["youtubepot-bgutilscript"] = {
+            "server_home": [bgutil_server],
+        }
+        if not _BGUTIL_STATUS_LOGGED:
+            LOGGER.info("✅ bgutil PO-token provider configured: %s", bgutil_server)
+            _BGUTIL_STATUS_LOGGED = True
+    elif not _BGUTIL_STATUS_LOGGED:
+        LOGGER.warning(
+            "⚠️ bgutil PO-token provider not installed at %s — "
+            "YouTube may block cloud-host requests with 'Sign in to confirm "
+            "you're not a bot'. Redeploy so bin/post_compile can install it.",
+            bgutil_server,
+        )
+        _BGUTIL_STATUS_LOGGED = True
 
     opts: dict = {
         "quiet": True,
@@ -265,11 +321,11 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         "fragment_retries": 5,
         "check_formats": False,
         "concurrent_fragment_downloads": 1,
-        "extractor_args": {
-            "youtube": {
-                "player_client": player_client,
-            }
-        },
+        # yt-dlp's YouTube extractor needs an external JS runtime to solve
+        # the player challenge and to run the bgutil PO-token script.
+        "js_runtimes": {"deno": {"path": _deno_path()}},
+        "remote_components": ["ejs:github"],
+        "extractor_args": provider_args,
         "http_headers": {
             "User-Agent": user_agent,
             "Referer": "https://www.youtube.com/",
