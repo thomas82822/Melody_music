@@ -247,8 +247,6 @@ async def sync_log_group_peer(bot, assistant):
 
 async def send_startup_log(bot, loaded: int, failed: int, failed_names: list):
     """Send a detailed startup message to the log channel (bot client only)."""
-    if not Config.LOG_GROUP_ID:
-        return
     try:
         me = await bot.get_me()
         py_ver = platform.python_version()

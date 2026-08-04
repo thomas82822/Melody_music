@@ -1,5 +1,7 @@
 """
 📋 /logs — send bot logs (owner only)
+FIX: decorator order corrected — @error_handler outer, @owner_only inner
+     (consistent with all other command handlers in the codebase)
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -8,15 +10,15 @@ from utils.decorators import owner_only, error_handler
 
 
 @bot.on_message(filters.command("logs") & filters.private)
-@owner_only
 @error_handler
+@owner_only
 async def logs_cmd(client: Client, message: Message):
     await message.reply("📋 **Bot Logs** are streamed to the LOG_GROUP channel.\nUse `/chatlist` to see all served chats.")
 
 
 @bot.on_message(filters.command("chatlist") & filters.private)
-@owner_only
 @error_handler
+@owner_only
 async def chatlist_cmd(client: Client, message: Message):
     from utils.database import get_all_chats
     chats = await get_all_chats()
@@ -33,8 +35,8 @@ async def chatlist_cmd(client: Client, message: Message):
 
 
 @bot.on_message(filters.command("maintenance") & filters.private)
-@owner_only
 @error_handler
+@owner_only
 async def maintenance_cmd(client: Client, message: Message):
     args = message.command
     if len(args) < 2:

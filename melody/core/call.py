@@ -26,9 +26,13 @@ async def start_call_py():
 
 
 # ─── Stream-end event ─────────────────────────────────────────────────────────
+# FIX: py-tgcalls 2.x removed on_stream_end() — use on_update() and filter
+# by isinstance(update, StreamEnded) instead.
 
-@_pytgcalls.on_stream_end()
-async def _on_stream_end(_, update: StreamEnded):
+@_pytgcalls.on_update()
+async def _on_stream_end(_, update):
+    if not isinstance(update, StreamEnded):
+        return
     chat_id = getattr(update, "chat_id", None)
     if chat_id is None:
         return
