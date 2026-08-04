@@ -25,6 +25,7 @@ _queues: dict[int, list[Track]] = {}
 _current: dict[int, Track] = {}
 _loop: dict[int, str] = {}       # "none" | "single" | "all"
 _volume: dict[int, int] = {}     # 0-200 (0 = muted)
+_predownloaded: dict[int, Track] = {}  # chat_id -> next AutoPlay track, already cached to /tmp
 
 
 def get_queue(chat_id: int) -> list[Track]:
@@ -103,6 +104,25 @@ def get_volume(chat_id: int) -> int:
 def set_volume_local(chat_id: int, vol: int):
     # Allow 0 (mute) up to 200
     _volume[chat_id] = max(0, min(200, vol))
+
+
+# ─── AutoPlay pre-download cache ──────────────────────────────────────────────
+# Holds the NEXT track AutoPlay has already predicted + downloaded for this
+# chat, so when the current song ends there is zero download wait.
+
+def set_predownloaded(chat_id: int, track: Optional[Track]):
+    if track is None:
+        _predownloaded.pop(chat_id, None)
+    else:
+        _predownloaded[chat_id] = track
+
+
+def pop_predownloaded(chat_id: int) -> Optional[Track]:
+    return _predownloaded.pop(chat_id, None)
+
+
+def peek_predownloaded(chat_id: int) -> Optional[Track]:
+    return _predownloaded.get(chat_id)
 
 
 # ─── Autoplay (persisted in DB) ───────────────────────────────────────────────

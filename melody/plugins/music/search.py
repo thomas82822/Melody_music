@@ -61,7 +61,7 @@ async def play_search_cb(client, cb):
     user = cb.from_user
     chat = cb.message.chat
 
-    if info["duration"] > Config.MAX_DURATION:
+    if Config.MAX_DURATION and info["duration"] > Config.MAX_DURATION:
         await cb.answer("⚠️ Song too long!", show_alert=True)
         return
 

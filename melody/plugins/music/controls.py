@@ -2,13 +2,24 @@
 🎛 Playback controls — pause, resume, skip, stop + inline button handlers
 BUG FIX: @error_handler moved OUTSIDE @admin_or_auth
 """
-from pyrogram import Client, filters
+import html
+import asyncio
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, CallbackQuery
 from melody import bot
 from melody.core.call import pause_stream, resume_stream, skip_stream, stop_stream
 from melody.core.queue import format_queue, get_current
+from melody.logging import log_activity
 from utils.decorators import admin_or_auth, error_handler
 from utils.formatters import format_duration
+
+
+def _who(message: Message) -> tuple[str, str]:
+    """Return (actor_html, chat_html) for a rich activity-log line."""
+    user = message.from_user
+    actor = html.escape(user.first_name) if user else "Someone"
+    chat_name = html.escape(message.chat.title or str(message.chat.id))
+    return actor, chat_name
 
 
 # ─── Message commands ─────────────────────────────────────────────────────────
@@ -18,7 +29,9 @@ from utils.formatters import format_duration
 @admin_or_auth
 async def pause_cmd(client: Client, message: Message):
     await pause_stream(message.chat.id)
-    await message.reply("⏸ **Paused.**")
+    await message.reply("<blockquote>⏸ <b>Paused.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"⏸ <b>Paused</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
 
 @bot.on_message(filters.command("resume") & filters.group)
@@ -26,7 +39,9 @@ async def pause_cmd(client: Client, message: Message):
 @admin_or_auth
 async def resume_cmd(client: Client, message: Message):
     await resume_stream(message.chat.id)
-    await message.reply("▶️ **Resumed.**")
+    await message.reply("<blockquote>▶️ <b>Resumed.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"▶️ <b>Resumed</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
 
 @bot.on_message(filters.command(["skip", "s"]) & filters.group)
@@ -34,7 +49,9 @@ async def resume_cmd(client: Client, message: Message):
 @admin_or_auth
 async def skip_cmd(client: Client, message: Message):
     await skip_stream(message.chat.id)
-    await message.reply("⏭ **Skipped.**")
+    await message.reply("<blockquote>⏭ <b>Skipped.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"⏭ <b>Skipped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
 
 @bot.on_message(filters.command("stop") & filters.group)
@@ -42,7 +59,12 @@ async def skip_cmd(client: Client, message: Message):
 @admin_or_auth
 async def stop_cmd(client: Client, message: Message):
     await stop_stream(message.chat.id)
-    await message.reply("⏹ **Music stopped and queue cleared.**")
+    await message.reply(
+        "<blockquote>⏹ <b>Music stopped and queue cleared.</b></blockquote>",
+        parse_mode=enums.ParseMode.HTML,
+    )
+    actor, chat_name = _who(message)
+    asyncio.create_task(log_activity(f"⏹ <b>Stopped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
 
 # ─── Inline button callbacks ──────────────────────────────────────────────────
@@ -93,24 +115,28 @@ async def lyrics_callback(client: Client, cb: CallbackQuery):
     await cb.answer("🎵 Fetching lyrics...")
     track = get_current(cb.message.chat.id)
     if not track:
-        await cb.message.reply("❌ Nothing is playing right now.")
+        await cb.message.reply("<blockquote>❌ Nothing is playing right now.</blockquote>", parse_mode=enums.ParseMode.HTML)
         return
 
     try:
         import lyricsgenius
         from melody.config import Config
         if not Config.GENIUS_API_TOKEN:
-            await cb.message.reply("⚠️ Genius API token not configured.")
+            await cb.message.reply("<blockquote>⚠️ Genius API token not configured.</blockquote>", parse_mode=enums.ParseMode.HTML)
             return
 
         genius = lyricsgenius.Genius(Config.GENIUS_API_TOKEN, verbose=False, remove_section_headers=True)
-        import asyncio
-        loop = asyncio.get_running_loop()
+        import asyncio as _asyncio
+        loop = _asyncio.get_running_loop()
         song = await loop.run_in_executor(None, lambda: genius.search_song(track.title, track.uploader))
         if song and song.lyrics:
-            lyrics_text = song.lyrics[:3500]
-            await cb.message.reply(f"🎵 **{track.title}**\n\n{lyrics_text}")
+            safe_title = html.escape(track.title)
+            lyrics_text = html.escape(song.lyrics[:3500])
+            await cb.message.reply(
+                f"🎵 <b>{safe_title}</b>\n\n<blockquote expandable>{lyrics_text}</blockquote>",
+                parse_mode=enums.ParseMode.HTML,
+            )
         else:
-            await cb.message.reply("❌ Lyrics not found.")
-    except Exception as exc:
-        await cb.message.reply("❌ Could not fetch lyrics.")
+            await cb.message.reply("<blockquote>❌ Lyrics not found.</blockquote>", parse_mode=enums.ParseMode.HTML)
+    except Exception:
+        await cb.message.reply("<blockquote>❌ Could not fetch lyrics.</blockquote>", parse_mode=enums.ParseMode.HTML)

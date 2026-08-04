@@ -85,7 +85,7 @@ async def _play_core(client: Client, message: Message, video: bool = False):
             await processing.edit("❌ Song nahi mili 🌸")
             return
 
-        if info["duration"] > Config.MAX_DURATION:
+        if Config.MAX_DURATION and info["duration"] > Config.MAX_DURATION:
             await abort_prejoin_if_idle(chat.id)
             await anim.stop()
             await processing.edit(f"⚠️ Song too long! Max allowed: {format_duration(Config.MAX_DURATION)}")

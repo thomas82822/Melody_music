@@ -31,7 +31,7 @@ from pytgcalls.types import MediaStream, StreamEnded
 from melody.logging import LOGGER, send_error_log
 from melody.core.queue import (
     get_current, set_current, pop_next, clear_queue,
-    get_volume, set_volume_local, is_autoplay_on,
+    get_volume, set_volume_local, is_autoplay_on, get_queue,
 )
 
 # Lazy — set by start_call_py() on first call
@@ -192,6 +192,14 @@ async def _stream_track(chat_id: int, track, video: bool = False):
                     await _pytgcalls.change_volume_call(chat_id, vol)
                 except Exception:
                     pass
+
+        # ⚡ AutoPlay pre-download: this song is now live. If nothing is
+        # manually queued after it and AutoPlay is ON for this chat, predict
+        # + download the next track RIGHT NOW in the background so there is
+        # zero download wait once this one ends (see autoplay.prefetch_next).
+        if not get_queue(chat_id) and await is_autoplay_on(chat_id):
+            from melody.core.autoplay import prefetch_next
+            asyncio.create_task(prefetch_next(chat_id))
 
     except Exception as exc:
         _active.pop(chat_id, None)

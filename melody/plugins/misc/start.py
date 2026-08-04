@@ -7,10 +7,12 @@
 """
 import html
 import os
+import asyncio
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from melody import bot
 from melody.config import Config
+from melody.logging import log_activity
 from utils.decorators import error_handler
 from utils.database import is_banned, is_gbanned
 from strings.themes import BLUE, RED, GREEN, btn, fancy
@@ -110,6 +112,17 @@ async def start_dm(client: Client, message: Message):
 
     is_owner = bool(message.from_user and message.from_user.id == Config.OWNER_ID)
 
+    # ── Log who started the bot (owner launches vs. a regular user's first DM) ──
+    user = message.from_user
+    if user:
+        role = "👑 Owner" if is_owner else "🙋 User"
+        uname = f"@{user.username}" if user.username else "—"
+        asyncio.create_task(log_activity(
+            f"🚀 <b>Bot Started</b>\n"
+            f"• {role}: <code>{html.escape(user.first_name)}</code> ({uname})\n"
+            f"• User ID: <code>{user.id}</code>"
+        ))
+
     # ── Animated sticker (if configured) ──
     if Config.WELCOME_STICKER:
         try:
@@ -183,17 +196,22 @@ async def new_group_handler(client: Client, message: Message):
         from utils.database import add_chat
         await add_chat(chat.id, chat.title or "")
 
+        member_count = None
         try:
-            await bot.send_message(
-                Config.LOG_GROUP_ID,
-                f"<b>➕ New Group Added</b>\n"
-                f"• Chat: <code>{html.escape(chat.title or '')}</code>\n"
-                f"• Chat ID: <code>{chat.id}</code>\n"
-                f"• Added by: <code>{adder.id if adder else 'unknown'}</code>",
-                parse_mode=enums.ParseMode.HTML,
-            )
+            member_count = await client.get_chat_members_count(chat.id)
         except Exception:
             pass
+
+        adder_uname = f"@{adder.username}" if (adder and adder.username) else "—"
+        asyncio.create_task(log_activity(
+            f"➕ <b>New Group Added</b>\n"
+            f"• Chat: <code>{html.escape(chat.title or '')}</code>\n"
+            f"• Chat ID: <code>{chat.id}</code>\n"
+            f"• Type: <code>{chat.type.value if chat.type else 'unknown'}</code>\n"
+            + (f"• Members: <code>{member_count}</code>\n" if member_count is not None else "")
+            + f"• Added by: <code>{html.escape(adder.first_name) if adder else 'unknown'}</code> "
+              f"({adder_uname}, <code>{adder.id if adder else 'unknown'}</code>)"
+        ))
 
         buttons = InlineKeyboardMarkup([
             [
