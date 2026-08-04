@@ -186,8 +186,29 @@ async def register_slash_commands(bot):
         LOGGER.warning("Could not register slash commands: %s", exc)
 
 
-async def send_startup_log(bot, loaded: int, failed: int, failed_names: list):
-    """Send a detailed startup message to the log channel."""
+async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_names: list):
+    """
+    Send a detailed startup message to the log channel.
+
+    ROOT-CAUSE FIX: the bot client raises "Peer id invalid" for LOG_GROUP_ID
+    on every cold start. This is NOT the same issue warm_bot_peer_cache()
+    solves — that one warms peers the bot has *previously* seen via
+    add_chat() in MongoDB. The log group is usually never a "chat" the bot
+    receives ordinary commands from, so it's never persisted to the chats
+    collection and never gets warmed. Since Heroku wipes the bot's local
+    peer-storage file on every restart, a numeric channel ID the bot has
+    never resolved *this process* can't be resolved at all — Pyrogram
+    requires either a prior incoming update from that chat or an existing
+    cached access_hash, and a bot account has no way to fetch either for a
+    private supergroup/channel out of thin air.
+
+    The assistant (userbot) account, however, already re-resolves every
+    chat it's a member of via get_dialogs() on every startup (see
+    warm_peer_cache()), so its peer cache for LOG_GROUP_ID is reliable.
+    Send the startup log with the assistant instead of the bot, and only
+    fall back to the bot if that also fails (e.g. assistant isn't a member
+    of the log group).
+    """
     if not Config.LOG_GROUP_ID:
         return
     try:
@@ -212,7 +233,14 @@ async def send_startup_log(bot, loaded: int, failed: int, failed_names: list):
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "✅ All systems operational. Ready to receive commands!"
         )
-        await bot.send_message(Config.LOG_GROUP_ID, text)
+        try:
+            await assistant.send_message(Config.LOG_GROUP_ID, text)
+        except Exception as assistant_exc:
+            LOGGER.warning(
+                "Could not send startup log via assistant (%s); trying bot client",
+                assistant_exc,
+            )
+            await bot.send_message(Config.LOG_GROUP_ID, text)
     except Exception as exc:
         LOGGER.warning("Could not send startup log: %s", exc)
 
@@ -251,7 +279,7 @@ async def main():
     await register_slash_commands(bot)
 
     # Detailed startup log to log channel
-    await send_startup_log(bot, loaded, failed, failed_names)
+    await send_startup_log(bot, assistant, loaded, failed, failed_names)
 
     LOGGER.info("🎶 Melody is live!")
     await asyncio.Event().wait()  # Keep running
