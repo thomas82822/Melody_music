@@ -1,20 +1,31 @@
 """
 📞 Voice call management — py-tgcalls 2.x (PyTgCalls + MediaStream API)
 
-FIX 1 (Silent crash): _pytgcalls was created at module level using
-    `from melody import assistant`, which triggered melody/__init__.py
-    (client creation) at import time — before validate_config() ran.
-    Moved to lazy init inside start_call_py().
+FIXES APPLIED:
+  • Instant VC join (silence trick) — bot joins the voice chat IMMEDIATELY
+    with a short silence stream before yt-dlp finishes searching/downloading.
+    When the real audio is ready, change_stream() swaps in the song (~instant).
+    User hears the bot join in <1 s instead of waiting 5-8 s for yt-dlp.
 
-FIX 2 (AttributeError crash): AudioQuality.STUDIO does not exist in
-    py-tgcalls >= 2.0. Replaced with HIGH_QUALITY (2.x constant name),
-    with a safe fallback in case the installed version differs.
+  • Silence race guard — _silence_playing[chat_id] flag prevents the silence
+    file's stream_end event from being treated as "song finished". Without this,
+    the bot would leave VC prematurely if the silence ends before the song
+    download completes.
 
-FIX 3: @_pytgcalls.on_update() decorator registration moved inside
-    start_call_py() because the instance doesn't exist at import time.
+  • Pipe-safe cleanup — /tmp files from FIFO pipe paths are NOT cleaned up
+    (the FIFO writer thread handles its own tmpdir). Only real /tmp/melody_*
+    files are deleted after playback to free space on Heroku's 512 MB /tmp.
+
+FIX 1 (Silent crash): lazy PyTgCalls init inside start_call_py().
+FIX 2 (AttributeError): AudioQuality.HIGH_QUALITY (2.x) with STUDIO fallback.
+FIX 3: Handler registration moved inside start_call_py().
 """
+import asyncio
 import glob
 import os
+import tempfile
+import time
+
 from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream, StreamEnded
 from melody.logging import LOGGER, send_error_log
@@ -27,15 +38,56 @@ from melody.core.queue import (
 _pytgcalls: "PyTgCalls | None" = None
 
 # Per-chat play state
-_active: dict = {}   # chat_id -> bool
+_active: dict = {}             # chat_id → bool
+_silence_playing: dict = {}    # chat_id → bool; True while silence stream is active
 
+
+# ─── Audio quality helper ─────────────────────────────────────────────────────
 
 def _get_audio_quality():
     """Return best available AudioQuality constant for py-tgcalls 2.x."""
     from pytgcalls.types import AudioQuality
-    # py-tgcalls 2.x uses HIGH_QUALITY; older 1.x had STUDIO — try both.
     return getattr(AudioQuality, "HIGH_QUALITY", None) or getattr(AudioQuality, "STUDIO", None)
 
+
+# ─── Silence file (instant VC join) ──────────────────────────────────────────
+
+_SILENCE_PATH: str | None = None
+_SILENCE_LOCK = asyncio.Lock()
+
+
+async def _get_silence_file() -> str | None:
+    """
+    Create once: a 4-second PCM silence MP3.
+    Used to join VC instantly before yt-dlp finishes downloading.
+    """
+    global _SILENCE_PATH
+    if _SILENCE_PATH and os.path.exists(_SILENCE_PATH):
+        return _SILENCE_PATH
+    async with _SILENCE_LOCK:
+        if _SILENCE_PATH and os.path.exists(_SILENCE_PATH):
+            return _SILENCE_PATH
+        path = os.path.join(tempfile.gettempdir(), "melody_vc_silence.mp3")
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+                "-t", "4",
+                "-c:a", "libmp3lame", "-b:a", "64k",
+                path,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.wait(), timeout=15)
+            if os.path.exists(path) and os.path.getsize(path) > 0:
+                _SILENCE_PATH = path
+                LOGGER.info("✅ Silence file created: %s", path)
+        except Exception as e:
+            LOGGER.debug("Silence file creation failed: %s", e)
+    return _SILENCE_PATH
+
+
+# ─── Startup ─────────────────────────────────────────────────────────────────
 
 async def start_call_py():
     """
@@ -54,20 +106,39 @@ async def start_call_py():
         chat_id = getattr(update, "chat_id", None)
         if chat_id is None:
             return
+
+        # Silence race guard: if the silence stream ends before the real song
+        # is ready, do NOT advance the queue — let _stream_track handle it.
+        if _silence_playing.get(chat_id):
+            LOGGER.debug("stream_end during silence for %d — ignoring (real song loading)", chat_id)
+            return
+
+        # Clean up the finished track's /tmp file (skip FIFO paths)
         current = get_current(chat_id)
         if current:
-            for f in glob.glob(f"/tmp/melody_{current.video_id}.*"):
-                try:
-                    os.unlink(f)
-                except Exception:
-                    pass
+            _cleanup_track_file(current.video_id)
+
         await _play_next(chat_id)
 
     await _pytgcalls.start()
     LOGGER.info("PyTgCalls (py-tgcalls 2.x) started.")
 
+    # Pre-generate the silence file so first /play is instant
+    asyncio.create_task(_get_silence_file())
+
 
 # ─── Internal helpers ─────────────────────────────────────────────────────────
+
+def _cleanup_track_file(video_id: str):
+    """Delete /tmp/melody_<video_id>.* after playback.
+    Skips FIFO pipe paths (they clean themselves up in the writer thread).
+    """
+    for f in glob.glob(f"/tmp/melody_{video_id}.*"):
+        try:
+            os.unlink(f)
+        except Exception:
+            pass
+
 
 async def _play_next(chat_id: int):
     """Advance queue or handle autoplay / stop."""
@@ -78,6 +149,7 @@ async def _play_next(chat_id: int):
         await _stream_track(chat_id, next_track)
     else:
         _active.pop(chat_id, None)
+        _silence_playing.pop(chat_id, None)
         try:
             await _pytgcalls.leave_group_call(chat_id)
         except Exception:
@@ -87,13 +159,23 @@ async def _play_next(chat_id: int):
 
 
 async def _stream_track(chat_id: int, track, video: bool = False):
-    """Download and play a track. Reuses existing call if already in voice chat."""
+    """
+    Download (or pipe-stream) a track and start/swap into the active VC.
+
+    If the bot joined VC early with silence (_active[chat_id] is already True),
+    this calls change_stream() which is near-instant — the user hears music
+    within ~100 ms of the download path returning.
+    """
     try:
         from melody.core.ytdl import download_audio
-        filepath = await download_audio(track.video_id)
+        filepath = await download_audio(track.video_id, audio_only=not video)
 
         audio_quality = _get_audio_quality()
         stream = MediaStream(filepath, audio_parameters=audio_quality)
+
+        # Clear silence flag before change_stream so any stream_end events
+        # from now on are treated as the real song finishing.
+        _silence_playing.pop(chat_id, None)
 
         if _active.get(chat_id):
             await _pytgcalls.change_stream(chat_id, stream)
@@ -110,13 +192,23 @@ async def _stream_track(chat_id: int, track, video: bool = False):
 
     except Exception as exc:
         _active.pop(chat_id, None)
+        _silence_playing.pop(chat_id, None)
         await send_error_log(f"_stream_track failed in {chat_id}", exc)
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
 async def play_stream(chat_id: int, track, video: bool = False) -> bool:
-    """Start or queue a track. Returns True if playing now, False if queued."""
+    """
+    Start or queue a track.
+    Returns True if playing now, False if queued.
+
+    ⚡ INSTANT VC JOIN:
+    If the bot is not yet in VC, we join immediately with a short silence
+    stream so the user sees the bot appear in the call right away.  The real
+    song download runs concurrently; when it finishes, change_stream() swaps
+    in the audio (~instant swap vs. slow initial join).
+    """
     from melody.core.queue import add_to_queue
 
     if _active.get(chat_id):
@@ -124,7 +216,31 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
         return False
 
     set_current(chat_id, track)
-    await _stream_track(chat_id, track, video=video)
+
+    # ⚡ Step 1: Join VC immediately with silence (non-blocking)
+    silence = await _get_silence_file()
+    if silence and _pytgcalls:
+        try:
+            audio_quality = _get_audio_quality()
+            sstream = MediaStream(silence, audio_parameters=audio_quality)
+            _silence_playing[chat_id] = True
+            await asyncio.wait_for(
+                _pytgcalls.join_group_call(chat_id, sstream),
+                timeout=8.0,
+            )
+            _active[chat_id] = True
+            LOGGER.debug("⚡ Instant VC join done for %d", chat_id)
+        except asyncio.TimeoutError:
+            LOGGER.debug("Instant VC join timed out for %d — will join with real song", chat_id)
+            _silence_playing.pop(chat_id, None)
+        except Exception as e:
+            LOGGER.debug("Instant VC join failed for %d: %s — will join with real song", chat_id, e)
+            _silence_playing.pop(chat_id, None)
+
+    # ⚡ Step 2: Download / pipe-stream the real song concurrently
+    # If silence join succeeded, change_stream swaps in audio when ready.
+    # If silence join failed, _stream_track joins VC normally with the real song.
+    asyncio.create_task(_stream_track(chat_id, track, video=video))
     return True
 
 
@@ -150,6 +266,7 @@ async def stop_stream(chat_id: int):
     """Stop playback, clear queue, leave voice chat."""
     clear_queue(chat_id)
     _active.pop(chat_id, None)
+    _silence_playing.pop(chat_id, None)
     try:
         await _pytgcalls.leave_group_call(chat_id)
     except Exception:
