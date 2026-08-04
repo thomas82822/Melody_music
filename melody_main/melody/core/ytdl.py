@@ -212,8 +212,10 @@ def _ydl_opts(audio_only: bool = True) -> dict:
     # curl_cffi makes HTTP requests with Chrome's exact TLS fingerprint.
     # YouTube's bot check reads the TLS hello; Python's urllib/requests have a
     # different fingerprint that gets flagged. curl_cffi resolves this.
+    # Use latest stable Chrome target — no version suffix is safest across
+    # different curl_cffi releases (0.5.x vs 0.7.x use different target names).
     if _CURL_CFFI_OK:
-        opts["impersonate"] = "chrome-124"
+        opts["impersonate"] = "chrome"
     if os.path.exists(COOKIES_FILE):
         opts["cookiefile"] = COOKIES_FILE
     return opts
@@ -301,6 +303,7 @@ async def get_video_info(url_or_query: str) -> dict | None:
         loop = asyncio.get_running_loop()
         info = await loop.run_in_executor(None, _info)
         if not info or not info.get("id"):
+            LOGGER.warning("get_video_info: no result for query: %s", url_or_query[:80])
             return None
         vid = info.get("id", "")
         return {
@@ -313,6 +316,9 @@ async def get_video_info(url_or_query: str) -> dict | None:
             "uploader": info.get("uploader") or info.get("channel") or "Unknown",
         }
     except Exception as exc:
+        # Log full traceback to Heroku console so we can see the real error,
+        # because send_error_log (Telegram) often fails at startup time.
+        LOGGER.error("get_video_info EXCEPTION for %r: %s", url_or_query[:80], exc, exc_info=True)
         await send_error_log("get_video_info failed", exc)
         return None
 
