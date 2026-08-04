@@ -53,7 +53,7 @@
       "required": false
     },
     "YT_COOKIES": {
-      "description": "Base64-encoded YouTube cookies.txt (optional, for age-restricted content)",
+      "description": "Paste the raw contents of a cookies.txt exported from a browser logged into youtube.com (Netscape format). Base64 also accepted. Strongly recommended on Heroku to avoid bot-detection blocks.",
       "required": false
     },
     "MAX_DURATION": {
@@ -74,6 +74,9 @@
     }
   },
   "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-apt"
+    },
     {
       "url": "heroku/python"
     }
