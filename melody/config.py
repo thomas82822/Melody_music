@@ -26,6 +26,16 @@ class Config:
 
     # YouTube
     YT_COOKIES: str = os.environ.get("YT_COOKIES", "")
+    # Optional residential/rotating proxy for yt-dlp requests
+    # (e.g. "http://user:pass@host:port" or "socks5://user:pass@host:port").
+    # Heroku dyno IPs live in well-known AWS/cloud datacenter ranges that
+    # YouTube fingerprints and blocks much more aggressively than home IPs
+    # — this is the real cause of "Sign in to confirm you're not a bot" /
+    # "Requested format is not available" even WITH valid cookies. Routing
+    # yt-dlp traffic through a residential proxy fixes both the bot-detection
+    # wall and most geo-restrictions, since requests then look like they come
+    # from a normal home connection instead of a Heroku/AWS datacenter IP.
+    YT_PROXY: str = os.environ.get("YT_PROXY", "")
 
     # Lyrics
     GENIUS_API_TOKEN: str = os.environ.get("GENIUS_API_TOKEN", "")

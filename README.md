@@ -37,6 +37,7 @@
 | `BOT_USERNAME` | Your bot's @username | ❌ |
 | `GENIUS_API_TOKEN` | From [genius.com/api-clients](https://genius.com/api-clients) | ❌ |
 | `YT_COOKIES` | Base64-encoded cookies.txt for YouTube | ❌ |
+| `YT_PROXY` | Residential/rotating proxy URL for YouTube requests, e.g. `http://user:pass@host:port` (fixes "Sign in to confirm you're not a bot" caused by Heroku's US datacenter IPs) | ❌ (strongly recommended on Heroku) |
 | `MAX_DURATION` | Max song duration in seconds (default: 3600) | ❌ |
 | `AUTOPLAY` | Enable autoplay by default (default: true) | ❌ |
 

@@ -280,6 +280,8 @@ def _ydl_opts(audio_only: bool = True) -> dict:
     # with "Impersonate target not available" on older curl_cffi builds.
     if has_cookies:
         opts["cookiefile"] = COOKIES_FILE
+    if Config.YT_PROXY:
+        opts["proxy"] = Config.YT_PROXY
     return opts
 
 
