@@ -7,6 +7,7 @@ import colorlog
 import traceback
 from pyrogram import enums
 from melody.config import Config
+from strings.themes import fancy
 
 # Formatter
 fmt = colorlog.ColoredFormatter(
@@ -65,7 +66,7 @@ async def send_error_log(text: str, exc: Exception = None):
     try:
         from melody import bot
         safe_text = html.escape(str(text))
-        msg = f"<b>⚠️ Melody Error Log</b>\n\n<code>{safe_text}</code>"
+        msg = f"<b>⚠️ {fancy('Melody Error Log')}</b>\n\n<code>{safe_text}</code>"
         if exc:
             tb = traceback.format_exc()
             safe_tb = html.escape(tb[:3000])

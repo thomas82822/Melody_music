@@ -7,7 +7,7 @@ from melody import bot
 from melody.core.ytdl import search_youtube
 from utils.decorators import error_handler
 from utils.formatters import format_duration
-from strings.themes import RED, btn
+from strings.themes import BLUE, RED, GREEN, btn
 
 
 @bot.on_message(filters.command("search") & filters.group)
@@ -26,13 +26,14 @@ async def search_cmd(client: Client, message: Message):
         return
 
     text = "**🔍 Search Results:**\n\n"
+    colors = [RED, BLUE, GREEN]
     buttons = []
     for i, r in enumerate(results[:5], 1):
         dur = format_duration(r["duration"]) if r["duration"] else "?"
         text += f"`{i}.` **{r['title'][:45]}**\n   👤 {r['uploader']}  ⏱ {dur}\n\n"
         buttons.append([
             InlineKeyboardButton(
-                btn(f"{i}. {r['title'][:30]}", RED),
+                btn(f"{i}. {r['title'][:30]}", colors[(i - 1) % len(colors)]),
                 callback_data=f"play_search_{r['id']}"
             )
         ])

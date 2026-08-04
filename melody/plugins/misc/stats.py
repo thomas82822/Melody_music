@@ -8,6 +8,7 @@ from pyrogram.types import Message
 from melody import bot
 from utils.database import get_stats
 from utils.decorators import error_handler
+from strings.themes import fancy
 
 _start_time = time.time()
 
@@ -26,7 +27,7 @@ async def stats_cmd(client: Client, message: Message):
     disk = psutil.disk_usage("/")
 
     text = (
-        "<blockquote>📊 <b>Melody Statistics</b></blockquote>\n\n"
+        f"<blockquote>📊 <b>{fancy('Melody Statistics')}</b></blockquote>\n\n"
         "<blockquote>"
         f"🕒 <b>Uptime:</b> <code>{hours}h {minutes}m {secs}s</code>\n\n"
         "💻 <b>System:</b>\n"
