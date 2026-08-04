@@ -13,6 +13,7 @@ import sys
 import uvloop
 from melody.logging import LOGGER
 from melody.config import Config
+from utils.database import get_all_chats
 
 
 def validate_config():
@@ -78,6 +79,40 @@ async def warm_peer_cache(client, label: str):
         LOGGER.info("%s: warmed peer cache for %d chats", label, count)
     except Exception as exc:
         LOGGER.warning("%s: could not warm peer cache: %s", label, exc)
+
+
+async def warm_bot_peer_cache(bot):
+    """
+    BUG FIX: the bot client can't call get_dialogs() (BOT_METHOD_INVALID),
+    so — unlike the assistant — it starts every restart with a completely
+    empty local peer cache (Heroku wipes the session file on every
+    restart/redeploy). When an update then arrives from a group chat the
+    bot hasn't "seen" yet in this process, Pyrogram's own update parser
+    raises an UNHANDLED `ValueError: Peer id invalid: ...` deep inside its
+    dispatcher/update-parsing internals — this happens before our
+    @error_handler-wrapped handlers ever run, so it's invisible in our
+    logs and silently drops the update. Symptom: the bot looks fully
+    "started" but never responds to any command in existing groups.
+
+    Fix: resolve_peer() IS allowed for bots as long as the chat_id was
+    seen before, so we pre-warm using the chat IDs we already persist in
+    MongoDB every time the bot is added to a group (see add_chat()).
+    """
+    try:
+        chats = await get_all_chats()
+    except Exception as exc:
+        LOGGER.warning("bot: could not load chats from DB to warm cache: %s", exc)
+        return
+
+    warmed = 0
+    for chat in chats:
+        try:
+            await bot.resolve_peer(chat["chat_id"])
+            warmed += 1
+        except Exception:
+            pass  # bot likely left/kicked from this chat — skip it
+
+    LOGGER.info("bot: warmed peer cache for %d/%d known chats", warmed, len(chats))
 
 
 async def register_slash_commands(bot):
@@ -189,6 +224,10 @@ async def main():
     # Only the assistant/userbot account can call get_dialogs() — bots always
     # get rejected with "BOT_METHOD_INVALID", so don't waste a call on `bot`.
     await warm_peer_cache(assistant, "assistant")
+    # The bot client needs its own warm-up (see warm_bot_peer_cache docstring) —
+    # without it, the bot silently fails to respond in any group it hasn't
+    # "seen" yet this process, which is why only the assistant worked.
+    await warm_bot_peer_cache(bot)
 
     await start_call_py()
     LOGGER.info("PyTgCalls started.")
