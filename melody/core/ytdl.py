@@ -264,6 +264,95 @@ def _extract_video_id(url: str) -> str | None:
     return None
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Invidious fallback search
+#  Invidious is a YouTube proxy that runs on non-cloud IPs — it bypasses
+#  Heroku's IP block on YouTube's bot-detection API.  Used when yt-dlp fails.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_INVIDIOUS_INSTANCES = [
+    "https://invidious.f5.si",
+    "https://invidious.privacydev.net",
+    "https://invidious.nerdvpn.de",
+    "https://invidious.fdn.fr",
+    "https://invidious.io.lol",
+    "https://invidious.einfachzocken.eu",
+    "https://invidious.protokolla.fi",
+    "https://invidious.privacyredirect.com",
+    "https://invidious.jing.rocks",
+    "https://invidious.asir.dev",
+    "https://invidious.drgns.space",
+    "https://invidious.slipfox.xyz",
+    "https://invidious.perennialte.ch",
+    "https://invidious.reallyaweso.me",
+    "https://invidious.darkness.services",
+]
+
+
+def _invidious_search_sync(query: str) -> dict | None:
+    """Search YouTube via public Invidious instances (fallback when yt-dlp fails).
+
+    WHY THIS WORKS ON HEROKU:
+    Invidious is a self-hosted YouTube proxy. Its API servers are NOT on Heroku
+    or AWS — they run on independent VPS machines that YouTube does not block.
+    We query their /api/v1/search endpoint (standard JSON REST), which proxies
+    the YouTube search API on our behalf. No cookies, no yt-dlp, no CDN URLs.
+
+    ProxyHandler({}) strips any malformed HTTP_PROXY env vars that Heroku
+    sometimes sets — they would break urllib but are irrelevant here.
+    """
+    import json
+    import urllib.request
+    import urllib.parse
+
+    encoded_query = urllib.parse.quote_plus(query)
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; MelodyBot/1.0)"}
+
+    for instance in _INVIDIOUS_INSTANCES:
+        try:
+            url = f"{instance}/api/v1/search?q={encoded_query}&type=video"
+            req = urllib.request.Request(url, headers=headers)
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            with opener.open(req, timeout=8) as resp:
+                if resp.status != 200:
+                    continue
+                items = json.loads(resp.read().decode("utf-8"))
+
+            result = next(
+                (item for item in items
+                 if item.get("type") == "video" and item.get("videoId")),
+                None,
+            )
+            if not result:
+                continue
+
+            thumbnails = result.get("videoThumbnails") or []
+            thumbnail = (
+                next(
+                    (t.get("url", "") for t in thumbnails
+                     if t.get("quality") in {"medium", "high"}),
+                    thumbnails[0].get("url", "") if thumbnails else "",
+                )
+            )
+            vid = result["videoId"]
+            LOGGER.info("✅ Invidious search OK (%s): %s", instance, result.get("title", "")[:50])
+            return {
+                "id": vid,
+                "webpage_url": f"https://www.youtube.com/watch?v={vid}",
+                "title": result.get("title") or query,
+                "duration": int(result.get("lengthSeconds") or 0),
+                "thumbnail": thumbnail,
+                "uploader": result.get("author") or "",
+            }
+        except Exception as exc:
+            LOGGER.debug("Invidious search failed (%s): %s", instance, exc)
+            continue
+
+    LOGGER.warning("❌ All Invidious instances failed for: %s", query[:50])
+    return None
+
+
 async def get_video_info(url_or_query: str) -> dict | None:
     """Get metadata for a single video (or first search result).
 
@@ -289,8 +378,19 @@ async def get_video_info(url_or_query: str) -> dict | None:
         vid_id = None
 
     def _info():
-        # extract_flat=True: metadata-only path, no streamingData, no bot check.
-        opts = {**_ydl_opts(), "extract_flat": True, "default_search": "ytsearch1"}
+        # CRITICAL FIX: noplaylist=False is REQUIRED for ytsearch1: queries.
+        # yt-dlp 2025+ internally wraps ytsearch results in a "SearchResultsPlaylist".
+        # With noplaylist=True (from _ydl_opts), yt-dlp refuses to process it → returns
+        # nothing → silent "Song not found" error even when the video exists.
+        # extract_flat="in_playlist" — lightweight metadata only, no streamingData request
+        # (streamingData = the CDN URL list that triggers YouTube bot-detection on Heroku).
+        opts = {
+            **_ydl_opts(),
+            "extract_flat": "in_playlist",
+            "default_search": "ytsearch1",
+            "noplaylist": False,    # MUST be False for ytsearch1: to work
+            "socket_timeout": 6,    # fail fast so Invidious fallback runs sooner
+        }
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(query, download=False)
             if info and "entries" in info and info["entries"]:
@@ -301,7 +401,16 @@ async def get_video_info(url_or_query: str) -> dict | None:
         loop = asyncio.get_running_loop()
         info = await loop.run_in_executor(None, _info)
         if not info or not info.get("id"):
-            return None
+            # ── Invidious fallback: yt-dlp search returned nothing ──────────
+            # On Heroku, YouTube's bot-detection sometimes blocks yt-dlp even
+            # with Android/iOS clients. Invidious runs its own YouTube API proxy
+            # on non-cloud IPs — it is not affected by Heroku's IP ban.
+            LOGGER.info("yt-dlp search returned nothing — trying Invidious fallback | %s", url_or_query[:50])
+            info = await asyncio.get_event_loop().run_in_executor(
+                None, _invidious_search_sync, url_or_query
+            )
+            if not info or not info.get("id"):
+                return None
         vid = info.get("id", "")
         return {
             "id": vid,
@@ -313,6 +422,24 @@ async def get_video_info(url_or_query: str) -> dict | None:
             "uploader": info.get("uploader") or info.get("channel") or "Unknown",
         }
     except Exception as exc:
+        # ── Invidious fallback on exception ─────────────────────────────────
+        LOGGER.warning("yt-dlp get_video_info raised exception — trying Invidious: %s", exc)
+        try:
+            loop2 = asyncio.get_event_loop()
+            info = await loop2.run_in_executor(None, _invidious_search_sync, url_or_query)
+            if info and info.get("id"):
+                vid = info["id"]
+                return {
+                    "id": vid,
+                    "title": info.get("title", "Unknown"),
+                    "duration": int(info.get("duration") or 0),
+                    "url": info.get("webpage_url") or f"https://www.youtube.com/watch?v={vid}",
+                    "stream_url": "",
+                    "thumbnail": info.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+                    "uploader": info.get("uploader") or "Unknown",
+                }
+        except Exception:
+            pass
         await send_error_log("get_video_info failed", exc)
         return None
 
