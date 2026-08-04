@@ -12,7 +12,7 @@ BUG FIX: ENTITY_BOUNDS_INVALID — switched all dynamic-text messages to HTML
 """
 import html
 import urllib.parse
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from melody import bot
 from melody.config import Config
@@ -108,7 +108,7 @@ async def _play_core(client: Client, message: Message, video: bool = False):
         await message.reply_photo(
             thumb_path,
             caption=caption,
-            parse_mode="html",
+            parse_mode=enums.ParseMode.HTML,
             reply_markup=get_play_buttons(chat.title or ""),
         )
     except Exception:
@@ -117,7 +117,7 @@ async def _play_core(client: Client, message: Message, video: bool = False):
             f"🎵 <b>{html.escape(status)}</b>\n\n"
             f"<code>{safe_title}</code>\n"
             f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>",
-            parse_mode="html",
+            parse_mode=enums.ParseMode.HTML,
             reply_markup=get_play_buttons(chat.title or ""),
         )
 

@@ -5,6 +5,7 @@ import html
 import logging
 import colorlog
 import traceback
+from pyrogram import enums
 from melody.config import Config
 
 # Formatter
@@ -43,6 +44,10 @@ async def send_error_log(text: str, exc: Exception = None):
             tb = traceback.format_exc()
             safe_tb = html.escape(tb[:3000])
             msg += f"\n\n<pre>{safe_tb}</pre>"
-        await bot.send_message(Config.LOG_GROUP_ID, msg, parse_mode="html")
+        await bot.send_message(Config.LOG_GROUP_ID, msg, parse_mode=enums.ParseMode.HTML)
     except Exception:
-        LOGGER.error("Failed to send log to group: %s", text)
+        # Always keep the real traceback visible in the Heroku console, even
+        # when delivery to the Telegram log group itself fails (e.g. bad
+        # parse_mode, peer not found, network issue). Previously only the
+        # short "text" summary was logged and the traceback was lost.
+        LOGGER.error("Failed to send log to group: %s", text, exc_info=exc)
