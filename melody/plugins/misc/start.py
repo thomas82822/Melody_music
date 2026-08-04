@@ -1,10 +1,13 @@
 """
-🚀 /start — Ultra-premium Melody Music Bot welcome
-   DM:    User buttons + Owner panel (if owner)
-   Group: Attractive join welcome
+🚀 /start — Ultra-premium Melody welcome
+   • HTML blockquote + bold/italic formatting everywhere
+   • Animated sticker on start (if WELCOME_STICKER set)
+   • User buttons vs Owner panel buttons
+   • Color-coded emoji buttons (🔵 normal | 🔴 danger | 🟢 music)
 """
+import html
 import os
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from melody import bot
 from melody.config import Config
@@ -14,66 +17,78 @@ from utils.database import is_banned, is_gbanned
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets")
 BG_START = os.path.join(ASSETS, "bg_start.png")
 
-# ─── Button layouts ───────────────────────────────────────────────────────────
+# ─── Formatted text blocks ────────────────────────────────────────────────────
+
+WELCOME_DM = (
+    "<blockquote>"
+    "🎶 <b>MELODY MUSIC BOT</b>\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━"
+    "</blockquote>\n\n"
+    "🎵 <b>Premium Telegram Music Bot</b>\n"
+    "<i>Stream HD music directly in your group voice chats!</i>\n\n"
+    "<blockquote>"
+    "✨ <b>Features:</b>\n"
+    "  ▸ 🔥 YouTube HD streaming\n"
+    "  ▸ 🎛 Inline music controls\n"
+    "  ▸ 📋 Smart queue manager\n"
+    "  ▸ 🔁 Loop &amp; AutoPlay\n"
+    "  ▸ 🎤 Genius lyrics\n"
+    "  ▸ 🖼 Beautiful play cards"
+    "</blockquote>\n\n"
+    f"♛ <b>Powered by</b> <code>{html.escape(Config.OWNER_NAME)}</code>\n"
+    "💛 <i>Made with love for music lovers</i>"
+)
+
+WELCOME_GROUP = (
+    "<blockquote>"
+    "🎶 <b>MELODY</b> has joined <b>{chat}</b>! 🎉"
+    "</blockquote>\n\n"
+    "Hey <b>{user}</b>, thanks for adding me! 🙏\n\n"
+    "<blockquote>"
+    "🎵 <code>/play &lt;song&gt;</code> — Start the music\n"
+    "📋 <code>/queue</code> — View the queue\n"
+    "⏭ <code>/skip</code> — Skip current song\n"
+    "📖 <code>/help</code> — See all commands"
+    "</blockquote>\n\n"
+    f"♛ <i>Powered by {html.escape(Config.OWNER_NAME)}</i>"
+)
+
+
+# ─── Button layouts (color-coded with emoji) ──────────────────────────────────
 
 def user_buttons() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🎵  Play Music", switch_inline_query_current_chat=""),
-            InlineKeyboardButton("📖  Help", callback_data="help_main"),
+            InlineKeyboardButton("🟢  ▶ Play Music", switch_inline_query_current_chat=""),
+            InlineKeyboardButton("🔵  📖 Help", callback_data="help_main"),
         ],
         [
             InlineKeyboardButton(
-                "➕  Add Me to Your Group",
+                "🔵  ➕ Add Me to Group",
                 url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
             ),
         ],
         [
-            InlineKeyboardButton("📢  Support", url="https://t.me/+0000000000000000"),
-            InlineKeyboardButton("ℹ️  About", callback_data="about_cb"),
+            InlineKeyboardButton("🔵  📢 Support", url="https://t.me/+0000000000000000"),
+            InlineKeyboardButton("🔵  ℹ About", callback_data="about_cb"),
         ],
     ])
 
 
 def owner_buttons() -> InlineKeyboardMarkup:
-    """Shown ONLY to the owner in DM."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🎵  Play Music", switch_inline_query_current_chat=""),
-            InlineKeyboardButton("📖  Help", callback_data="help_main"),
+            InlineKeyboardButton("🟢  ▶ Play Music", switch_inline_query_current_chat=""),
+            InlineKeyboardButton("🔵  📖 Help", callback_data="help_main"),
         ],
         [
             InlineKeyboardButton(
-                "➕  Add Me to Your Group",
+                "🔵  ➕ Add Me to Group",
                 url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
             ),
         ],
         [
-            InlineKeyboardButton("👑  Owner Panel", callback_data="owner_panel"),
-        ],
-    ])
-
-
-def owner_panel_markup() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🖼️  Set Start Pic", callback_data="owner_setpic_info"),
-            InlineKeyboardButton("📡  Active VCs", callback_data="owner_activevc"),
-        ],
-        [
-            InlineKeyboardButton("📢  Broadcast", callback_data="owner_broadcast_info"),
-            InlineKeyboardButton("📊  Bot Stats", callback_data="owner_stats"),
-        ],
-        [
-            InlineKeyboardButton("📋  Chat List", callback_data="owner_chatlist"),
-            InlineKeyboardButton("🔧  Maintenance", callback_data="owner_maintenance"),
-        ],
-        [
-            InlineKeyboardButton("🔄  Reload Plugins", callback_data="owner_reload"),
-            InlineKeyboardButton("🔁  Restart Bot", callback_data="owner_restart"),
-        ],
-        [
-            InlineKeyboardButton("◀️  Back", callback_data="owner_back_home"),
+            InlineKeyboardButton("🔴  👑 Owner Panel", callback_data="owner_panel"),
         ],
     ])
 
@@ -87,36 +102,35 @@ async def start_dm(client: Client, message: Message):
         if await is_gbanned(message.from_user.id):
             return
         if await is_banned(message.from_user.id):
-            return await message.reply("❌ You are banned from using this bot.")
+            return await message.reply(
+                "<b>❌ You are banned from using this bot.</b>",
+                parse_mode=enums.ParseMode.HTML,
+            )
 
-    is_owner = (
-        message.from_user
-        and message.from_user.id == Config.OWNER_ID
-    )
+    is_owner = bool(message.from_user and message.from_user.id == Config.OWNER_ID)
 
-    caption = (
-        "🎶 **MELODY MUSIC BOT**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🎵 **Premium Telegram Music Bot**\n"
-        "Stream high-quality music directly in your group voice chats!\n\n"
-        "✨ **Features:**\n"
-        "  ▸ 🔥 YouTube HD streaming\n"
-        "  ▸ 🎛 Inline music controls\n"
-        "  ▸ 📋 Smart queue manager\n"
-        "  ▸ 🔁 Loop & AutoPlay\n"
-        "  ▸ 🎤 Genius lyrics\n"
-        "  ▸ 🖼 Beautiful play cards\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"♛ **Powered by** `{Config.OWNER_NAME}`\n"
-        "💛 _Made with love for music lovers_"
-    )
+    # ── Animated sticker (if configured) ──
+    if Config.WELCOME_STICKER:
+        try:
+            await message.reply_sticker(Config.WELCOME_STICKER)
+        except Exception:
+            pass
 
     markup = owner_buttons() if is_owner else user_buttons()
 
     if os.path.exists(BG_START):
-        await message.reply_photo(BG_START, caption=caption, reply_markup=markup)
+        await message.reply_photo(
+            BG_START,
+            caption=WELCOME_DM,
+            parse_mode=enums.ParseMode.HTML,
+            reply_markup=markup,
+        )
     else:
-        await message.reply(caption, reply_markup=markup)
+        await message.reply(
+            WELCOME_DM,
+            parse_mode=enums.ParseMode.HTML,
+            reply_markup=markup,
+        )
 
 
 # ─── /start in Groups ─────────────────────────────────────────────────────────
@@ -132,22 +146,22 @@ async def start_group(client: Client, message: Message):
 
     buttons = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("▶️  Play Music", switch_inline_query_current_chat=""),
-            InlineKeyboardButton("📖  Help", callback_data="help_main"),
+            InlineKeyboardButton("🟢  ▶ Play Music", switch_inline_query_current_chat=""),
+            InlineKeyboardButton("🔵  📖 Help", callback_data="help_main"),
         ],
         [
             InlineKeyboardButton(
-                "➕  Add to Another Group",
+                "🔵  ➕ Add to Another Group",
                 url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
             ),
         ],
     ])
-
     await message.reply(
-        "🎶 **MELODY** is ready to rock this group!\n\n"
-        "Use `/play <song name or YouTube link>` to start the music 🎵\n"
-        "Use `/help` to see all available commands.\n\n"
-        f"♛ _Powered by {Config.OWNER_NAME}_",
+        "<blockquote>🎶 <b>MELODY</b> is ready to rock this group! 🎵</blockquote>\n\n"
+        "Use <code>/play &lt;song name or YouTube link&gt;</code> to start the music.\n"
+        "Use <code>/help</code> to see all available commands.\n\n"
+        f"♛ <i>Powered by {html.escape(Config.OWNER_NAME)}</i>",
+        parse_mode=enums.ParseMode.HTML,
         reply_markup=buttons,
     )
 
@@ -159,86 +173,59 @@ async def start_group(client: Client, message: Message):
 async def new_group_handler(client: Client, message: Message):
     bot_user = await client.get_me()
     for member in message.new_chat_members:
-        if member.id == bot_user.id:
-            chat = message.chat
-            adder = message.from_user
+        if member.id != bot_user.id:
+            continue
 
-            # Save chat
-            from utils.database import add_chat
-            await add_chat(chat.id, chat.title or "")
+        chat  = message.chat
+        adder = message.from_user
 
-            # Log to private group
-            try:
-                await bot.send_message(
-                    Config.LOG_GROUP_ID,
-                    f"**➕ New Group Added**\n"
-                    f"• Chat: `{chat.title}`\n"
-                    f"• Chat ID: `{chat.id}`\n"
-                    f"• Added by: `{adder.id if adder else 'unknown'}`",
-                )
-            except Exception:
-                pass
+        from utils.database import add_chat
+        await add_chat(chat.id, chat.title or "")
 
-            buttons = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("▶️  Play Now", switch_inline_query_current_chat=""),
-                    InlineKeyboardButton("📖  Help", callback_data="help_main"),
-                ],
-                [
-                    InlineKeyboardButton(
-                        "➕  Add to Another Group",
-                        url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
-                    ),
-                ],
-            ])
-
-            adder_name = adder.first_name if adder else "there"
-            caption = (
-                f"🎶 **MELODY** has joined **{chat.title}**! 🎉\n\n"
-                f"Hey **{adder_name}**, thanks for adding me! 🙏\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "🎵 `/play <song>` — Start the music\n"
-                "📋 `/queue` — View the queue\n"
-                "⏭ `/skip` — Skip current song\n"
-                "📖 `/help` — See all commands\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"♛ _Powered by {Config.OWNER_NAME}_"
+        try:
+            await bot.send_message(
+                Config.LOG_GROUP_ID,
+                f"<b>➕ New Group Added</b>\n"
+                f"• Chat: <code>{html.escape(chat.title or '')}</code>\n"
+                f"• Chat ID: <code>{chat.id}</code>\n"
+                f"• Added by: <code>{adder.id if adder else 'unknown'}</code>",
+                parse_mode=enums.ParseMode.HTML,
             )
+        except Exception:
+            pass
 
-            if os.path.exists(BG_START):
-                await message.reply_photo(BG_START, caption=caption, reply_markup=buttons)
-            else:
-                await message.reply(caption, reply_markup=buttons)
-            break
+        buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🟢  ▶ Play Now", switch_inline_query_current_chat=""),
+                InlineKeyboardButton("🔵  📖 Help", callback_data="help_main"),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔵  ➕ Add to Another Group",
+                    url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
+                ),
+            ],
+        ])
 
+        adder_name = html.escape(adder.first_name if adder else "there")
+        chat_name  = html.escape(chat.title or "this group")
 
-# ─── Back to Home callback ────────────────────────────────────────────────────
-# (owner_panel callback is handled in owner/panel.py)
+        caption = WELCOME_GROUP.format(chat=chat_name, user=adder_name)
 
-@bot.on_callback_query(filters.regex(r"^owner_back_home$"))
-@error_handler
-async def cb_owner_back_home(client: Client, cb: CallbackQuery):
-    if cb.from_user.id != Config.OWNER_ID:
-        return await cb.answer("❌ Owner only!", show_alert=True)
-
-    caption = (
-        "🎶 **MELODY MUSIC BOT**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🎵 **Premium Telegram Music Bot**\n"
-        "Stream high-quality music directly in your group voice chats!\n\n"
-        "✨ **Features:**\n"
-        "  ▸ 🔥 YouTube HD streaming\n"
-        "  ▸ 🎛 Inline music controls\n"
-        "  ▸ 📋 Smart queue manager\n"
-        "  ▸ 🔁 Loop & AutoPlay\n"
-        "  ▸ 🎤 Genius lyrics\n"
-        "  ▸ 🖼 Beautiful play cards\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"♛ **Powered by** `{Config.OWNER_NAME}`\n"
-        "💛 _Made with love for music lovers_"
-    )
-    await cb.message.edit_text(caption, reply_markup=owner_buttons())
-    await cb.answer()
+        if os.path.exists(BG_START):
+            await message.reply_photo(
+                BG_START,
+                caption=caption,
+                parse_mode=enums.ParseMode.HTML,
+                reply_markup=buttons,
+            )
+        else:
+            await message.reply(
+                caption,
+                parse_mode=enums.ParseMode.HTML,
+                reply_markup=buttons,
+            )
+        break
 
 
 # ─── About callback ───────────────────────────────────────────────────────────
@@ -247,22 +234,41 @@ async def cb_owner_back_home(client: Client, cb: CallbackQuery):
 @error_handler
 async def cb_about(client: Client, cb: CallbackQuery):
     await cb.message.edit_text(
-        "🎶 **About Melody**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "**Melody** is a premium Telegram music bot that streams\nhigh-quality audio from YouTube.\n\n"
-        "🔥 **Features:**\n"
+        "<blockquote>🎶 <b>About Melody</b></blockquote>\n\n"
+        "<b>Melody</b> is a premium Telegram music bot that streams\n"
+        "high-quality audio from YouTube.\n\n"
+        "<blockquote>"
+        "🔥 <b>Features:</b>\n"
         "  ▸ HD YouTube streaming\n"
         "  ▸ Smart queue management\n"
         "  ▸ AutoPlay with related songs\n"
         "  ▸ Genius lyrics integration\n"
         "  ▸ Beautiful now-playing cards\n"
-        "  ▸ Group admin controls\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "Made with 💛 by an anonymous developer 🌑\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "  ▸ Group admin controls"
+        "</blockquote>\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Made with 💀 by <b>Sasta Developer</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+        parse_mode=enums.ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("◀️  Back", callback_data="start_back")],
+            [InlineKeyboardButton("🔴  ◀ Back", callback_data="start_back")],
         ]),
+    )
+    await cb.answer()
+
+
+# ─── Back to Home ─────────────────────────────────────────────────────────────
+
+@bot.on_callback_query(filters.regex(r"^owner_back_home$"))
+@error_handler
+async def cb_owner_back_home(client: Client, cb: CallbackQuery):
+    if cb.from_user.id != Config.OWNER_ID:
+        return await cb.answer("❌ Owner only!", show_alert=True)
+
+    await cb.message.edit_text(
+        WELCOME_DM,
+        parse_mode=enums.ParseMode.HTML,
+        reply_markup=owner_buttons(),
     )
     await cb.answer()
 
@@ -271,24 +277,9 @@ async def cb_about(client: Client, cb: CallbackQuery):
 @error_handler
 async def cb_start_back(client: Client, cb: CallbackQuery):
     is_owner = cb.from_user.id == Config.OWNER_ID
-    caption = (
-        "🎶 **MELODY MUSIC BOT**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🎵 **Premium Telegram Music Bot**\n"
-        "Stream high-quality music directly in your group voice chats!\n\n"
-        "✨ **Features:**\n"
-        "  ▸ 🔥 YouTube HD streaming\n"
-        "  ▸ 🎛 Inline music controls\n"
-        "  ▸ 📋 Smart queue manager\n"
-        "  ▸ 🔁 Loop & AutoPlay\n"
-        "  ▸ 🎤 Genius lyrics\n"
-        "  ▸ 🖼 Beautiful play cards\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"♛ **Powered by** `{Config.OWNER_NAME}`\n"
-        "💛 _Made with love for music lovers_"
-    )
     await cb.message.edit_text(
-        caption,
+        WELCOME_DM,
+        parse_mode=enums.ParseMode.HTML,
         reply_markup=owner_buttons() if is_owner else user_buttons(),
     )
     await cb.answer()

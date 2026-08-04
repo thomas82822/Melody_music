@@ -1,15 +1,16 @@
 """
 👑 Owner Panel — All owner control callbacks
-   Handles: stats, chatlist, activevc, broadcast info,
-            setpic info, maintenance toggle, reload, restart
+   HTML blockquote formatting + color-coded emoji buttons
+   🔵 Blue = info/safe | 🔴 Red = danger/restart | 🟢 Green = positive
 """
 import asyncio
+import html
 import importlib
 import pkgutil
 import sys
 import time
 import psutil
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from melody import bot
 from melody.config import Config
@@ -18,10 +19,67 @@ from utils.database import get_all_chats, get_stats
 
 _start_time = time.time()
 
+PANEL_TEXT = (
+    "<blockquote>👑 <b>OWNER CONTROL PANEL</b></blockquote>\n\n"
+    "Welcome back, <b>Master</b> 🫡\n"
+    "<i>Choose an action below:</i>\n\n"
+    "<blockquote>"
+    "🖼️ <b>Set Start Pic</b> — Change welcome image\n"
+    "📡 <b>Active VCs</b> — Live voice chat sessions\n"
+    "📢 <b>Broadcast</b> — Message all chats\n"
+    "📊 <b>Bot Stats</b> — CPU, RAM, uptime\n"
+    "📋 <b>Chat List</b> — All served groups\n"
+    "🔧 <b>Maintenance</b> — Toggle mode\n"
+    "🔄 <b>Reload</b> — Hot-reload plugins\n"
+    "🔴 <b>Restart</b> — Full bot restart"
+    "</blockquote>"
+)
+
+PANEL_MARKUP = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton("🔵  🖼️ Set Start Pic",  callback_data="owner_setpic_info"),
+        InlineKeyboardButton("🟢  📡 Active VCs",      callback_data="owner_activevc"),
+    ],
+    [
+        InlineKeyboardButton("🔵  📢 Broadcast",       callback_data="owner_broadcast_info"),
+        InlineKeyboardButton("🔵  📊 Bot Stats",       callback_data="owner_stats"),
+    ],
+    [
+        InlineKeyboardButton("🔵  📋 Chat List",       callback_data="owner_chatlist"),
+        InlineKeyboardButton("🔴  🔧 Maintenance",     callback_data="owner_maintenance"),
+    ],
+    [
+        InlineKeyboardButton("🟢  🔄 Reload Plugins",  callback_data="owner_reload"),
+        InlineKeyboardButton("🔴  🔁 Restart Bot",     callback_data="owner_restart"),
+    ],
+])
+
+PANEL_MARKUP_WITH_BACK = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton("🔵  🖼️ Set Start Pic",  callback_data="owner_setpic_info"),
+        InlineKeyboardButton("🟢  📡 Active VCs",      callback_data="owner_activevc"),
+    ],
+    [
+        InlineKeyboardButton("🔵  📢 Broadcast",       callback_data="owner_broadcast_info"),
+        InlineKeyboardButton("🔵  📊 Bot Stats",       callback_data="owner_stats"),
+    ],
+    [
+        InlineKeyboardButton("🔵  📋 Chat List",       callback_data="owner_chatlist"),
+        InlineKeyboardButton("🔴  🔧 Maintenance",     callback_data="owner_maintenance"),
+    ],
+    [
+        InlineKeyboardButton("🟢  🔄 Reload Plugins",  callback_data="owner_reload"),
+        InlineKeyboardButton("🔴  🔁 Restart Bot",     callback_data="owner_restart"),
+    ],
+    [
+        InlineKeyboardButton("🔴  ⊛ BACK ⊛",           callback_data="owner_back_home"),
+    ],
+])
+
 
 def back_to_panel() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("◀️  Back to Panel", callback_data="owner_panel")],
+        [InlineKeyboardButton("🔴  ⊛ BACK ⊛", callback_data="owner_panel")],
     ])
 
 
@@ -31,86 +89,24 @@ def back_to_panel() -> InlineKeyboardMarkup:
 @owner_only
 @error_handler
 async def panel_cmd(client: Client, message: Message):
-    panel_markup = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🖼️  Set Start Pic", callback_data="owner_setpic_info"),
-            InlineKeyboardButton("📡  Active VCs", callback_data="owner_activevc"),
-        ],
-        [
-            InlineKeyboardButton("📢  Broadcast", callback_data="owner_broadcast_info"),
-            InlineKeyboardButton("📊  Bot Stats", callback_data="owner_stats"),
-        ],
-        [
-            InlineKeyboardButton("📋  Chat List", callback_data="owner_chatlist"),
-            InlineKeyboardButton("🔧  Maintenance", callback_data="owner_maintenance"),
-        ],
-        [
-            InlineKeyboardButton("🔄  Reload Plugins", callback_data="owner_reload"),
-            InlineKeyboardButton("🔁  Restart Bot", callback_data="owner_restart"),
-        ],
-    ])
     await message.reply(
-        "👑 **OWNER CONTROL PANEL**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Welcome back, **Master** 🫡\n"
-        "Choose an action below:\n\n"
-        "🖼️ **Set Start Pic** — Change the bot's start image\n"
-        "📡 **Active VCs** — See all active voice chats\n"
-        "📢 **Broadcast** — Send message to all chats\n"
-        "📊 **Bot Stats** — CPU, RAM, uptime, totals\n"
-        "📋 **Chat List** — All served groups\n"
-        "🔧 **Maintenance** — Toggle maintenance mode\n"
-        "🔄 **Reload** — Hot-reload all plugins\n"
-        "🔁 **Restart** — Full bot restart\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        reply_markup=panel_markup,
+        PANEL_TEXT,
+        parse_mode=enums.ParseMode.HTML,
+        reply_markup=PANEL_MARKUP,
     )
 
 
-# ─── Owner panel main (callback from start.py) ────────────────────────────────
+# ─── Owner panel callback ─────────────────────────────────────────────────────
 
 @bot.on_callback_query(filters.regex(r"^owner_panel$"))
 @error_handler
 async def cb_panel(client: Client, cb: CallbackQuery):
     if cb.from_user.id != Config.OWNER_ID:
         return await cb.answer("❌ Owner only!", show_alert=True)
-
-    panel_markup = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🖼️  Set Start Pic", callback_data="owner_setpic_info"),
-            InlineKeyboardButton("📡  Active VCs", callback_data="owner_activevc"),
-        ],
-        [
-            InlineKeyboardButton("📢  Broadcast", callback_data="owner_broadcast_info"),
-            InlineKeyboardButton("📊  Bot Stats", callback_data="owner_stats"),
-        ],
-        [
-            InlineKeyboardButton("📋  Chat List", callback_data="owner_chatlist"),
-            InlineKeyboardButton("🔧  Maintenance", callback_data="owner_maintenance"),
-        ],
-        [
-            InlineKeyboardButton("🔄  Reload Plugins", callback_data="owner_reload"),
-            InlineKeyboardButton("🔁  Restart Bot", callback_data="owner_restart"),
-        ],
-        [
-            InlineKeyboardButton("◀️  Back", callback_data="owner_back_home"),
-        ],
-    ])
     await cb.message.edit_text(
-        "👑 **OWNER CONTROL PANEL**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Welcome back, **Master** 🫡\n"
-        "Choose an action below:\n\n"
-        "🖼️ **Set Start Pic** — Change the bot's start image\n"
-        "📡 **Active VCs** — See all active voice chats\n"
-        "📢 **Broadcast** — Send message to all chats\n"
-        "📊 **Bot Stats** — CPU, RAM, uptime, totals\n"
-        "📋 **Chat List** — All served groups\n"
-        "🔧 **Maintenance** — Toggle maintenance mode\n"
-        "🔄 **Reload** — Hot-reload all plugins\n"
-        "🔁 **Restart** — Full bot restart\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        reply_markup=panel_markup,
+        PANEL_TEXT,
+        parse_mode=enums.ParseMode.HTML,
+        reply_markup=PANEL_MARKUP_WITH_BACK,
     )
     await cb.answer()
 
@@ -123,31 +119,35 @@ async def cb_stats(client: Client, cb: CallbackQuery):
     if cb.from_user.id != Config.OWNER_ID:
         return await cb.answer("❌ Owner only!", show_alert=True)
 
-    db_stats = await get_stats()
+    db_stats  = await get_stats()
     uptime_sec = int(time.time() - _start_time)
     h = uptime_sec // 3600
     m = (uptime_sec % 3600) // 60
     s = uptime_sec % 60
 
-    cpu = psutil.cpu_percent(interval=0.5)
-    ram = psutil.virtual_memory()
+    cpu  = psutil.cpu_percent(interval=0.5)
+    ram  = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
 
     text = (
-        "📊 **BOT STATISTICS**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"🕒 **Uptime:** `{h}h {m}m {s}s`\n\n"
-        "💻 **System:**\n"
-        f"  ▸ CPU: `{cpu}%`\n"
-        f"  ▸ RAM: `{ram.percent}%` ({ram.used // 1024 // 1024}MB / {ram.total // 1024 // 1024}MB)\n"
-        f"  ▸ Disk: `{disk.percent}%` ({disk.used // 1024 // 1024 // 1024}GB / {disk.total // 1024 // 1024 // 1024}GB)\n\n"
-        "📈 **Database:**\n"
-        f"  ▸ Total Chats: `{db_stats['chats']}`\n"
-        f"  ▸ Banned Users: `{db_stats['banned']}`\n"
-        f"  ▸ Globally Banned: `{db_stats['gbanned']}`\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "<blockquote>📊 <b>BOT STATISTICS</b></blockquote>\n\n"
+        "<blockquote>"
+        f"🕒 <b>Uptime:</b> <code>{h}h {m}m {s}s</code>\n\n"
+        "💻 <b>System:</b>\n"
+        f"  ▸ CPU:  <code>{cpu}%</code>\n"
+        f"  ▸ RAM:  <code>{ram.percent}%</code> "
+        f"<i>({ram.used // 1024 // 1024}MB / {ram.total // 1024 // 1024}MB)</i>\n"
+        f"  ▸ Disk: <code>{disk.percent}%</code> "
+        f"<i>({disk.used // 1024 // 1024 // 1024}GB / {disk.total // 1024 // 1024 // 1024}GB)</i>"
+        "</blockquote>\n\n"
+        "<blockquote>"
+        "📈 <b>Database:</b>\n"
+        f"  ▸ Total Chats:     <code>{db_stats['chats']}</code>\n"
+        f"  ▸ Banned Users:    <code>{db_stats['banned']}</code>\n"
+        f"  ▸ Globally Banned: <code>{db_stats['gbanned']}</code>"
+        "</blockquote>"
     )
-    await cb.message.edit_text(text, reply_markup=back_to_panel())
+    await cb.message.edit_text(text, parse_mode=enums.ParseMode.HTML, reply_markup=back_to_panel())
     await cb.answer()
 
 
@@ -162,20 +162,25 @@ async def cb_chatlist(client: Client, cb: CallbackQuery):
     chats = await get_all_chats()
     if not chats:
         await cb.message.edit_text(
-            "📋 **Chat List**\n\n❌ No chats in database yet.",
+            "<blockquote>📋 <b>Chat List</b></blockquote>\n\n"
+            "❌ No chats in database yet.",
+            parse_mode=enums.ParseMode.HTML,
             reply_markup=back_to_panel(),
         )
         return await cb.answer()
 
-    lines = [f"📋 **All Served Chats** ({len(chats)} total)\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"]
+    lines = [f"<blockquote>📋 <b>All Served Chats</b> ({len(chats)} total)</blockquote>\n"]
     for c in chats[:30]:
-        title = c.get("title", "Unknown")[:25]
-        lines.append(f"▸ `{c['chat_id']}` — {title}")
+        title = html.escape(c.get("title", "Unknown")[:25])
+        lines.append(f"  ▸ <code>{c['chat_id']}</code> — {title}")
     if len(chats) > 30:
-        lines.append(f"\n_...and {len(chats) - 30} more_")
-    lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"\n<i>...and {len(chats) - 30} more</i>")
 
-    await cb.message.edit_text("\n".join(lines), reply_markup=back_to_panel())
+    await cb.message.edit_text(
+        "\n".join(lines),
+        parse_mode=enums.ParseMode.HTML,
+        reply_markup=back_to_panel(),
+    )
     await cb.answer()
 
 
@@ -192,22 +197,30 @@ async def cb_activevc(client: Client, cb: CallbackQuery):
 
     if not active_ids:
         await cb.message.edit_text(
-            "📡 **Active Voice Chats**\n\n🔇 No active VCs right now.",
+            "<blockquote>📡 <b>Active Voice Chats</b></blockquote>\n\n"
+            "🔇 No active VCs right now.",
+            parse_mode=enums.ParseMode.HTML,
             reply_markup=back_to_panel(),
         )
         return await cb.answer()
 
-    # Get chat titles from DB
     all_chats = await get_all_chats()
-    chat_map = {c["chat_id"]: c.get("title", "Unknown") for c in all_chats}
+    chat_map  = {c["chat_id"]: c.get("title", "Unknown") for c in all_chats}
 
-    lines = [f"📡 **Active Voice Chats** ({len(active_ids)} active)\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"]
+    from melody.core.queue import get_current
+
+    lines = [f"<blockquote>📡 <b>Active Voice Chats</b> ({len(active_ids)} active)</blockquote>\n"]
     for cid in active_ids:
-        title = chat_map.get(cid, "Unknown")[:25]
-        lines.append(f"🎵 `{cid}` — {title}")
-    lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        title   = html.escape(chat_map.get(cid, "Unknown")[:25])
+        current = get_current(cid)
+        song    = f"<code>{html.escape(current.title[:20])}...</code>" if current else "<i>Unknown</i>"
+        lines.append(f"🎵 <b>{title}</b>\n   ID: <code>{cid}</code> | Now: {song}\n")
 
-    await cb.message.edit_text("\n".join(lines), reply_markup=back_to_panel())
+    await cb.message.edit_text(
+        "\n".join(lines),
+        parse_mode=enums.ParseMode.HTML,
+        reply_markup=back_to_panel(),
+    )
     await cb.answer()
 
 
@@ -221,14 +234,15 @@ async def cb_broadcast_info(client: Client, cb: CallbackQuery):
 
     chats = await get_all_chats()
     await cb.message.edit_text(
-        "📢 **Broadcast**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"📊 Total chats to broadcast: **{len(chats)}**\n\n"
-        "**How to broadcast:**\n"
+        "<blockquote>📢 <b>Broadcast</b></blockquote>\n\n"
+        f"📊 Total chats: <b>{len(chats)}</b>\n\n"
+        "<blockquote>"
+        "<b>How to broadcast:</b>\n"
         "1. Close this panel\n"
         "2. Write or forward your message\n"
-        "3. Reply to it with `/broadcast`\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "3. Reply to it with <code>/broadcast</code>"
+        "</blockquote>",
+        parse_mode=enums.ParseMode.HTML,
         reply_markup=back_to_panel(),
     )
     await cb.answer()
@@ -243,14 +257,13 @@ async def cb_setpic_info(client: Client, cb: CallbackQuery):
         return await cb.answer("❌ Owner only!", show_alert=True)
 
     await cb.message.edit_text(
-        "🖼️ **Set Start Picture**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Send a photo to change the bot's start/welcome image.\n\n"
-        "**How to use:**\n"
-        "Send any photo with caption `/setpic`\n\n"
-        "**Current status:**\n"
-        "Use `/delpic` to remove the custom image.\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "<blockquote>🖼️ <b>Set Start Picture</b></blockquote>\n\n"
+        "<blockquote>"
+        "<b>How to use:</b>\n"
+        "Send any photo with caption <code>/setpic</code>\n\n"
+        "To remove: send <code>/delpic</code>"
+        "</blockquote>",
+        parse_mode=enums.ParseMode.HTML,
         reply_markup=back_to_panel(),
     )
     await cb.answer()
@@ -265,25 +278,28 @@ async def cb_maintenance(client: Client, cb: CallbackQuery):
         return await cb.answer("❌ Owner only!", show_alert=True)
 
     import melody
-    current = getattr(melody, "_maintenance", False)
+    current   = getattr(melody, "_maintenance", False)
     new_state = not current
     melody._maintenance = new_state
 
-    status = "🔧 **ON** — Regular users cannot use the bot." if new_state else "✅ **OFF** — Bot is available for everyone."
+    status = (
+        "🔧 <b>ON</b> — <i>Regular users cannot use the bot.</i>"
+        if new_state else
+        "✅ <b>OFF</b> — <i>Bot is available for everyone.</i>"
+    )
     await cb.message.edit_text(
-        f"🔧 **Maintenance Mode**\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"Status: {status}\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"<blockquote>🔧 <b>Maintenance Mode</b></blockquote>\n\n"
+        f"Status: {status}",
+        parse_mode=enums.ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton(
-                "🔧 Toggle Again",
+                "🔴  🔧 Toggle Again" if not new_state else "🟢  ✅ Turn Off",
                 callback_data="owner_maintenance",
             )],
-            [InlineKeyboardButton("◀️  Back to Panel", callback_data="owner_panel")],
+            [InlineKeyboardButton("🔴  ⊛ BACK ⊛", callback_data="owner_panel")],
         ]),
     )
-    await cb.answer(f"Maintenance {'ON' if new_state else 'OFF'}", show_alert=True)
+    await cb.answer(f"Maintenance {'ON ⚠️' if new_state else 'OFF ✅'}", show_alert=True)
 
 
 # ─── Reload Plugins ───────────────────────────────────────────────────────────
@@ -294,7 +310,10 @@ async def cb_reload(client: Client, cb: CallbackQuery):
     if cb.from_user.id != Config.OWNER_ID:
         return await cb.answer("❌ Owner only!", show_alert=True)
 
-    await cb.message.edit_text("🔄 **Reloading plugins...**\n_Please wait..._")
+    await cb.message.edit_text(
+        "<blockquote>🔄 <b>Reloading plugins...</b></blockquote>\n<i>Please wait...</i>",
+        parse_mode=enums.ParseMode.HTML,
+    )
     await cb.answer()
 
     reloaded, failed = [], []
@@ -309,19 +328,17 @@ async def cb_reload(client: Client, cb: CallbackQuery):
             else:
                 importlib.import_module(name)
             reloaded.append(name.split(".")[-1])
-        except Exception as e:
+        except Exception:
             failed.append(name.split(".")[-1])
 
     text = (
-        f"🔄 **Reload Complete**\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"✅ Reloaded: `{len(reloaded)}` plugins\n"
+        f"<blockquote>🔄 <b>Reload Complete</b></blockquote>\n\n"
+        f"✅ Reloaded: <code>{len(reloaded)}</code> plugins\n"
     )
     if failed:
-        text += f"❌ Failed: `{len(failed)}` — `{'`, `'.join(failed[:10])}`\n"
-    text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        text += f"❌ Failed: <code>{len(failed)}</code> — <code>{'</code>, <code>'.join(failed[:8])}</code>\n"
 
-    await cb.message.edit_text(text, reply_markup=back_to_panel())
+    await cb.message.edit_text(text, parse_mode=enums.ParseMode.HTML, reply_markup=back_to_panel())
 
 
 # ─── Restart Bot ──────────────────────────────────────────────────────────────
@@ -333,9 +350,11 @@ async def cb_restart(client: Client, cb: CallbackQuery):
         return await cb.answer("❌ Owner only!", show_alert=True)
 
     await cb.message.edit_text(
-        "🔁 **Restarting Melody...**\n_Thodi der mein wapas aaunga! 👋_"
+        "<blockquote>🔁 <b>Restarting Melody...</b></blockquote>\n"
+        "<i>Thodi der mein wapas aaunga! 👋</i>",
+        parse_mode=enums.ParseMode.HTML,
     )
-    await cb.answer("Restarting...", show_alert=True)
+    await cb.answer("Restarting... 🔁", show_alert=True)
     await asyncio.sleep(1)
     import os
     os.execv(sys.executable, [sys.executable, "-m", "melody"])

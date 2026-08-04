@@ -36,13 +36,18 @@ class Config:
     BOT_USERNAME: str = os.environ.get("BOT_USERNAME", "")
     WEBAPP_URL: str = os.environ.get("WEBAPP_URL", "")
 
+    # Welcome animated sticker (file_id of any Telegram sticker/animation)
+    # Set this in .env: WELCOME_STICKER=<file_id>
+    # To get a file_id: forward any sticker to your bot and use /eval to print message.sticker.file_id
+    WELCOME_STICKER: str = os.environ.get("WELCOME_STICKER", "")
+
     # Theme colors (Modi-Meloni)
     COLORS = {
-        "saffron": "#FF6600",
-        "gold": "#FFD700",
-        "green": "#009246",
-        "red": "#CE2B37",
-        "white": "#FFFFFF",
-        "dark": "#1A0500",
-        "overlay": "rgba(0,0,0,0.55)",
+        "saffron":  "#FF6600",
+        "gold":     "#FFD700",
+        "green":    "#009246",
+        "red":      "#CE2B37",
+        "white":    "#FFFFFF",
+        "dark":     "#1A0500",
+        "overlay":  "rgba(0,0,0,0.55)",
     }
