@@ -1,6 +1,11 @@
 """
 📋 Queue management — per-chat in-memory queues with settings
+
+FIX: format_queue() now returns HTML (not Markdown) so queue_cmd.py can
+     send it with parse_mode=HTML and avoid ENTITY_BOUNDS_INVALID when song
+     titles contain Markdown special characters (* _ ` [ etc.).
 """
+import html
 import random
 from dataclasses import dataclass, field
 from typing import Optional
@@ -136,23 +141,32 @@ async def set_autoplay(chat_id: int, enabled: bool):
     await set_setting(chat_id, "autoplay", enabled)
 
 
-# ─── Queue display ────────────────────────────────────────────────────────────
+# ─── Queue display (HTML) ─────────────────────────────────────────────────────
 
 def format_queue(chat_id: int) -> str:
+    """
+    Returns an HTML-formatted queue string safe for parse_mode=HTML.
+    Song titles / requester names are html.escape()'d so characters like
+    & < > ' " never break Telegram's HTML entity parser.
+    """
     current = _current.get(chat_id)
     q = _queues.get(chat_id, [])
 
-    lines = ["**📋 Music Queue**\n"]
+    lines = ["<b>📋 Music Queue</b>\n"]
     if current:
-        lines.append(f"**▶️ Now Playing:**\n`{current.title[:45]}` — {current.requester_name}\n")
+        safe_title = html.escape(current.title[:45])
+        safe_name  = html.escape(current.requester_name)
+        lines.append(f"<b>▶️ Now Playing:</b>\n<code>{safe_title}</code> — {safe_name}\n")
 
     if q:
-        lines.append("**⏳ Up Next:**")
+        lines.append("<b>⏳ Up Next:</b>")
         for i, t in enumerate(q[:10], 1):
-            lines.append(f"`{i}.` {t.title[:40]} — _{t.requester_name}_")
+            safe_t = html.escape(t.title[:40])
+            safe_n = html.escape(t.requester_name)
+            lines.append(f"<code>{i}.</code> {safe_t} — <i>{safe_n}</i>")
         if len(q) > 10:
-            lines.append(f"\n_...and {len(q) - 10} more_")
+            lines.append(f"\n<i>...and {len(q) - 10} more</i>")
     else:
-        lines.append("_Queue is empty_")
+        lines.append("<i>Queue is empty</i>")
 
     return "\n".join(lines)

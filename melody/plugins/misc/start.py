@@ -3,8 +3,8 @@
    • HTML blockquote + bold/italic formatting everywhere
    • Animated sticker on start (if WELCOME_STICKER set)
    • User buttons vs Owner panel buttons
-   • Plain-label buttons (no fake color emoji — Bot API buttons can't be
-     colored; see strings/themes.py + strings/webmenu.py)
+   • Color-coded emoji buttons (🔵 normal | 🔴 danger | 🟢 music)
+   • Rich "thank you" welcome card when bot is added to a group
 """
 import html
 import os
@@ -43,16 +43,25 @@ WELCOME_DM = (
     "💛 <i>Made with love for music lovers</i>"
 )
 
+# Richer welcome text shown when the bot is added to a group.
+# {chat} and {user} are substituted at send time.
 WELCOME_GROUP = (
     "<blockquote>"
-    f"🎶 <b>{fancy('MELODY')}</b> has joined <b>{{chat}}</b>! 🎉"
+    "🎶 <b>𝑴𝒆𝒍𝒐𝒅𝒚 𝑴𝒖𝒔𝒊𝒄 𝑩𝒐𝒕</b> has joined <b>{chat}</b>! 🎉"
     "</blockquote>\n\n"
-    "Hey <b>{user}</b>, thanks for adding me! 🙏\n\n"
-    "<blockquote>"
-    "🎵 <code>/play &lt;song&gt;</code> — Start the music\n"
-    "📋 <code>/queue</code> — View the queue\n"
-    "⏭ <code>/skip</code> — Skip current song\n"
-    "📖 <code>/help</code> — See all commands"
+    "🙏 Thanks for adding me, <b>{user}</b>!\n\n"
+    "<blockquote expandable>"
+    "🎵 <b>Quick Start</b>\n"
+    "┌ <code>/play &lt;song&gt;</code> — Stream a song\n"
+    "├ <code>/vplay &lt;song&gt;</code> — Stream video\n"
+    "├ <code>/queue</code> — View the queue\n"
+    "├ <code>/skip</code>  —  Skip current song\n"
+    "├ <code>/stop</code>  —  Stop &amp; leave VC\n"
+    "└ <code>/help</code>  —  Full command list\n\n"
+    "🔥 <b>Power Features</b>\n"
+    "┌ Loop mode · AutoPlay · Lyrics\n"
+    "├ Beautiful now-playing cards\n"
+    "└ Inline controls (pause / skip / stop)"
     "</blockquote>\n\n"
     f"♛ <i>Powered by {html.escape(Config.OWNER_NAME)}</i>"
 )
@@ -93,6 +102,26 @@ def owner_buttons() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(btn("👑 Owner Panel", RED), callback_data="owner_panel"),
+        ],
+    ])
+
+
+def new_group_buttons() -> InlineKeyboardMarkup:
+    """Rich button row shown when the bot is first added to a group."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(btn("🎵 Play Music", GREEN), switch_inline_query_current_chat=""),
+            InlineKeyboardButton(btn("📖 Help", BLUE), callback_data="help_main"),
+        ],
+        [
+            InlineKeyboardButton(
+                btn("➕ Add to Another Group", BLUE),
+                url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
+            ),
+        ],
+        [
+            InlineKeyboardButton(btn("📢 Support Channel", BLUE), url="https://t.me/+0000000000000000"),
+            InlineKeyboardButton(btn("ℹ About", BLUE), callback_data="about_cb"),
         ],
     ])
 
@@ -181,7 +210,7 @@ async def start_group(client: Client, message: Message):
     )
 
 
-# ─── Bot added to a new group ─────────────────────────────────────────────────
+# ─── Bot added to a new group — rich "thank you" welcome card ─────────────────
 
 @bot.on_message(filters.new_chat_members)
 @error_handler
@@ -214,36 +243,33 @@ async def new_group_handler(client: Client, message: Message):
               f"({adder_uname}, <code>{adder.id if adder else 'unknown'}</code>)"
         ))
 
-        buttons = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(btn("▶ Play Now", RED), switch_inline_query_current_chat=""),
-                InlineKeyboardButton(btn("📖 Help", BLUE), callback_data="help_main"),
-            ],
-            [
-                InlineKeyboardButton(
-                    btn("➕ Add to Another Group", BLUE),
-                    url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
-                ),
-            ],
-        ])
-
         adder_name = html.escape(adder.first_name if adder else "there")
         chat_name  = html.escape(chat.title or "this group")
+        members_line = (
+            f"\n👥 <b>Members:</b> <code>{member_count}</code>" if member_count else ""
+        )
 
-        caption = WELCOME_GROUP.format(chat=chat_name, user=adder_name)
+        # Build the caption with member count appended nicely
+        caption = WELCOME_GROUP.format(chat=chat_name, user=adder_name) + members_line
 
         if os.path.exists(BG_START):
             await message.reply_photo(
                 BG_START,
                 caption=caption,
                 parse_mode=enums.ParseMode.HTML,
-                reply_markup=buttons,
+                reply_markup=new_group_buttons(),
             )
         else:
+            # No custom pic set yet — send an attractive text card with a
+            # blockquote header so it still looks polished in the chat.
             await message.reply(
-                caption,
+                "<blockquote>"
+                "🎶 <b>𝑴𝒆𝒍𝒐𝒅𝒚 𝑴𝒖𝒔𝒊𝒄 𝑩𝒐𝒕</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━"
+                "</blockquote>\n\n"
+                + caption,
                 parse_mode=enums.ParseMode.HTML,
-                reply_markup=buttons,
+                reply_markup=new_group_buttons(),
             )
         break
 

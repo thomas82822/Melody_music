@@ -54,6 +54,12 @@ class Config:
     # To get a file_id: forward any sticker to your bot and use /eval to print message.sticker.file_id
     WELCOME_STICKER: str = os.environ.get("WELCOME_STICKER", "")
 
+    # GitHub integration — used by /setpic to persist the bot's start image
+    # across fresh deployments. Set GITHUB_TOKEN to a Personal Access Token
+    # with repo write permissions and GITHUB_REPO to "username/reponame".
+    GITHUB_TOKEN: str = os.environ.get("GITHUB_TOKEN", "")
+    GITHUB_REPO: str = os.environ.get("GITHUB_REPO", "")
+
     # Theme colors (Modi-Meloni)
     COLORS = {
         "saffron":  "#FF6600",

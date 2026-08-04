@@ -16,9 +16,17 @@ FIXES APPLIED:
     (the FIFO writer thread handles its own tmpdir). Only real /tmp/melody_*
     files are deleted after playback to free space on Heroku's 512 MB /tmp.
 
+  • Per-chat play lock (FIX concurrent /play race) — if two users type /play
+    at almost the same moment, both could previously pass the `_active` check
+    before either had set _active[chat_id] = True, causing both to try to
+    start a new stream instead of one playing and one queuing. _play_locks
+    serialises play_stream() per chat: the second request always sees the
+    correct _active state and is properly added to the queue.
+
 FIX 1 (Silent crash): lazy PyTgCalls init inside start_call_py().
 FIX 2 (AttributeError): AudioQuality.HIGH_QUALITY (2.x) with STUDIO fallback.
 FIX 3: Handler registration moved inside start_call_py().
+FIX 4: Per-chat asyncio locks eliminate the concurrent /play race condition.
 """
 import asyncio
 import glob
@@ -43,6 +51,18 @@ _silence_playing: dict = {}    # chat_id → bool; True while silence stream is 
 _is_video: dict = {}           # chat_id → bool; True if current track is streaming as video
 _play_start_time: dict = {}    # chat_id → float (time.time()) when current track started/last sought
 _seek_offset: dict = {}        # chat_id → int seconds; playback position baked into the last stream swap
+
+# FIX 4: Per-chat locks that serialise play_stream() calls.
+# Two concurrent /play commands for the same group acquire this lock in order;
+# the second one always sees the updated _active state and gets queued instead
+# of trying to start a second stream simultaneously.
+_play_locks: dict[int, asyncio.Lock] = {}
+
+
+def _get_play_lock(chat_id: int) -> asyncio.Lock:
+    if chat_id not in _play_locks:
+        _play_locks[chat_id] = asyncio.Lock()
+    return _play_locks[chat_id]
 
 
 # ─── Audio quality helper ─────────────────────────────────────────────────────
@@ -332,6 +352,15 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
     Start or queue a track.
     Returns True if playing now, False if queued.
 
+    FIX 4 — CONCURRENT /play RACE:
+    The per-chat lock (_play_locks) ensures that if two users issue /play at
+    almost the same time, the second coroutine waits until the first has
+    finished updating _active. Without the lock, both could read
+    _active.get(chat_id) == False simultaneously, both set_current(), and both
+    call _stream_track() — resulting in only one song playing while the other
+    is silently lost. With the lock, the second request always sees
+    _active == True and is correctly added to the queue.
+
     ⚡ INSTANT VC JOIN:
     If pre_join() already got the bot into the call with silence, this skips
     straight to streaming the real track (near-instant change_stream swap).
@@ -340,22 +369,26 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
     """
     from melody.core.queue import add_to_queue
 
-    # A real track is already playing (not just our silence placeholder) —
-    # queue this one instead of interrupting it.
-    if _active.get(chat_id) and not _silence_playing.get(chat_id):
-        add_to_queue(chat_id, track)
-        return False
+    lock = _get_play_lock(chat_id)
+    async with lock:
+        # A real track is already playing (not just our silence placeholder) —
+        # queue this one instead of interrupting it.
+        if _active.get(chat_id) and not _silence_playing.get(chat_id):
+            add_to_queue(chat_id, track)
+            return False
 
-    set_current(chat_id, track)
+        set_current(chat_id, track)
 
-    # If nobody pre-joined for us yet, do it now (keeps old callers working).
-    if not _active.get(chat_id):
-        await pre_join(chat_id, video=video)
+        # If nobody pre-joined for us yet, do it now (keeps old callers working).
+        if not _active.get(chat_id):
+            await pre_join(chat_id, video=video)
 
     # ⚡ Download / pipe-stream the real song concurrently. If silence join
     # succeeded (either here or via an earlier pre_join()), change_stream
     # swaps in the audio the instant it's ready. If silence join failed,
     # _stream_track joins VC normally with the real song.
+    # NOTE: _stream_track is kicked off OUTSIDE the lock so it doesn't block
+    # the next /play request from queuing while the download is in progress.
     asyncio.create_task(_stream_track(chat_id, track, video=video))
     return True
 
