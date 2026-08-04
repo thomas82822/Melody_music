@@ -148,12 +148,36 @@ _write_cookies()
 
 
 def _ydl_opts(audio_only: bool = True) -> dict:
+    """Return base yt-dlp options.
+
+    ROOT-CAUSE FIX for "Sign in to confirm you're not a bot" errors:
+
+    Without valid YouTube cookies, yt-dlp's default "web" player client is
+    increasingly challenged by YouTube's bot-detection.  Setting
+    extractor_args to try the "android" client first (then "mweb" as
+    fallback) bypasses this check without needing any login — Android
+    requests are served a different API path that skips the sign-in wall for
+    the vast majority of public videos.
+
+    This is the canonical yt-dlp workaround:
+        https://github.com/yt-dlp/yt-dlp/wiki/FAQ
+        #how-do-i-pass-cookies-to-yt-dlp
+    and the "android" client has been the most stable no-auth option since
+    yt-dlp ≥ 2024.01.
+    """
     opts = {
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
         "format": "bestaudio/best" if audio_only else "best[height<=720]",
         "postprocessors": [],
+        # Android client bypasses "Sign in to confirm you're not a bot"
+        # for public videos without requiring cookies.
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "mweb", "web"],
+            }
+        },
     }
     if os.path.exists(COOKIES_FILE):
         opts["cookiefile"] = COOKIES_FILE

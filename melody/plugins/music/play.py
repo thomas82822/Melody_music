@@ -4,7 +4,13 @@ BUG FIX: @error_handler moved OUTSIDE @admin_or_auth so DB errors are also caugh
 BUG FIX: Removed duplicate callback handlers (pause/resume/skip/stop/queue/lyrics
          are already registered in controls.py — having them here too caused
          duplicate handler registration and unpredictable behaviour)
+BUG FIX: ENTITY_BOUNDS_INVALID — switched all dynamic-text messages to HTML
+         parse_mode with html.escape() so song titles / uploader names that
+         contain Markdown special characters (* _ ` [ etc.) never produce
+         malformed entities.  Slicing a title string mid-Markdown-token was
+         the direct trigger for [400 ENTITY_BOUNDS_INVALID].
 """
+import html
 import urllib.parse
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
@@ -74,6 +80,14 @@ async def _play_core(client: Client, message: Message, video: bool = False):
     await add_history(chat.id, info["id"], info["title"])
 
     # Generate thumbnail
+    # NOTE: all dynamic text (title, uploader, requester name) is passed through
+    # html.escape() to prevent ENTITY_BOUNDS_INVALID.  We use parse_mode="html"
+    # so Pyrogram does NOT try to parse Markdown tokens inside the escaped text.
+    status_label = "Now Playing" if playing_now else "Added to Queue"
+    safe_title    = html.escape(info["title"][:50])
+    safe_uploader = html.escape(info["uploader"])
+    safe_duration = html.escape(format_duration(info["duration"]))
+
     try:
         thumb_path = await make_thumbnail(
             song_title=info["title"],
@@ -85,21 +99,25 @@ async def _play_core(client: Client, message: Message, video: bool = False):
             yt_thumbnail_url=info["thumbnail"],
         )
         caption = (
-            f"🎶 **{'Now Playing' if playing_now else 'Added to Queue'}**\n\n"
-            f"**{info['title'][:50]}**\n"
-            f"👤 `{info['uploader']}`  ⏱ `{format_duration(info['duration'])}`\n"
+            f"🎶 <b>{html.escape(status_label)}</b>\n\n"
+            f"<b>{safe_title}</b>\n"
+            f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
             f"🙋 Requested by {user.mention}"
         )
         await processing.delete()
         await message.reply_photo(
             thumb_path,
             caption=caption,
+            parse_mode="html",
             reply_markup=get_play_buttons(chat.title or ""),
         )
     except Exception:
         status = "Now Playing ▶️" if playing_now else "Added to Queue 📋"
         await processing.edit(
-            f"🎵 **{status}**\n\n`{info['title'][:50]}`\n👤 `{info['uploader']}`  ⏱ `{format_duration(info['duration'])}`",
+            f"🎵 <b>{html.escape(status)}</b>\n\n"
+            f"<code>{safe_title}</code>\n"
+            f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>",
+            parse_mode="html",
             reply_markup=get_play_buttons(chat.title or ""),
         )
 
