@@ -245,8 +245,16 @@ async def sync_log_group_peer(bot, assistant):
         LOGGER.warning("bot: could not sync log group peer from assistant: %s", exc)
 
 
-async def send_startup_log(bot, loaded: int, failed: int, failed_names: list):
-    """Send a detailed startup message to the log channel (bot client only)."""
+async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_names: list):
+    """Send a detailed startup message to the log channel.
+
+    Sends via assistant first (it always has the channel's access_hash from
+    get_dialogs). Falls back to bot if assistant fails (e.g. assistant is not
+    a channel member). Bot-only approach fails with 'Invalid peer type' because
+    bots can't call get_dialogs and therefore never cache the channel peer.
+    """
+    if not Config.LOG_GROUP_ID:
+        return
     try:
         me = await bot.get_me()
         py_ver = platform.python_version()
@@ -269,6 +277,15 @@ async def send_startup_log(bot, loaded: int, failed: int, failed_names: list):
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "✅ All systems operational. Ready to receive commands!"
         )
+
+        # Try assistant first — it already resolved this peer via get_dialogs()
+        try:
+            await assistant.send_message(Config.LOG_GROUP_ID, text)
+            return
+        except Exception:
+            pass
+
+        # Fall back to bot (works if it received a prior update from the channel)
         await bot.send_message(Config.LOG_GROUP_ID, text)
     except Exception as exc:
         LOGGER.warning("Could not send startup log: %s", exc)
@@ -313,7 +330,7 @@ async def main():
     await sync_log_group_peer(bot, assistant)
 
     # Detailed startup log to log channel (bot is channel admin — correct sender)
-    await send_startup_log(bot, loaded, failed, failed_names)
+    await send_startup_log(bot, assistant, loaded, failed, failed_names)
 
     LOGGER.info("🎶 Melody is live!")
     await asyncio.Event().wait()  # Keep running
