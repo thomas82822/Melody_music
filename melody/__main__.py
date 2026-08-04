@@ -65,6 +65,11 @@ async def warm_peer_cache(client, label: str):
     run — so commands look like they do nothing. Iterating dialogs once
     on startup re-resolves every chat the account is already in and
     prevents this.
+
+    NOTE: only call this for the userbot/assistant client. `get_dialogs()`
+    calls messages.getDialogs, which Telegram rejects for bot accounts
+    with "400 BOT_METHOD_INVALID" — bots can never use this method, so
+    calling it for the bot client is guaranteed to fail every startup.
     """
     try:
         count = 0
@@ -180,8 +185,9 @@ async def main():
     await assistant.start()
     LOGGER.info("Assistant client started.")
 
-    # Re-resolve peers for chats we're already in (see warm_peer_cache docstring)
-    await warm_peer_cache(bot, "bot")
+    # Re-resolve peers for chats we're already in (see warm_peer_cache docstring).
+    # Only the assistant/userbot account can call get_dialogs() — bots always
+    # get rejected with "BOT_METHOD_INVALID", so don't waste a call on `bot`.
     await warm_peer_cache(assistant, "assistant")
 
     await start_call_py()
