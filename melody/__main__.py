@@ -246,14 +246,32 @@ async def sync_log_group_peer(bot, assistant):
 
 
 async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_names: list):
-    """Send a detailed startup message to the log channel.
+    """Send a detailed startup message to LOG_GROUP_ID with owner DM fallback.
 
-    Sends via assistant first (it always has the channel's access_hash from
-    get_dialogs). Falls back to bot if assistant fails (e.g. assistant is not
-    a channel member). Bot-only approach fails with 'Invalid peer type' because
-    bots can't call get_dialogs and therefore never cache the channel peer.
+    ROOT-CAUSE FIX for persistent CHANNEL_INVALID on startup log:
+
+    WHY IT KEPT FAILING
+    ═══════════════════
+    sync_log_group_peer() injects the access_hash into bot's SQLite so
+    bot.resolve_peer() succeeds — but Telegram still rejects
+    messages.SendMessage with CHANNEL_INVALID when the calling account
+    (bot or assistant) is NOT a member / admin of that channel, or the
+    channel ID stored in LOG_GROUP_ID no longer exists / was migrated.
+    Peer resolution and channel membership are two separate things:
+    having the access_hash doesn't mean you have posting rights.
+
+    THE FIX
+    ═══════
+    Try in order:
+      1. assistant → LOG_GROUP_ID   (assistant is usually a subscriber)
+      2. bot       → LOG_GROUP_ID   (bot if it's channel admin)
+      3. bot       → OWNER_ID DM    (always works as long as owner has
+                                     started the bot at least once)
+
+    Each attempt is isolated so one failure never silences the others.
+    The destination that worked is logged so misconfiguration is visible.
     """
-    if not Config.LOG_GROUP_ID:
+    if not Config.LOG_GROUP_ID and not Config.OWNER_ID:
         return
     try:
         me = await bot.get_me()
@@ -262,7 +280,7 @@ async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_name
         pyrogram_ver = pyrogram.__version__
 
         status_line = f"✅ {loaded} plugins OK" + (
-            f", ❌ {failed} failed: `{'`, `'.join(failed_names)}`" if failed else ""
+            f", ❌ {failed} failed: {'  '.join(failed_names)}" if failed else ""
         )
 
         text = (
@@ -278,15 +296,45 @@ async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_name
             "✅ All systems operational. Ready to receive commands!"
         )
 
-        # Try assistant first — it already resolved this peer via get_dialogs()
-        try:
-            await assistant.send_message(Config.LOG_GROUP_ID, text)
-            return
-        except Exception:
-            pass
+        # Attempt 1: assistant → log channel
+        if Config.LOG_GROUP_ID:
+            try:
+                await assistant.send_message(Config.LOG_GROUP_ID, text)
+                LOGGER.info("Startup log sent via assistant → LOG_GROUP_ID")
+                return
+            except Exception as e1:
+                LOGGER.debug("assistant→LOG_GROUP_ID failed: %s", e1)
 
-        # Fall back to bot (works if it received a prior update from the channel)
-        await bot.send_message(Config.LOG_GROUP_ID, text)
+        # Attempt 2: bot → log channel
+        if Config.LOG_GROUP_ID:
+            try:
+                await bot.send_message(Config.LOG_GROUP_ID, text)
+                LOGGER.info("Startup log sent via bot → LOG_GROUP_ID")
+                return
+            except Exception as e2:
+                LOGGER.debug("bot→LOG_GROUP_ID failed: %s", e2)
+
+        # Attempt 3: bot → owner DM (permanent fallback)
+        # Works as long as the owner has started the bot at least once.
+        # If LOG_GROUP_ID is broken/wrong, owner will see the log here.
+        if Config.OWNER_ID:
+            try:
+                owner_note = ""
+                if Config.LOG_GROUP_ID:
+                    owner_note = (
+                        "\n\n⚠️ **Note:** Startup log sent to your DM because "
+                        "neither bot nor assistant could send to LOG_GROUP_ID "
+                        f"`{Config.LOG_GROUP_ID}`. "
+                        "Check that the bot/assistant is a member of that channel."
+                    )
+                await bot.send_message(Config.OWNER_ID, text + owner_note)
+                LOGGER.info("Startup log sent via bot → OWNER_ID DM (LOG_GROUP_ID unreachable)")
+                return
+            except Exception as e3:
+                LOGGER.warning(
+                    "Startup log could not be delivered anywhere. "
+                    "LOG_GROUP_ID error: see debug logs. OWNER_ID DM error: %s", e3
+                )
     except Exception as exc:
         LOGGER.warning("Could not send startup log: %s", exc)
 

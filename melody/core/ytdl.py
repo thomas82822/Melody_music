@@ -52,22 +52,96 @@ def _json_cookies_to_netscape(json_text: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _write_cookies():
-    """Decode base64 YT_COOKIES and write to file if provided.
+def _is_netscape_cookies(text: str) -> bool:
+    """Return True if text looks like a valid Netscape cookie file."""
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Every data line must have exactly 7 tab-separated fields
+        if len(line.split("\t")) == 7:
+            return True
+    return False
 
-    Handles both Netscape and JSON cookie formats — JSON is automatically
-    converted to Netscape so yt-dlp can read it without errors.
+
+def _write_cookies():
+    """Decode base64 YT_COOKIES and write a valid Netscape file for yt-dlp.
+
+    ROOT-CAUSE FIX for recurring "Cookies file must be Netscape formatted"
+    yt-dlp errors:
+
+    The previous code decoded the base64 env var and wrote whatever came out,
+    even if the result was binary garbage (e.g. a raw Chrome SQLite cookies DB,
+    a Firefox cookies.sqlite, or a corrupted export).  yt-dlp strictly expects
+    Netscape HTTP Cookie File format — any other content causes:
+        ERROR: Cookies file must be Netscape formatted, not JSON.
+        WARNING: skipping cookie file entry due to invalid length 1: ...
+
+    Fix strategy (in order):
+    1. Detect binary content early — if the decoded text contains UTF-8
+       replacement characters (U+FFFD), the base64 decoded to non-text binary.
+       Don't write the file; yt-dlp will just run without cookies.
+    2. Detect JSON array (browser extension exports like "Get cookies.txt") —
+       convert to Netscape format automatically.
+    3. Detect already-valid Netscape content — write as-is.
+    4. Anything else — skip writing and warn; running without cookies is
+       better than crashing yt-dlp with a broken file every request.
     """
-    if Config.YT_COOKIES:
-        try:
-            decoded = base64.b64decode(Config.YT_COOKIES).decode("utf-8", errors="replace")
-            # Convert JSON → Netscape if needed
-            netscape = _json_cookies_to_netscape(decoded)
-            with open(COOKIES_FILE, "w") as f:
-                f.write(netscape)
-            LOGGER.info("YT_COOKIES written to %s", COOKIES_FILE)
-        except Exception as e:
-            LOGGER.warning("Could not decode YT_COOKIES: %s", e)
+    if not Config.YT_COOKIES:
+        return
+
+    try:
+        raw_bytes = base64.b64decode(Config.YT_COOKIES)
+    except Exception as e:
+        LOGGER.warning("YT_COOKIES is not valid base64 — skipping cookies: %s", e)
+        return
+
+    # Step 1: detect binary — try strict UTF-8 decode first
+    try:
+        decoded = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        LOGGER.warning(
+            "YT_COOKIES base64 decodes to binary data (not a text cookie file). "
+            "Provide a Netscape-formatted cookies.txt exported from your browser. "
+            "Skipping cookies — yt-dlp will run without authentication."
+        )
+        return
+
+    # Extra guard: errors="replace" replacement char means hidden binary
+    if "\ufffd" in decoded:
+        LOGGER.warning(
+            "YT_COOKIES contains non-UTF-8 bytes (binary file). "
+            "Export cookies as Netscape text (not a SQLite DB). "
+            "Skipping cookies."
+        )
+        return
+
+    decoded = decoded.strip()
+
+    # Step 2: JSON cookie array → Netscape conversion
+    if decoded.startswith("["):
+        netscape = _json_cookies_to_netscape(decoded)
+        if not _is_netscape_cookies(netscape):
+            LOGGER.warning("YT_COOKIES JSON conversion produced no valid entries — skipping.")
+            return
+        with open(COOKIES_FILE, "w", encoding="utf-8") as f:
+            f.write(netscape)
+        LOGGER.info("YT_COOKIES (JSON→Netscape) written to %s", COOKIES_FILE)
+        return
+
+    # Step 3: already Netscape
+    if _is_netscape_cookies(decoded):
+        with open(COOKIES_FILE, "w", encoding="utf-8") as f:
+            f.write(decoded)
+        LOGGER.info("YT_COOKIES (Netscape) written to %s", COOKIES_FILE)
+        return
+
+    # Step 4: unrecognised format — don't write garbage
+    LOGGER.warning(
+        "YT_COOKIES format not recognised (not JSON array, not Netscape). "
+        "Export cookies using a browser extension like 'Get cookies.txt LOCALLY'. "
+        "Skipping cookies — yt-dlp will run without authentication."
+    )
 
 
 _write_cookies()
