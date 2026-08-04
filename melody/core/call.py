@@ -1,11 +1,10 @@
 """
-📞 Voice call management — pytgcalls 2.x (PyTgCalls API)
+📞 Voice call management — py-tgcalls 2.x (PyTgCalls + MediaStream API)
 """
-import asyncio
-import os
 import glob
+import os
 from pytgcalls import PyTgCalls
-from pytgcalls.types import AudioPiped, AudioParameters
+from pytgcalls.types import AudioQuality, MediaStream, StreamEnded
 from melody.logging import LOGGER, send_error_log
 from melody.core.queue import (
     get_current, set_current, pop_next, clear_queue,
@@ -13,7 +12,7 @@ from melody.core.queue import (
 )
 from melody import assistant
 
-# One PyTgCalls instance for the assistant client
+# One PyTgCalls instance per assistant client
 _pytgcalls = PyTgCalls(assistant)
 
 # Per-chat play state
@@ -23,17 +22,17 @@ _active: dict = {}   # chat_id -> bool
 async def start_call_py():
     """Start the PyTgCalls service. Must be called once on bot startup."""
     await _pytgcalls.start()
-    LOGGER.info("PyTgCalls (2.x) started.")
+    LOGGER.info("PyTgCalls (py-tgcalls 2.x) started.")
 
 
 # ─── Stream-end event ─────────────────────────────────────────────────────────
 
 @_pytgcalls.on_stream_end()
-async def _on_stream_end(_, update):
-    chat_id = update.chat_id if hasattr(update, "chat_id") else None
+async def _on_stream_end(_, update: StreamEnded):
+    chat_id = getattr(update, "chat_id", None)
     if chat_id is None:
         return
-    # Delete finished audio file to save /tmp space
+    # Delete finished audio file to save disk space
     current = get_current(chat_id)
     if current:
         for f in glob.glob(f"/tmp/melody_{current.video_id}.*"):
@@ -47,7 +46,7 @@ async def _on_stream_end(_, update):
 # ─── Internal helpers ─────────────────────────────────────────────────────────
 
 async def _play_next(chat_id: int):
-    """Advance queue or handle autoplay/stop."""
+    """Advance queue or handle autoplay / stop."""
     from melody.core.autoplay import try_autoplay
 
     next_track = pop_next(chat_id)
@@ -69,11 +68,9 @@ async def _stream_track(chat_id: int, track, video: bool = False):
         from melody.core.ytdl import download_audio
         filepath = await download_audio(track.video_id)
 
-        audio_params = AudioParameters(bitrate=128)
-        stream = AudioPiped(filepath, audio_parameters=audio_params)
+        stream = MediaStream(filepath, audio_parameters=AudioQuality.STUDIO)
 
         if _active.get(chat_id):
-            # Already in voice chat — change the stream
             await _pytgcalls.change_stream(chat_id, stream)
         else:
             await _pytgcalls.join_group_call(chat_id, stream)
@@ -122,7 +119,6 @@ async def resume_stream(chat_id: int):
 
 
 async def skip_stream(chat_id: int):
-    """Skip current track and play next."""
     await _play_next(chat_id)
 
 
@@ -151,8 +147,8 @@ async def change_volume(chat_id: int, volume: int):
 
 
 async def seek_stream(chat_id: int, seconds: int):
-    """Seek is not natively supported in pytgcalls 2.x file streaming — no-op."""
-    LOGGER.warning("seek_stream: not supported in pytgcalls 2.x, seconds=%d", seconds)
+    """Seek is not supported in pytgcalls file streaming — no-op."""
+    LOGGER.warning("seek_stream: not supported in py-tgcalls file mode, seconds=%d", seconds)
 
 
 async def is_active(chat_id: int) -> bool:
