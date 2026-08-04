@@ -171,11 +171,13 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         "noplaylist": True,
         "format": "bestaudio/best" if audio_only else "best[height<=720]",
         "postprocessors": [],
-        # Android client bypasses "Sign in to confirm you're not a bot"
-        # for public videos without requiring cookies.
+        # Try multiple player clients to bypass YouTube bot-detection.
+        # "ios" is most reliable in 2025-2026 (different API path, rarely
+        # challenged).  "android" and "mweb" are fallbacks.
+        # "web" is last-resort — the client most likely to be challenged.
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "mweb", "web"],
+                "player_client": ["ios", "android", "mweb", "web"],
             }
         },
     }

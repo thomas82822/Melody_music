@@ -19,7 +19,7 @@ from melody.config import Config
 from melody.core.ytdl import get_video_info
 from melody.core.queue import Track, add_to_queue
 from melody.core.call import play_stream
-from utils.database import add_history
+from utils.database import add_history, add_chat
 from utils.decorators import admin_or_auth, error_handler
 from utils.formatters import format_duration
 from utils.thumbnails import make_thumbnail
@@ -75,6 +75,11 @@ async def _play_core(client: Client, message: Message, video: bool = False):
         requester_name=user.first_name,
         requested_in=chat.id,
     )
+
+    # Save chat to DB on every /play so warm_bot_peer_cache works correctly.
+    # new_group_handler only fires when bot is first ADDED — existing groups
+    # that were added before this code was deployed are never stored otherwise.
+    await add_chat(chat.id, chat.title or "")
 
     playing_now = await play_stream(chat.id, track, video=video)
     await add_history(chat.id, info["id"], info["title"])
