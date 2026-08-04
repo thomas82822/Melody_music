@@ -4,6 +4,9 @@ FIXES:
   - Plugins loaded BEFORE bot.start() so handlers register correctly
   - Slash commands registered via set_my_commands() on startup
   - Detailed log channel message with plugin count and system info
+  - Peer id invalid patched: updates from unseen peers are silently dropped
+    on startup instead of crashing the asyncio Task with an unhandled
+    ValueError (see _patch_pyrogram_peer_errors docstring).
 """
 import asyncio
 import importlib
@@ -14,6 +17,61 @@ import uvloop
 from melody.logging import LOGGER
 from melody.config import Config
 from utils.database import get_all_chats
+
+
+def _patch_pyrogram_peer_errors():
+    """Monkey-patch Pyrogram's handle_updates to suppress startup peer errors.
+
+    ROOT-CAUSE FIX for:
+        asyncio Task exception was never retrieved
+        ValueError: Peer id invalid: -1002453972770
+
+    WHY IT HAPPENS
+    ══════════════
+    Heroku wipes the dyno filesystem on every restart, so Pyrogram's SQLite
+    peer cache is empty.  As soon as `assistant.start()` returns, Pyrogram
+    starts dispatching buffered Telegram updates.  If any update carries a
+    channel or group ID that isn't in the peer cache yet, Pyrogram's internal
+    `handle_updates()` calls `resolve_peer(channel_id)`:
+      1. `storage.get_peer_by_id(peer_id)` → KeyError (cache miss)
+      2. Fallback: `utils.get_peer_type(peer_id)` → ValueError: Peer id invalid
+    The exception propagates out of the Task and becomes an unhandled
+    "Task exception was never retrieved" log line.  It is completely harmless
+    (no data is lost; Telegram will re-deliver the update), but it looks like
+    a crash and can obscure real errors in logs.
+
+    Our `warm_peer_cache(assistant)` call fixes the cache 8-10 seconds later,
+    but updates that arrive in that window still trigger the error.
+
+    THE FIX
+    ═══════
+    Wrap the original `Client.handle_updates` method so that any ValueError
+    whose message contains "Peer id invalid" is silently swallowed.  Any
+    other exception is still propagated normally.  This is a class-level
+    patch so it affects all Client instances (bot + assistant) — that's fine
+    because the bot never receives updates from channels it isn't in.
+
+    This patch is applied once, before any client is started.
+    """
+    try:
+        import pyrogram.client as _pyro_client
+
+        _original_handle_updates = _pyro_client.Client.handle_updates
+
+        async def _safe_handle_updates(self, updates):
+            try:
+                await _original_handle_updates(self, updates)
+            except ValueError as exc:
+                if "Peer id invalid" in str(exc):
+                    # Drop silently — cache miss on startup, not a real error.
+                    pass
+                else:
+                    raise
+
+        _pyro_client.Client.handle_updates = _safe_handle_updates
+        LOGGER.debug("Pyrogram handle_updates patched to suppress peer-id errors.")
+    except Exception as exc:
+        LOGGER.warning("Could not patch Pyrogram handle_updates: %s", exc)
 
 
 def validate_config():
@@ -341,6 +399,11 @@ async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_name
 
 async def main():
     validate_config()
+
+    # FIX: Patch Pyrogram BEFORE any client is created so the class-level
+    # override is in place by the time bot.start() / assistant.start() run.
+    # See _patch_pyrogram_peer_errors() docstring for full explanation.
+    _patch_pyrogram_peer_errors()
 
     # FIX: Create Pyrogram clients AFTER validate_config() passes.
     # melody/__init__.py intentionally does NOT create clients at import time
