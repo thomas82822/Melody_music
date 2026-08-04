@@ -16,7 +16,6 @@ FIXES APPLIED:
 """
 import asyncio
 import base64
-import fcntl
 import glob
 import os
 import shutil
@@ -29,6 +28,19 @@ import time
 from yt_dlp import YoutubeDL
 from melody.config import Config
 from melody.logging import LOGGER, send_error_log
+
+# Check whether curl_cffi is available (enables Chrome TLS impersonation,
+# which bypasses YouTube's bot-detection on Heroku / cloud IPs).
+try:
+    import curl_cffi  # noqa: F401
+    _CURL_CFFI_OK = True
+    LOGGER.info("✅ curl_cffi available — Chrome TLS impersonation enabled")
+except ImportError:
+    _CURL_CFFI_OK = False
+    LOGGER.warning(
+        "curl_cffi not installed — YouTube may block requests on cloud IPs. "
+        "Add 'curl_cffi>=0.7.0' to requirements.txt and redeploy."
+    )
 
 
 COOKIES_FILE = "/tmp/melody_yt_cookies.txt"
@@ -180,10 +192,11 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         "fragment_retries": 5,
         "check_formats": False,
         "concurrent_fragment_downloads": 1,
-        # Client order: android_music ← most stable no-auth bypass for Heroku IPs
+        # tv_embedded is the most reliable no-auth client on cloud/Heroku IPs.
+        # android_music + ios as backups.
         "extractor_args": {
             "youtube": {
-                "player_client": ["android_music", "ios", "android", "tv_embedded", "mweb", "web"],
+                "player_client": ["tv_embedded", "android_music", "ios", "android", "mweb", "web"],
             }
         },
         "http_headers": {
@@ -195,6 +208,12 @@ def _ydl_opts(audio_only: bool = True) -> dict:
             "Referer": "https://www.youtube.com/",
         },
     }
+    # ⚡ Chrome TLS impersonation — bypasses YouTube bot-detection on Heroku IPs.
+    # curl_cffi makes HTTP requests with Chrome's exact TLS fingerprint.
+    # YouTube's bot check reads the TLS hello; Python's urllib/requests have a
+    # different fingerprint that gets flagged. curl_cffi resolves this.
+    if _CURL_CFFI_OK:
+        opts["impersonate"] = "chrome-124"
     if os.path.exists(COOKIES_FILE):
         opts["cookiefile"] = COOKIES_FILE
     return opts
@@ -232,35 +251,66 @@ async def search_youtube(query: str, limit: int = 5) -> list[dict]:
         return []
 
 
-async def get_video_info(url_or_query: str) -> dict | None:
-    """Get info for a single video (or first search result).
+def _extract_video_id(url: str) -> str | None:
+    """Extract YouTube video ID from various URL formats."""
+    import re
+    patterns = [
+        r"(?:v=|/v/|youtu\.be/|/embed/|/shorts/)([A-Za-z0-9_-]{11})",
+    ]
+    for p in patterns:
+        m = re.search(p, url)
+        if m:
+            return m.group(1)
+    return None
 
-    Uses extract_flat=False only for the final resolve to get the direct URL.
-    On cloud hosts the stream_url is left empty — download_audio() resolves it.
+
+async def get_video_info(url_or_query: str) -> dict | None:
+    """Get metadata for a single video (or first search result).
+
+    KEY FIX for Heroku "Sign in to confirm you're not a bot":
+    • Uses extract_flat=True — yt-dlp fetches only lightweight metadata
+      (title, duration, uploader, thumbnail) WITHOUT requesting streamingData
+      (the format/CDN URL list). streamingData calls are what trigger YouTube's
+      bot-detection check on cloud IPs. By deferring stream resolution to
+      download_audio(), we avoid the check entirely at this stage.
+    • For direct YouTube URLs we extract the video_id and search by video_id,
+      still via the flat/metadata path (no streamingData request).
     """
     import re
-    is_url = re.match(r"https?://", url_or_query)
-    query = url_or_query if is_url else f"ytsearch1:{url_or_query}"
+    is_url = bool(re.match(r"https?://", url_or_query))
+
+    if is_url:
+        vid_id = _extract_video_id(url_or_query)
+        # Use ytsearch1: for the video URL — forces the search API path which
+        # only fetches metadata, not streamingData.
+        query = f"ytsearch1:{url_or_query}" if not vid_id else f"ytsearch1:https://www.youtube.com/watch?v={vid_id}"
+    else:
+        query = f"ytsearch1:{url_or_query}"
+        vid_id = None
 
     def _info():
-        opts = {**_ydl_opts(), "extract_flat": False}
+        # extract_flat=True: metadata-only path, no streamingData, no bot check.
+        opts = {**_ydl_opts(), "extract_flat": True, "default_search": "ytsearch1"}
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(query, download=False)
-            if "entries" in info:
-                info = info["entries"][0]
+            if info and "entries" in info and info["entries"]:
+                return info["entries"][0]
             return info
 
     try:
         loop = asyncio.get_running_loop()
         info = await loop.run_in_executor(None, _info)
+        if not info or not info.get("id"):
+            return None
+        vid = info.get("id", "")
         return {
-            "id": info.get("id", ""),
+            "id": vid,
             "title": info.get("title", "Unknown"),
-            "duration": info.get("duration", 0),
-            "url": info.get("webpage_url") or f"https://www.youtube.com/watch?v={info.get('id','')}",
+            "duration": int(info.get("duration") or 0),
+            "url": info.get("webpage_url") or f"https://www.youtube.com/watch?v={vid}",
             "stream_url": "",  # resolved at play time by download_audio()
-            "thumbnail": info.get("thumbnail") or f"https://i.ytimg.com/vi/{info.get('id','')}/hqdefault.jpg",
-            "uploader": info.get("uploader", "Unknown"),
+            "thumbnail": info.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+            "uploader": info.get("uploader") or info.get("channel") or "Unknown",
         }
     except Exception as exc:
         await send_error_log("get_video_info failed", exc)
