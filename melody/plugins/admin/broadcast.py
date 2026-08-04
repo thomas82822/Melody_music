@@ -1,5 +1,7 @@
 """
 📢 Broadcast — owner only
+BUG FIX: @error_handler moved OUTSIDE @owner_only so errors during broadcast
+are caught and logged instead of failing silently for the owner.
 """
 import asyncio
 from pyrogram import Client, filters
@@ -11,8 +13,8 @@ from melody.logging import LOGGER
 
 
 @bot.on_message(filters.command("broadcast") & filters.private)
-@owner_only
 @error_handler
+@owner_only
 async def broadcast_cmd(client: Client, message: Message):
     if not message.reply_to_message:
         return await message.reply("**Reply to a message to broadcast it.**")

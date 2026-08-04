@@ -1,5 +1,7 @@
 """
 🌐 Global ban — owner only
+BUG FIX: @error_handler moved OUTSIDE @owner_only so errors are caught and
+logged instead of failing silently for the owner.
 """
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -10,8 +12,8 @@ from utils.decorators import owner_only, error_handler
 
 
 @bot.on_message(filters.command("gban") & filters.private)
-@owner_only
 @error_handler
+@owner_only
 async def gban_cmd(client: Client, message: Message):
     user = await _get_target_user(message)
     if not user:
@@ -26,8 +28,8 @@ async def gban_cmd(client: Client, message: Message):
 
 
 @bot.on_message(filters.command("ungban") & filters.private)
-@owner_only
 @error_handler
+@owner_only
 async def ungban_cmd(client: Client, message: Message):
     user = await _get_target_user(message)
     if not user:

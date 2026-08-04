@@ -8,12 +8,10 @@
   "env": {
     "API_ID": {
       "description": "Telegram API ID from my.telegram.org",
-      "value": "37193916",
       "required": true
     },
     "API_HASH": {
       "description": "Telegram API Hash from my.telegram.org",
-      "value": "a5c865f962588fd3b76d6ed9a2f5953f",
       "required": true
     },
     "BOT_TOKEN": {
@@ -30,7 +28,6 @@
     },
     "OWNER_ID": {
       "description": "Your Telegram numeric user ID",
-      "value": "8098146730",
       "required": true
     },
     "OWNER_NAME": {
@@ -39,8 +36,7 @@
       "required": false
     },
     "LOG_GROUP_ID": {
-      "description": "Private Telegram group ID for error logs (e.g. -1001234567890)",
-      "value": "-1004334848663",
+      "description": "Private Telegram group ID for error logs (e.g. -1001234567890). Must be a group where YOUR bot is an admin -- do not reuse an example/old ID.",
       "required": true
     },
     "WEBAPP_URL": {
