@@ -33,7 +33,7 @@
 | `OWNER_ID` | Your Telegram numeric user ID | ✅ |
 | `LOG_GROUP_ID` | Private group ID for error logs | ✅ |
 | `OWNER_NAME` | Alias shown in play cards (default: Maestro) | ❌ |
-| `WEBAPP_URL` | HTTPS URL for colored controls mini-app | ❌ |
+| `WEBAPP_URL` | HTTPS URL to `web_app/index.html` (host the `web_app/` folder anywhere static, e.g. GitHub Pages/Vercel/Netlify). Powers the colored playback-controls mini-app **and** the colored `/help` category menu (`web_app/menu.html`, same folder). | ❌ |
 | `BOT_USERNAME` | Your bot's @username | ❌ |
 | `GENIUS_API_TOKEN` | From [genius.com/api-clients](https://genius.com/api-clients) | ❌ |
 | `YT_COOKIES` | Base64-encoded cookies.txt for YouTube | ❌ |

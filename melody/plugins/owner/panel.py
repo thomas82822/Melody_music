@@ -1,7 +1,7 @@
 """
 👑 Owner Panel — All owner control callbacks
-   HTML blockquote formatting + color-coded emoji buttons
-   🔵 Blue = info/safe | 🔴 Red = danger/restart | 🟢 Green = positive
+   HTML blockquote formatting, plain-label buttons (no fake color emoji —
+   Bot API buttons can't be colored; see strings/themes.py + strings/webmenu.py)
 """
 import asyncio
 import html

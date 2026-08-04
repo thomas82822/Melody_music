@@ -3,7 +3,8 @@
    • HTML blockquote + bold/italic formatting everywhere
    • Animated sticker on start (if WELCOME_STICKER set)
    • User buttons vs Owner panel buttons
-   • Color-coded emoji buttons (🔵 normal | 🔴 danger | 🟢 music)
+   • Plain-label buttons (no fake color emoji — Bot API buttons can't be
+     colored; see strings/themes.py + strings/webmenu.py)
 """
 import html
 import os

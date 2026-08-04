@@ -25,21 +25,38 @@ def fancy(text: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Inline button color-coding — matches the reference screenshot's palette.
-#  Bot API inline buttons can't carry a real background color, so every
-#  button label is prefixed with a colored circle that mirrors the screenshot:
-#    🔵 blue  = general / info / auth / navigation
-#    🔴 red   = playback / primary action / danger / back
-#    🟢 green = modifiers & settings (seek, speed, mode, loop, shuffle)
+#  Inline button color-coding.
+#
+#  IMPORTANT: the Telegram Bot API has no "color" field on InlineKeyboardButton
+#  or ReplyKeyboardMarkup — a bot can NEVER paint a real background color on a
+#  normal chat button (this used to be faked here with a 🔵/🔴/🟢 circle emoji
+#  prefix, which is not the same thing and was dropped on request).
+#
+#  The only way to get real colored button backgrounds (like the reference
+#  screenshot) is Telegram's Mini App / Web App surface, which is plain HTML
+#  and can be styled however you want. See `strings/webmenu.py` +
+#  `web_app/menu.html` for the reusable "colored menu" system built for this —
+#  `melody/plugins/misc/help.py` is the reference implementation.
+#
+#  Rule for any NEW button going forward:
+#    - If it needs a real color, add it as a row in a `strings.webmenu`
+#      spec (pick "blue" / "red" / "green") instead of inventing a new emoji
+#      trick.
+#    - Otherwise keep it a plain, undecorated label — no color emoji.
 # ─────────────────────────────────────────────────────────────────────────────
-BLUE = "🔵"
-RED = "🔴"
-GREEN = "🟢"
+BLUE = "blue"
+RED = "red"
+GREEN = "green"
 
 
-def btn(label: str, color: str) -> str:
-    """Prefix a button label with its themed color circle."""
-    return f"{color} {label}"
+def btn(label: str, color: str = None) -> str:
+    """Plain button label — color emoji prefixes are intentionally not used.
+
+    Kept as a passthrough (instead of deleting it) so existing call sites
+    across the plugins don't need to change; `color` is accepted but ignored
+    for normal Bot API buttons. Use `strings.webmenu` for real colors.
+    """
+    return label
 
 
 COLORS = {

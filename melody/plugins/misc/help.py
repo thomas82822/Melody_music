@@ -1,16 +1,26 @@
 """
-📋 /help — 3-column color-coded help menu (reference image style)
-   • 🟢 Green  = music/play actions
-   • 🔵 Blue   = normal/info actions
-   • 🔴 Red    = danger/back/important
-   • HTML blockquote formatting throughout
+📋 /help — category help menu.
+
+Colors match the reference screenshot exactly (Admin/Auth/Loop/Ping/Shuffle
+= blue, C-Play/Play/Song/Other = red, Seek/Speed/Mode = green) — but real
+button backgrounds are only possible via the Mini App (`web_app/menu.html`),
+since the Bot API can't color a normal chat button. When `WEBAPP_URL` is
+configured, `/help` opens that colored grid; otherwise it falls back to a
+plain (uncolored) native keyboard so the command still works.
 """
 from pyrogram import Client, filters, enums
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import (
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery,
+    WebAppInfo,
+)
 from melody import bot
 from melody.config import Config
 from utils.decorators import error_handler
-from strings.themes import BLUE, RED, GREEN, btn, fancy
+from strings.themes import fancy
+from strings.webmenu import build_webapp_menu, MenuButton
 
 # ─── Help page text (HTML) ────────────────────────────────────────────────────
 
@@ -120,52 +130,91 @@ HELP_MAIN_TEXT = (
     "<i>All commands can be used with</i> <code>/</code>"
 )
 
-# ─── Keyboard: 3-column grid, colors matched to the reference screenshot ─────
-# Blue  = general / info / auth / navigation
-# Red   = playback / primary action / danger / back
-# Green = modifiers & settings (seek, speed, mode)
+# ─── Category grid — same layout/colors as the reference screenshot ─────────
+# Row 1: Admin(blue) Auth(blue) C-Play(red)
+# Row 2: Loop(blue) Ping(blue) Play(red)
+# Row 3: Shuffle(blue) Seek(green) Song(red)
+# Row 4: Speed(green) Mode(green) Other(red)
+_CATEGORY_ROWS = [
+    [MenuButton("Admin", "blue", "admin"), MenuButton("Auth", "blue", "admin"), MenuButton("C-Play", "red", "cplay")],
+    [MenuButton("Loop", "blue", "loop"), MenuButton("Ping", "blue", "ping"), MenuButton("Play", "red", "play")],
+    [MenuButton("Shuffle", "blue", "queue"), MenuButton("Seek", "green", "seek"), MenuButton("Song", "red", "play")],
+    [MenuButton("Speed", "green", "volume"), MenuButton("Mode", "green", "mode"), MenuButton("Other", "red", "other")],
+]
+
+
+def _category_webapp_url() -> str | None:
+    return build_webapp_menu(
+        menu_id="help",
+        title="Melody — Help Menu",
+        subtitle="Choose a category to see its commands",
+        rows=_CATEGORY_ROWS,
+    )
+
 
 def main_help_kb() -> InlineKeyboardMarkup:
-    """3-column layout, color-coded exactly like the reference image."""
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(btn("Admin", BLUE),  callback_data="help_admin"),
-            InlineKeyboardButton(btn("Auth", BLUE),   callback_data="help_admin"),
-            InlineKeyboardButton(btn("C-Play", RED),  callback_data="help_cplay"),
-        ],
-        [
-            InlineKeyboardButton(btn("Loop", BLUE),   callback_data="help_loop"),
-            InlineKeyboardButton(btn("Ping", BLUE),   callback_data="help_ping"),
-            InlineKeyboardButton(btn("Play", RED),    callback_data="help_play"),
-        ],
-        [
-            InlineKeyboardButton(btn("Shuffle", BLUE), callback_data="help_queue"),
-            InlineKeyboardButton(btn("Seek", GREEN),   callback_data="help_seek"),
-            InlineKeyboardButton(btn("Song", RED),     callback_data="help_play"),
-        ],
-        [
-            InlineKeyboardButton(btn("Speed", GREEN),  callback_data="help_volume"),
-            InlineKeyboardButton(btn("Mode", GREEN),   callback_data="help_mode"),
-            InlineKeyboardButton(btn("Other", RED),    callback_data="help_other"),
-        ],
-        [
-            InlineKeyboardButton(
-                btn("➕ Add to Group", BLUE),
-                url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
-            ),
-        ],
-        [
-            InlineKeyboardButton(btn("✵ CLOSE ✵", RED), callback_data="help_close"),
-        ],
+    """Help entry point. Opens the colored Mini App grid when a Mini App is
+    configured (`WEBAPP_URL`); otherwise falls back to plain native buttons
+    with the same categories/order, without any fake color emoji."""
+    webapp_url = _category_webapp_url()
+
+    rows = []
+    if webapp_url:
+        rows.append([
+            InlineKeyboardButton("🎨 Open Category Menu", web_app=WebAppInfo(url=webapp_url)),
+        ])
+    else:
+        rows.extend([
+            [
+                InlineKeyboardButton("Admin", callback_data="help_admin"),
+                InlineKeyboardButton("Auth", callback_data="help_admin"),
+                InlineKeyboardButton("C-Play", callback_data="help_cplay"),
+            ],
+            [
+                InlineKeyboardButton("Loop", callback_data="help_loop"),
+                InlineKeyboardButton("Ping", callback_data="help_ping"),
+                InlineKeyboardButton("Play", callback_data="help_play"),
+            ],
+            [
+                InlineKeyboardButton("Shuffle", callback_data="help_queue"),
+                InlineKeyboardButton("Seek", callback_data="help_seek"),
+                InlineKeyboardButton("Song", callback_data="help_play"),
+            ],
+            [
+                InlineKeyboardButton("Speed", callback_data="help_volume"),
+                InlineKeyboardButton("Mode", callback_data="help_mode"),
+                InlineKeyboardButton("Other", callback_data="help_other"),
+            ],
+        ])
+
+    rows.append([
+        InlineKeyboardButton(
+            "➕ Add to Group",
+            url=f"https://t.me/{Config.BOT_USERNAME.lstrip('@')}?startgroup=true",
+        ),
     ])
+    rows.append([
+        InlineKeyboardButton("✵ CLOSE ✵", callback_data="help_close"),
+    ])
+    return InlineKeyboardMarkup(rows)
 
 
 def back_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton(btn("✵ BACK ✵", RED), callback_data="help_main"),
+            InlineKeyboardButton("✵ BACK ✵", callback_data="help_main"),
         ],
     ])
+
+
+def render_help_category(key: str):
+    """Shared renderer used by both the callback-query flow and the Mini App
+    (web_app data) flow so they never drift apart. Returns (text, markup)."""
+    if key == "main":
+        return HELP_MAIN_TEXT, main_help_kb()
+    if key in HELP_PAGES:
+        return HELP_PAGES[key], back_kb()
+    return None, None
 
 
 # ─── Handlers ─────────────────────────────────────────────────────────────────
@@ -185,21 +234,14 @@ async def help_cmd(client: Client, message: Message):
 async def help_cb(client: Client, cb: CallbackQuery):
     key = cb.data.split("help_")[1]
 
-    if key == "main":
-        await cb.message.edit_text(
-            HELP_MAIN_TEXT,
-            parse_mode=enums.ParseMode.HTML,
-            reply_markup=main_help_kb(),
-        )
-    elif key == "close":
+    if key == "close":
         try:
             await cb.message.delete()
         except Exception:
             pass
-    elif key in HELP_PAGES:
-        await cb.message.edit_text(
-            HELP_PAGES[key],
-            parse_mode=enums.ParseMode.HTML,
-            reply_markup=back_kb(),
-        )
+        return await cb.answer()
+
+    text, markup = render_help_category(key)
+    if text:
+        await cb.message.edit_text(text, parse_mode=enums.ParseMode.HTML, reply_markup=markup)
     await cb.answer()
