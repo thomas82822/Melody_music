@@ -170,24 +170,37 @@ def _cleanup_track_file(video_id: str):
 
 
 async def _play_next(chat_id: int):
-    """Advance queue or handle autoplay / stop."""
+    """
+    Advance queue or handle autoplay / stop.
+
+    BUG FIX ("autoplay on kiya phir bhi bot VC left kar diya"): this used to
+    unconditionally leave the call FIRST and only THEN check AutoPlay —
+    so even with AutoPlay on, the bot visibly dropped out of the voice chat
+    before (maybe) trying to rejoin, and `try_autoplay()`'s own `is_active`
+    guard (see autoplay.py) made that rejoin silently no-op most of the
+    time. Now: if the manual queue is empty, try AutoPlay WHILE still
+    connected — the bot never leaves the call at all when AutoPlay has a
+    track to play. Only leave if there really is nothing left to play.
+    """
     from melody.core.autoplay import try_autoplay
 
     next_track = pop_next(chat_id)
     if next_track:
         await _stream_track(chat_id, next_track)
-    else:
-        _active.pop(chat_id, None)
-        _silence_playing.pop(chat_id, None)
-        _is_video.pop(chat_id, None)
-        _play_start_time.pop(chat_id, None)
-        _seek_offset.pop(chat_id, None)
-        try:
-            await _pytgcalls.leave_call(chat_id)
-        except Exception:
-            pass
-        if await is_autoplay_on(chat_id):
-            await try_autoplay(chat_id)
+        return
+
+    if await is_autoplay_on(chat_id) and await try_autoplay(chat_id):
+        return
+
+    _active.pop(chat_id, None)
+    _silence_playing.pop(chat_id, None)
+    _is_video.pop(chat_id, None)
+    _play_start_time.pop(chat_id, None)
+    _seek_offset.pop(chat_id, None)
+    try:
+        await _pytgcalls.leave_call(chat_id)
+    except Exception:
+        pass
 
 
 async def _stream_track(chat_id: int, track, video: bool = False):

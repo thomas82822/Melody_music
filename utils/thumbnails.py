@@ -302,10 +302,15 @@ async def make_thumbnail(
     font_controls = _get_font("Poppins-Bold.ttf", 34)
 
     # ── Circular thumbnail (left) ───────────────────────────────────────
-    thumb_size = H - PAD * 2
+    # REQUEST: "thumbnail ki width thodi kam kr" — the YouTube-cover circle
+    # used to fill the full card height; shrink it a bit and re-center it
+    # in the freed vertical space instead of just cropping to top-aligned.
+    thumb_avail = H - PAD * 2
+    thumb_size = int(thumb_avail * 0.74)
     cover = await _fetch_image_from_url(yt_thumbnail_url)
     cover_circle = _dual_ring_crop(cover if cover else _placeholder_avatar(thumb_size), thumb_size)
-    thumb_x, thumb_y = PAD, PAD
+    thumb_x = PAD
+    thumb_y = PAD + (thumb_avail - thumb_size) // 2
     bg.paste(cover_circle, (thumb_x, thumb_y), cover_circle)
 
     # ── Song info (right of thumbnail) ─────────────────────────────────
@@ -328,9 +333,12 @@ async def make_thumbnail(
     # production even though the circular-thumbnail layout itself worked.
     # Stick to plain characters (• and —) that Poppins actually has glyphs
     # for, and draw the transport controls below as real vector shapes.
-    meta_line = f"Playing now  •  {group_name[:24]}"
+    # REQUEST: "Play card me group ka name show kr" — lead with the group
+    # name (in gold, matching the channel line) instead of burying it after
+    # a generic "Playing now" prefix in dim gray, so it's actually visible.
+    meta_line = f"🏠 {group_name}"
     safe_meta = _truncate_to_width(draw, meta_line, font_meta, info_w)
-    draw.text((info_x, meta_y), safe_meta, font=font_meta, fill="#CFCFCF")
+    draw.text((info_x, meta_y), safe_meta, font=font_meta, fill=GOLD)
 
     # ── Progress bar (saffron → white → green, Modi-Meloni tricolour) ──
     bar_y = meta_y + 46
@@ -373,27 +381,31 @@ async def make_thumbnail(
         color = WHITE if kind in ("prev", "playpause", "next") else GOLD
         _draw_control_icon(draw, kind, cx, cy, icon_size, color)
 
-    # ── Requester + bot badge, small, top-right corner ─────────────────
-    badge_size = 54
+    # ── Requester + bot badge, top-right corner ─────────────────────────
+    # REQUEST: "requested user ka pic aur thoda bada dikha" — the requester's
+    # own avatar was easy to miss at 54px; size it up noticeably (the small
+    # bot badge inset on it scales up to match) while keeping it pinned to
+    # the corner so it doesn't collide with the title/channel text.
+    badge_size = 84
     bot_img = _load_image_any(bot_dp_path) if bot_dp_path else None
     user_img = _load_image_any(requester_dp_path) if requester_dp_path else None
 
     user_circle = _circle_crop(
         user_img if user_img else _initials_avatar(requester_name, badge_size, "#8B0000"),
-        badge_size, ring_color=GOLD, ring_width=3,
+        badge_size, ring_color=GOLD, ring_width=4,
     )
     badge_x = W - PAD - badge_size
     badge_y = PAD // 2
     bg.paste(user_circle, (badge_x, badge_y), user_circle)
 
-    bot_badge_size = 26
+    bot_badge_size = 34
     bot_circle = _circle_crop(
         bot_img if bot_img else _initials_avatar("Melody", bot_badge_size, "#B8860B"),
         bot_badge_size, ring_color=WHITE, ring_width=2,
     )
     bg.paste(
         bot_circle,
-        (badge_x + badge_size - bot_badge_size + 6, badge_y + badge_size - bot_badge_size + 6),
+        (badge_x + badge_size - bot_badge_size + 8, badge_y + badge_size - bot_badge_size + 8),
         bot_circle,
     )
     req_label = _truncate_to_width(draw, requester_name, font_small, 160)

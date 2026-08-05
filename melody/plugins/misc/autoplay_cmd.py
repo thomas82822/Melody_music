@@ -7,7 +7,7 @@ import asyncio
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
-from melody.core.queue import set_autoplay, is_autoplay_on, get_current
+from melody.core.queue import set_autoplay, is_autoplay_on, get_current, add_to_queue
 from melody.core.autoplay import prefetch_next
 from melody.logging import log_activity
 from utils.decorators import admin_or_auth, error_handler
@@ -38,15 +38,23 @@ async def autoplay_cmd(client: Client, message: Message):
         await set_autoplay(chat.id, True)
         await message.reply(
             "<blockquote>🤖 <b>AutoPlay enabled!</b> 🟢</blockquote>\n\n"
-            "Melody will keep the music going with related songs — and "
-            "pre-downloads the next one in advance for zero-gap playback. 🎶",
+            "Melody will keep the music going with related songs — the next "
+            "one is being added to the queue and downloaded right now for "
+            "zero-gap playback. 🎶",
             parse_mode=enums.ParseMode.HTML,
         )
-        # REQUIREMENT: as soon as AutoPlay is turned on, immediately predict
-        # and pre-download the next song (don't wait for the post-play hook)
-        # so /queue can show it right away as "Requested by: AutoPlay".
+        # REQUIREMENT: "jese hi on hoga next song queue me add + download krna"
+        # — as soon as AutoPlay is turned on, immediately predict AND
+        # download the next song, then drop it straight into the visible
+        # queue (not just the internal pre-download cache) so /queue shows
+        # it right away and it plays automatically the moment the current
+        # song ends — no separate AutoPlay hand-off needed.
         if get_current(chat.id):
-            asyncio.create_task(prefetch_next(chat.id))
+            async def _queue_next_autoplay_track():
+                track = await prefetch_next(chat.id)
+                if track:
+                    add_to_queue(chat.id, track)
+            asyncio.create_task(_queue_next_autoplay_track())
         asyncio.create_task(log_activity(
             f"🤖 <b>AutoPlay Enabled</b>\n"
             f"• By: <code>{actor_name}</code> (<code>{actor.id if actor else '—'}</code>)\n"

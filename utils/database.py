@@ -20,16 +20,31 @@ settings_col = db["settings"]
 
 # ─── Chat management ─────────────────────────────────────────────────────────
 
-async def add_chat(chat_id: int, title: str = ""):
-    await chats_col.update_one(
-        {"chat_id": chat_id},
-        {"$set": {"chat_id": chat_id, "title": title}},
-        upsert=True,
-    )
+async def add_chat(chat_id: int, title: str = "", owner_id: int = None, owner_name: str = None):
+    """
+    `owner_id`/`owner_name` capture the user who ADDED the bot to this group
+    — used for the "👑 My Cute Owner" welcome button (utils/database.py ->
+    melody/plugins/misc/start.py). Only set on first insert so a later
+    `add_chat()` call (e.g. from another handler) never overwrites the
+    original adder with `None`.
+    """
+    update = {"$set": {"chat_id": chat_id, "title": title}}
+    if owner_id is not None:
+        update["$setOnInsert"] = {"owner_id": owner_id, "owner_name": owner_name or ""}
+    await chats_col.update_one({"chat_id": chat_id}, update, upsert=True)
 
 
 async def get_all_chats() -> list:
     return await chats_col.find({}, {"_id": 0, "chat_id": 1, "title": 1}).to_list(None)
+
+
+async def get_chat_owner(chat_id: int) -> "dict | None":
+    """Return {"owner_id", "owner_name"} for whoever added the bot to this
+    group, or None if unknown (e.g. chat predates this feature)."""
+    doc = await chats_col.find_one({"chat_id": chat_id}, {"_id": 0, "owner_id": 1, "owner_name": 1})
+    if doc and doc.get("owner_id"):
+        return doc
+    return None
 
 
 # ─── Auth management ─────────────────────────────────────────────────────────

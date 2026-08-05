@@ -157,10 +157,12 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                 requester_dp_path=user_dp_path,
                 bot_dp_path=bot_dp_path,
             )
+            safe_group = html.escape((chat.title or "Private")[:60])
             caption = (
                 f"<blockquote>🎶 <b>{html.escape(status_label)}</b>\n\n"
                 f"<b>{safe_title}</b>\n"
                 f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
+                f"🏠 {safe_group}\n"
                 f"🙋 Requested by {requester_mention}</blockquote>"
             )
             await anim.stop()
@@ -188,7 +190,8 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                 quote_html(
                     f"🎵 <b>{html.escape(status)}</b>\n\n"
                     f"<code>{safe_title}</code>\n"
-                    f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>"
+                    f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
+                    f"🏠 {html.escape((chat.title or 'Private')[:60])}"
                 ),
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=get_play_buttons(chat.title or ""),

@@ -15,7 +15,7 @@ from melody import bot
 from melody.config import Config
 from melody.logging import log_activity
 from utils.decorators import error_handler
-from utils.database import is_banned, is_gbanned
+from utils.database import is_banned, is_gbanned, get_chat_owner
 from strings.themes import BLUE, RED, GREEN, btn, fancy
 
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets")
@@ -106,13 +106,32 @@ def owner_buttons() -> InlineKeyboardMarkup:
     ])
 
 
-def new_group_buttons() -> InlineKeyboardMarkup:
-    """Rich button row shown when the bot is first added to a group."""
-    return InlineKeyboardMarkup([
+def new_group_buttons(owner_id: int = None, owner_name: str = None) -> InlineKeyboardMarkup:
+    """
+    Rich button row shown when the bot is first added to a group.
+
+    REQUEST: "jo user bot ko group add karega uska naam my cute owner me
+    show kr" — whoever added the bot to this specific group gets credited
+    as its "Cute Owner" with their own dedicated button (tapping it opens
+    their profile). Falls back to no extra row if we somehow don't have an
+    adder (e.g. legacy chat with no stored owner).
+    """
+    rows = [
         [
             InlineKeyboardButton(btn("🎵 Play Music", GREEN), switch_inline_query_current_chat=""),
             InlineKeyboardButton(btn("📖 Help", BLUE), callback_data="help_main"),
         ],
+    ]
+    if owner_id and owner_name:
+        # NOTE: intentionally callback_data, not a `tg://user?id=` url button —
+        # Telegram's Bot API only guarantees http(s)/t.me url schemes for
+        # inline buttons, and an unrecognized scheme risks BUTTON_URL_INVALID
+        # at send-time. A callback (see cb_cute_owner below) shows the same
+        # info via a popup and always works.
+        rows.append([
+            InlineKeyboardButton(btn(f"👑 My Cute Owner: {owner_name}", GREEN), callback_data="cute_owner"),
+        ])
+    rows.extend([
         [
             InlineKeyboardButton(
                 btn("➕ Add to Another Group", BLUE),
@@ -124,6 +143,7 @@ def new_group_buttons() -> InlineKeyboardMarkup:
             InlineKeyboardButton(btn("ℹ About", BLUE), callback_data="about_cb"),
         ],
     ])
+    return InlineKeyboardMarkup(rows)
 
 
 # ─── /start in DM ─────────────────────────────────────────────────────────────
@@ -224,7 +244,12 @@ async def new_group_handler(client: Client, message: Message):
         adder = message.from_user
 
         from utils.database import add_chat
-        await add_chat(chat.id, chat.title or "")
+        await add_chat(
+            chat.id,
+            chat.title or "",
+            owner_id=adder.id if adder else None,
+            owner_name=(adder.first_name if adder else None),
+        )
 
         member_count = None
         try:
@@ -251,13 +276,17 @@ async def new_group_handler(client: Client, message: Message):
 
         # Build the caption with member count appended nicely
         caption = WELCOME_GROUP.format(chat=chat_name, user=adder_name) + members_line
+        buttons = new_group_buttons(
+            owner_id=adder.id if adder else None,
+            owner_name=(adder.first_name if adder else None),
+        )
 
         if os.path.exists(BG_START):
             await message.reply_photo(
                 BG_START,
                 caption=caption,
                 parse_mode=enums.ParseMode.HTML,
-                reply_markup=new_group_buttons(),
+                reply_markup=buttons,
             )
         else:
             # No custom pic set yet — send an attractive text card with a
@@ -269,9 +298,22 @@ async def new_group_handler(client: Client, message: Message):
                 "</blockquote>\n\n"
                 + caption,
                 parse_mode=enums.ParseMode.HTML,
-                reply_markup=new_group_buttons(),
+                reply_markup=buttons,
             )
         break
+
+
+# ─── Cute Owner callback ────────────────────────────────────────────────────
+
+@bot.on_callback_query(filters.regex(r"^cute_owner$"))
+@error_handler
+async def cb_cute_owner(client: Client, cb: CallbackQuery):
+    owner = await get_chat_owner(cb.message.chat.id)
+    if owner and owner.get("owner_name"):
+        text = f"👑 {owner['owner_name']} added Melody to this group. Say thanks! 🎶"
+    else:
+        text = "👑 This group's Cute Owner is a mystery for now! 🎶"
+    await cb.answer(text, show_alert=True)
 
 
 # ─── About callback ───────────────────────────────────────────────────────────

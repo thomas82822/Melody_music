@@ -53,21 +53,25 @@ async def _pick_related_track(chat_id: int) -> "Track | None":
     )
 
 
-async def prefetch_next(chat_id: int):
+async def prefetch_next(chat_id: int) -> "Track | None":
     """
     Predict + pre-download the next AutoPlay track for `chat_id`.
 
     Called right after a track starts playing (from call.py) whenever the
-    manual queue is empty and AutoPlay is ON for that chat. Safe / cheap to
-    call repeatedly — it no-ops if a pre-download is already queued.
+    manual queue is empty and AutoPlay is ON for that chat, AND right when
+    a chat turns AutoPlay on (see autoplay_cmd.py) — "jese hi on hoga next
+    song queue me add + download". Safe / cheap to call repeatedly — it
+    no-ops if a pre-download is already queued. Returns the track (already
+    cached to /tmp) so callers can also surface it in the visible queue.
     """
     try:
-        if peek_predownloaded(chat_id):
-            return  # already have the next one cached
+        cached = peek_predownloaded(chat_id)
+        if cached:
+            return cached  # already have the next one cached
 
         track = await _pick_related_track(chat_id)
         if not track:
-            return
+            return None
 
         # This is the actual "download krke rakh" step — warms the /tmp
         # cache for this video_id so try_autoplay()'s download_audio() call
@@ -75,27 +79,46 @@ async def prefetch_next(chat_id: int):
         await download_audio(track.video_id)
 
         set_predownloaded(chat_id, track)
+        return track
     except Exception as exc:
         await send_error_log(f"prefetch_next failed in {chat_id}", exc)
+        return None
 
 
-async def try_autoplay(chat_id: int):
-    """Play the next AutoPlay track for a chat — uses the pre-downloaded one
-    if available, otherwise falls back to a fresh lookup+download."""
+async def try_autoplay(chat_id: int) -> bool:
+    """
+    Play the next AutoPlay track for a chat — uses the pre-downloaded one
+    if available, otherwise falls back to a fresh lookup+download.
+
+    BUG FIX ("autoplay on kiya phir bhi bot VC left kar diya"): this used
+    to be gated on `is_active(chat_id)` and always call `play_stream()`,
+    which assumes the bot has *already left* the call. But call.py's
+    `_play_next()` now calls this BEFORE leaving the voice chat (so the
+    bot stays connected across the transition — no more leave→rejoin
+    flicker/race). That means `is_active(chat_id)` is still True at this
+    point, which used to make this function bail out immediately and do
+    nothing — the real root cause of AutoPlay silently never kicking in.
+    Now: if the bot is still in the call, swap the stream in place via
+    `_stream_track()`; only fall back to a fresh `play_stream()` join for
+    the rare case this is invoked while the bot isn't connected at all.
+
+    Returns True if a track started playing, False if there was nothing
+    to play (caller should then actually leave the call).
+    """
     try:
-        from melody.core.call import play_stream, is_active
-
-        if is_active(chat_id):
-            return
+        from melody.core.call import _stream_track, play_stream, is_active
 
         track = pop_predownloaded(chat_id)
         if not track:
             track = await _pick_related_track(chat_id)
         if not track:
-            return
+            return False
 
         set_current(chat_id, track)
-        await play_stream(chat_id, track)
+        if is_active(chat_id):
+            await _stream_track(chat_id, track)
+        else:
+            await play_stream(chat_id, track)
         await add_history(chat_id, track.video_id, track.title)
 
         from melody import bot
@@ -115,6 +138,8 @@ async def try_autoplay(chat_id: int):
 
         # Immediately line up (and download) the one after this too.
         asyncio.create_task(prefetch_next(chat_id))
+        return True
 
     except Exception as exc:
         await send_error_log(f"try_autoplay failed in {chat_id}", exc)
+        return False
