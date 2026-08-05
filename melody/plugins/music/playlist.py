@@ -11,7 +11,6 @@ import html
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
-from melody.config import Config
 from melody.core.ytdl import get_playlist_entries
 from melody.core.queue import Track, add_to_queue
 from melody.core.call import play_stream, pre_join, abort_prejoin_if_idle
@@ -59,15 +58,10 @@ async def playlist_cmd(client: Client, message: Message):
         return
 
     queued = 0
-    skipped = 0
     first_title = None
     first_playing = False
 
     for i, info in enumerate(entries):
-        if Config.MAX_DURATION and info["duration"] and info["duration"] > Config.MAX_DURATION:
-            skipped += 1
-            continue
-
         track = Track(
             video_id=info["id"],
             title=info["title"],
@@ -92,19 +86,18 @@ async def playlist_cmd(client: Client, message: Message):
 
     if queued == 0:
         await msg.edit(
-            quote_html("❌ Koi bhi track queue nahi ho payi (sab duration limit se bade the)."),
+            quote_html("❌ Koi bhi track queue nahi ho payi."),
             parse_mode=enums.ParseMode.HTML,
         )
         return
 
     status = "▶️ Now Playing + " if first_playing else "📋 Added "
     safe_first_title = html.escape((first_title or "")[:50])
-    skipped_note = f"\n⚠️ Skipped `{skipped}` (too long)." if skipped else ""
     await msg.edit(
         quote_html(
             f"📃 **Playlist Queued**\n"
             f"{status}`{queued}` track(s) to the queue.\n"
-            f"First: `{safe_first_title}`{skipped_note}"
+            f"First: `{safe_first_title}`"
         ),
         parse_mode=enums.ParseMode.HTML,
     )

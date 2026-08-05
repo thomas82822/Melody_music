@@ -46,7 +46,6 @@ async def play_search_cb(client, cb):
     from melody.core.ytdl import get_video_info
     from melody.core.queue import Track, add_to_queue
     from melody.core.call import play_stream
-    from melody.config import Config
     from utils.formatters import format_duration
     from utils.database import add_history
 
@@ -60,10 +59,6 @@ async def play_search_cb(client, cb):
 
     user = cb.from_user
     chat = cb.message.chat
-
-    if Config.MAX_DURATION and info["duration"] > Config.MAX_DURATION:
-        await cb.answer("⚠️ Song too long!", show_alert=True)
-        return
 
     track = Track(
         video_id=info["id"],

@@ -56,11 +56,6 @@
       "description": "Paste the raw contents of a cookies.txt exported from a browser logged into youtube.com (Netscape format). Base64 also accepted. Strongly recommended on Heroku to avoid bot-detection blocks.",
       "required": false
     },
-    "MAX_DURATION": {
-      "description": "Maximum song duration in seconds. 0 = unlimited (no cutoff).",
-      "value": "0",
-      "required": false
-    },
     "AUTOPLAY": {
       "description": "Enable autoplay by default (true/false)",
       "value": "true",

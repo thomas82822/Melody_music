@@ -41,10 +41,8 @@ class Config:
     GENIUS_API_TOKEN: str = os.environ.get("GENIUS_API_TOKEN", "")
 
     # Bot settings
-    # 0 = unlimited song duration (Melody plays full songs, mixes, even long
-    # live sets — no artificial cutoff). Set a positive number of seconds in
-    # .env only if you deliberately want a cap again.
-    MAX_DURATION: int = int(os.environ.get("MAX_DURATION", 0))
+    # No song-duration cap: Melody plays full songs, mixes, even long live
+    # sets, with no artificial cutoff anywhere in the codebase.
     AUTOPLAY: bool = os.environ.get("AUTOPLAY", "true").lower() == "true"
     BOT_USERNAME: str = os.environ.get("BOT_USERNAME", "")
     WEBAPP_URL: str = os.environ.get("WEBAPP_URL", "")

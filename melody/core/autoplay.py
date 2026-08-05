@@ -16,7 +16,6 @@ from melody.core.queue import (
     Track, set_current, set_predownloaded, pop_predownloaded, peek_predownloaded,
 )
 from utils.database import get_history, add_history
-from melody.config import Config
 
 
 async def _pick_related_track(chat_id: int) -> "Track | None":
@@ -35,9 +34,6 @@ async def _pick_related_track(chat_id: int) -> "Track | None":
     top = related[0]
     info = await get_video_info(top["url"])
     if not info:
-        return None
-
-    if Config.MAX_DURATION and info["duration"] > Config.MAX_DURATION:
         return None
 
     return Track(

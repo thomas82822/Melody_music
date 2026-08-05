@@ -919,6 +919,96 @@ def _download_audio_sync(video_id: str, audio_only: bool = True) -> str:
     return filepath
 
 
+def _replied_media_object(message):
+    """Return the playable media object on a message (audio/video/voice/
+    video_note/audio-or-video document), or None if it isn't playable."""
+    if not message:
+        return None
+    if message.audio:
+        return message.audio
+    if message.video:
+        return message.video
+    if message.voice:
+        return message.voice
+    if message.video_note:
+        return message.video_note
+    doc = message.document
+    if doc and (doc.mime_type or "").split("/")[0] in ("audio", "video"):
+        return doc
+    return None
+
+
+def has_playable_media(message) -> bool:
+    """True if `message` (typically message.reply_to_message) carries an
+    audio/video file that /play or /vplay can stream directly — this is the
+    "tag any audio/video and play it" feature."""
+    return _replied_media_object(message) is not None
+
+
+async def download_replied_media(client, message, video: bool = False) -> "dict | None":
+    """
+    Download a tagged (replied-to) Telegram audio/video/voice message and
+    adapt it into the same info-dict shape get_video_info() returns, so the
+    existing Track/queue/thumbnail pipeline in play.py works completely
+    unchanged for tagged media too.
+
+    ROOT-CAUSE for why this reuses download_audio()'s cache path instead of
+    a separate code path: the file is saved directly at
+    `/tmp/melody_<synthetic_id>_<a|v>.<ext>` — exactly where
+    download_audio()'s cache check looks. So when _stream_track() later
+    calls download_audio(track.video_id, audio_only=not video), it's a
+    guaranteed cache hit and yt-dlp is never touched for tagged media.
+    """
+    media = _replied_media_object(message)
+    if not media:
+        return None
+
+    # Synthetic id keyed on the source chat + message so re-tagging the same
+    # message twice (e.g. /play then /vplay) reuses/creates the correct
+    # audio vs video cached variant independently, same as YouTube tracks.
+    vid = f"tg{str(message.chat.id).replace('-', 'n')}_{message.id}"
+    tag = _cache_tag(not video)
+
+    cached = glob.glob(f"/tmp/melody_{vid}_{tag}.*")
+    if cached:
+        filepath = cached[0]
+    else:
+        file_name = getattr(media, "file_name", None) or ""
+        ext = file_name.rsplit(".", 1)[-1] if "." in file_name else None
+        if not ext:
+            ext = "mp4" if message.video or message.video_note else ("ogg" if message.voice else "mp3")
+        dest = f"/tmp/melody_{vid}_{tag}.{ext}"
+        try:
+            filepath = await client.download_media(message, file_name=dest)
+        except Exception as exc:
+            await send_error_log(f"download_replied_media failed for message {message.id}", exc)
+            return None
+        if not filepath or not os.path.exists(filepath):
+            return None
+
+    title = (
+        getattr(media, "file_name", None)
+        or getattr(media, "title", None)
+        or "Tagged Media"
+    )
+    uploader = (
+        getattr(media, "performer", None)
+        or (message.from_user.first_name if message.from_user else None)
+        or "Telegram"
+    )
+    duration = int(getattr(media, "duration", 0) or 0)
+
+    return {
+        "id": vid,
+        "title": title,
+        "duration": duration,
+        "url": "",
+        "stream_url": "",
+        "thumbnail": "",
+        "uploader": uploader,
+    }
+
+
 async def download_audio(video_id: str, audio_only: bool = True) -> str:
     """Return a path to play audio (or audio+video) from.
 

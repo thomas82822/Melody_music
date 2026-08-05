@@ -27,7 +27,7 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from melody import bot
 from melody.config import Config
-from melody.core.ytdl import get_video_info
+from melody.core.ytdl import get_video_info, download_replied_media, has_playable_media
 from melody.core.queue import Track, add_to_queue
 from melody.core.call import play_stream, force_play_stream, pre_join, abort_prejoin_if_idle
 from melody.logging import log_activity
@@ -63,10 +63,19 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
     chat = message.chat
     user = message.from_user
 
-    if not query:
+    # 🏷 Tag-to-play: reply /play or /vplay to any audio/video/voice message
+    # (or an audio/video document) to stream that exact file — no text query
+    # needed. This takes priority over a text query when both are present.
+    replied = message.reply_to_message
+    tagged = has_playable_media(replied)
+
+    if not query and not tagged:
         usage_cmd = "/cplay" if chat.type == enums.ChatType.CHANNEL else "/play"
         await message.reply(
-            quote_html(f"**Usage:** `{usage_cmd} <song name or YouTube URL>`"),
+            quote_html(
+                f"**Usage:** `{usage_cmd} <song name or YouTube URL>`\n"
+                f"Ya kisi audio/video message ko reply karke sirf `{usage_cmd}` bhejo."
+            ),
             parse_mode=enums.ParseMode.HTML,
         )
         return
@@ -89,21 +98,16 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
     user_dp_task = asyncio.create_task(fetch_dp(client, requester_id))
 
     try:
-        info = await get_video_info(query)
+        if tagged:
+            info = await download_replied_media(client, replied, video=video)
+        else:
+            info = await get_video_info(query)
 
         if not info:
             await abort_prejoin_if_idle(chat.id)
             await anim.stop()
-            await processing.edit(quote_html("❌ Song nahi mili 🌸"), parse_mode=enums.ParseMode.HTML)
-            return
-
-        if Config.MAX_DURATION and info["duration"] > Config.MAX_DURATION:
-            await abort_prejoin_if_idle(chat.id)
-            await anim.stop()
-            await processing.edit(
-                quote_html(f"⚠️ Song too long! Max allowed: {format_duration(Config.MAX_DURATION)}"),
-                parse_mode=enums.ParseMode.HTML,
-            )
+            fail_msg = "❌ Ye tagged file play nahi ho payi 🌸" if tagged else "❌ Song nahi mili 🌸"
+            await processing.edit(quote_html(fail_msg), parse_mode=enums.ParseMode.HTML)
             return
 
         track = Track(
