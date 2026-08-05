@@ -36,7 +36,7 @@ import time
 
 from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream, StreamEnded
-from pyrogram.errors import ChannelInvalid, ChannelPrivate, PeerIdInvalid
+from pyrogram.errors import ChannelInvalid, ChannelPrivate, ChatAdminRequired, PeerIdInvalid
 from melody.logging import LOGGER, send_error_log
 from melody.core.queue import (
     get_current, set_current, pop_next, clear_queue,
@@ -316,6 +316,40 @@ async def _stream_track(chat_id: int, track, video: bool = False, _retry: bool =
                 chat_id,
                 "⚠️ <b>Assistant ko group mein add karne ke baad bhi gaana play nahi ho paya.</b>\n\n"
                 "Dobara <code>/play</code> try karo.",
+            )
+        elif isinstance(exc, ChatAdminRequired):
+            # ROOT-CAUSE FIX (⚠️ "CHAT_ADMIN_REQUIRED ... The method requires
+            # chat admin privileges" — the delay/failure the user actually
+            # reported here): Telegram only lets a chat ADMIN start a brand
+            # new voice chat (`phone.createGroupCall`, called internally by
+            # pytgcalls' play() the very first time a call becomes active in
+            # a chat). Joining an ALREADY-RUNNING voice chat needs no special
+            # rights at all — this only fires when no voice chat exists yet
+            # and the assistant account trying to create one is a plain
+            # (non-admin) member.
+            #
+            # This used to fall through to the generic "❌ Gaana play nahi ho
+            # paya" branch below with no explanation, AND pre_join() (the
+            # instant silence-join meant to make /play feel instant) hits the
+            # exact same error and silently swallows it — so the bot skipped
+            # its fast path, silently fell back to the slow path, and only
+            # surfaced a vague failure several seconds later. That combo is
+            # exactly what read as "bohot jada delay" to the user: a long
+            # wait for nothing, ending in an unhelpful error.
+            #
+            # There is no code-side fix for a Telegram-enforced permission —
+            # either promote the assistant to admin, or a human starts the
+            # voice chat once (after which the bot can join it normally every
+            # time, since joining an existing call never needs admin rights).
+            # Naming the real cause immediately (instead of a generic retry
+            # loop) is the actual fix for the reported "delay".
+            await _notify_playback_failed(
+                chat_id,
+                "⚠️ <b>Voice chat start nahi ho paya — assistant account admin nahi hai.</b>\n\n"
+                "Naya voice chat sirf group ka ADMIN start kar sakta hai. Iske liye do options hain:\n"
+                "1️⃣ Assistant account ko is group mein <b>admin</b> bana do (koi bhi permission chalega), YA\n"
+                "2️⃣ Group mein khud ek baar manually voice chat start kar do — uske baad bot bina admin ke bhi usme baar-baar join kar sakta hai.\n\n"
+                "Ek baar in mein se koi ek kar ke phir se <code>/play</code> try karo.",
             )
         else:
             await _notify_playback_failed(
