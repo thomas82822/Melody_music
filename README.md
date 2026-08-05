@@ -97,6 +97,10 @@
 ### 🔒 Owner (hidden from /help)
 | Command | Description |
 |---------|-------------|
+| `/setpic` | Set the DM /start picture (send/reply to a photo). Saved permanently to GitHub — see `GITHUB_TOKEN`/`GITHUB_REPO`. |
+| `/delpic` | Remove the custom /start picture |
+| `/setwelcomepic` | Set the picture shown when the bot joins a new group (send/reply to a photo). Saved permanently to GitHub too. |
+| `/delwelcomepic` | Remove the custom group-welcome picture |
 | `/reboot` | Full process restart |
 | `/restart` | Same as /reboot |
 | `/reload` | Hot-reload all plugins (no restart) |

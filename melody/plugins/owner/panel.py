@@ -26,6 +26,7 @@ PANEL_TEXT = (
     "<i>Choose an action below:</i>\n\n"
     "<blockquote>"
     "🖼️ <b>Set Start Pic</b> — Change welcome image\n"
+    "🎉 <b>Set Welcome GC Pic</b> — Shown when added to a group\n"
     "📡 <b>Active VCs</b> — Live voice chat sessions\n"
     "📢 <b>Broadcast</b> — Message all chats\n"
     "📊 <b>Bot Stats</b> — CPU, RAM, uptime\n"
@@ -39,18 +40,21 @@ PANEL_TEXT = (
 PANEL_MARKUP = InlineKeyboardMarkup([
     [
         InlineKeyboardButton(btn("🖼️ Set Start Pic", BLUE),  callback_data="owner_setpic_info"),
+        InlineKeyboardButton(btn("🎉 Welcome GC Pic", BLUE),  callback_data="owner_setwelcomepic_info"),
+    ],
+    [
         InlineKeyboardButton(btn("📡 Active VCs", GREEN),     callback_data="owner_activevc"),
-    ],
-    [
         InlineKeyboardButton(btn("📢 Broadcast", BLUE),       callback_data="owner_broadcast_info"),
+    ],
+    [
         InlineKeyboardButton(btn("📊 Bot Stats", BLUE),       callback_data="owner_stats"),
-    ],
-    [
         InlineKeyboardButton(btn("📋 Chat List", BLUE),       callback_data="owner_chatlist"),
-        InlineKeyboardButton(btn("🔧 Maintenance", RED),      callback_data="owner_maintenance"),
     ],
     [
+        InlineKeyboardButton(btn("🔧 Maintenance", RED),      callback_data="owner_maintenance"),
         InlineKeyboardButton(btn("🔄 Reload Plugins", GREEN), callback_data="owner_reload"),
+    ],
+    [
         InlineKeyboardButton(btn("🔁 Restart Bot", RED),      callback_data="owner_restart"),
     ],
 ])
@@ -58,18 +62,21 @@ PANEL_MARKUP = InlineKeyboardMarkup([
 PANEL_MARKUP_WITH_BACK = InlineKeyboardMarkup([
     [
         InlineKeyboardButton(btn("🖼️ Set Start Pic", BLUE),  callback_data="owner_setpic_info"),
+        InlineKeyboardButton(btn("🎉 Welcome GC Pic", BLUE),  callback_data="owner_setwelcomepic_info"),
+    ],
+    [
         InlineKeyboardButton(btn("📡 Active VCs", GREEN),     callback_data="owner_activevc"),
-    ],
-    [
         InlineKeyboardButton(btn("📢 Broadcast", BLUE),       callback_data="owner_broadcast_info"),
+    ],
+    [
         InlineKeyboardButton(btn("📊 Bot Stats", BLUE),       callback_data="owner_stats"),
-    ],
-    [
         InlineKeyboardButton(btn("📋 Chat List", BLUE),       callback_data="owner_chatlist"),
-        InlineKeyboardButton(btn("🔧 Maintenance", RED),      callback_data="owner_maintenance"),
     ],
     [
+        InlineKeyboardButton(btn("🔧 Maintenance", RED),      callback_data="owner_maintenance"),
         InlineKeyboardButton(btn("🔄 Reload Plugins", GREEN), callback_data="owner_reload"),
+    ],
+    [
         InlineKeyboardButton(btn("🔁 Restart Bot", RED),      callback_data="owner_restart"),
     ],
     [
@@ -263,6 +270,29 @@ async def cb_setpic_info(client: Client, cb: CallbackQuery):
         "<b>How to use:</b>\n"
         "Send any photo with caption <code>/setpic</code>\n\n"
         "To remove: send <code>/delpic</code>"
+        "</blockquote>",
+        parse_mode=enums.ParseMode.HTML,
+        reply_markup=back_to_panel(),
+    )
+    await cb.answer()
+
+
+# ─── Set Welcome (GC) Pic Info ─────────────────────────────────────────────────
+
+@bot.on_callback_query(filters.regex(r"^owner_setwelcomepic_info$"))
+@error_handler
+async def cb_setwelcomepic_info(client: Client, cb: CallbackQuery):
+    if cb.from_user.id != Config.OWNER_ID:
+        return await cb.answer("❌ Owner only!", show_alert=True)
+
+    await cb.message.edit_text(
+        "<blockquote>🎉 <b>Set Welcome (GC) Picture</b></blockquote>\n\n"
+        "Shown whenever the bot is added to a new group — separate from "
+        "the /setpic start picture.\n\n"
+        "<blockquote>"
+        "<b>How to use:</b>\n"
+        "Send any photo with caption <code>/setwelcomepic</code>\n\n"
+        "To remove: send <code>/delwelcomepic</code>"
         "</blockquote>",
         parse_mode=enums.ParseMode.HTML,
         reply_markup=back_to_panel(),

@@ -4,85 +4,31 @@
 
 FIX: After saving bg_start.png locally, the image is also pushed to the
      GitHub repository so it persists across fresh deployments/restarts.
-     Set GITHUB_TOKEN + GITHUB_REPO in your .env to enable this.
+     Set GITHUB_TOKEN + GITHUB_REPO in your .env to enable this. On the
+     next startup, melody/__main__.py pulls it back down from GitHub if
+     the local file is missing (see utils/github_assets.py) — the push
+     alone isn't enough on ephemeral filesystems like Heroku's.
      The push is best-effort — a failure is reported but does NOT block
      the local save, so the pic works immediately regardless.
 """
-import asyncio
-import base64
 import html
-import json
 import os
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
-from melody.config import Config
 from utils.decorators import owner_only, error_handler
 from utils.formatters import quote_html
+from utils.github_assets import push_to_github
 
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets")
 BG_START = os.path.join(ASSETS, "bg_start.png")
 
 # GitHub target path inside the repo
-_GH_FILE_PATH = "assets/bg_start.png"
-_GH_API_BASE = "https://api.github.com"
+GH_START_PATH = "assets/bg_start.png"
 
 
 def _ensure_assets():
     os.makedirs(ASSETS, exist_ok=True)
-
-
-async def _push_to_github(local_path: str) -> tuple[bool, str]:
-    """
-    Upload local_path to the GitHub repo via the Contents API.
-    Returns (success: bool, message: str).
-
-    Requires Config.GITHUB_TOKEN and Config.GITHUB_REPO (e.g. "user/repo").
-    """
-    token = Config.GITHUB_TOKEN
-    repo  = Config.GITHUB_REPO
-    if not token or not repo:
-        return False, "GITHUB_TOKEN / GITHUB_REPO not set in .env — skipping GitHub push."
-
-    try:
-        import aiohttp
-    except ImportError:
-        return False, "aiohttp not installed — cannot push to GitHub."
-
-    try:
-        with open(local_path, "rb") as f:
-            content_b64 = base64.b64encode(f.read()).decode()
-    except OSError as e:
-        return False, f"Could not read local file: {e}"
-
-    headers = {
-        "Authorization": f"token {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    url = f"{_GH_API_BASE}/repos/{repo}/contents/{_GH_FILE_PATH}"
-
-    async with aiohttp.ClientSession() as session:
-        # 1. Check if the file already exists (need its SHA to update it)
-        sha = None
-        async with session.get(url, headers=headers) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                sha = data.get("sha")
-
-        # 2. Create or update the file
-        payload: dict = {
-            "message": "🖼️ Update bot start picture via /setpic",
-            "content": content_b64,
-        }
-        if sha:
-            payload["sha"] = sha
-
-        async with session.put(url, headers=headers, json=payload) as resp:
-            if resp.status in (200, 201):
-                return True, "Image pushed to GitHub ✅"
-            body = await resp.text()
-            return False, f"GitHub API error {resp.status}: {body[:200]}"
 
 
 @bot.on_message(filters.command("setpic") & filters.private)
@@ -126,21 +72,14 @@ async def setpic_cmd(client: Client, message: Message):
         )
         return
 
-    # Push to GitHub (best-effort, in background)
-    gh_ok, gh_msg = await _push_to_github(BG_START)
-
-    gh_line = (
-        f"\n\n📦 <b>GitHub:</b> {gh_msg}"
-        if not gh_ok
-        else f"\n\n📦 <b>GitHub:</b> {gh_msg}"
-    )
+    # Push to GitHub (best-effort) so it survives a fresh deploy/restart.
+    gh_ok, gh_msg = await push_to_github(BG_START, GH_START_PATH, "🖼️ Update bot start picture via /setpic")
 
     await msg.edit(
         quote_html(
             "✅ <b>Start picture updated!</b>\n\n"
-            "The new image will be shown on the next <code>/start</code> command "
-            "and whenever the bot is added to a new group."
-            + gh_line
+            "The new image will be shown on the next <code>/start</code> command."
+            f"\n\n📦 <b>GitHub:</b> {gh_msg}"
         ),
         parse_mode=enums.ParseMode.HTML,
     )

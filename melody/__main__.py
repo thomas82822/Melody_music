@@ -424,6 +424,23 @@ async def send_startup_log(bot, assistant, loaded: int, failed: int, failed_name
 async def main():
     validate_config()
 
+    # FIX: restore GitHub-persisted images (start pic, group-welcome pic)
+    # BEFORE plugins load. Ephemeral filesystems (Heroku) wipe assets/ on
+    # every restart; /setpic and /setwelcomepic push to GitHub on save, but
+    # that's only "permanent" if the fresh dyno also pulls it back down on
+    # boot. Best-effort — silently skipped if GITHUB_TOKEN/GITHUB_REPO
+    # aren't configured, and never blocks startup.
+    try:
+        from utils.github_assets import restore_persistent_assets
+        import os as _os
+        _assets_dir = _os.path.join(_os.path.dirname(__file__), "..", "assets")
+        await restore_persistent_assets([
+            (_os.path.join(_assets_dir, "bg_start.png"), "assets/bg_start.png"),
+            (_os.path.join(_assets_dir, "bg_welcome.png"), "assets/bg_welcome.png"),
+        ])
+    except Exception as exc:
+        LOGGER.warning("Could not restore persistent assets from GitHub: %s", exc)
+
     # FIX: Patch Pyrogram BEFORE any client is created so the class-level
     # override is in place by the time bot.start() / assistant.start() run.
     # See _patch_pyrogram_peer_errors() docstring for full explanation.

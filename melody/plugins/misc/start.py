@@ -20,6 +20,10 @@ from strings.themes import BLUE, RED, GREEN, btn, fancy
 
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets")
 BG_START = os.path.join(ASSETS, "bg_start.png")
+# Dedicated picture for the "bot added to a group" welcome card — set via
+# /setwelcomepic (see melody/plugins/owner/set_welcome_pic.py). Falls back
+# to BG_START, then to a text-only card, if not set.
+BG_WELCOME = os.path.join(ASSETS, "bg_welcome.png")
 
 # ─── Formatted text blocks ────────────────────────────────────────────────────
 
@@ -281,9 +285,13 @@ async def new_group_handler(client: Client, message: Message):
             owner_name=(adder.first_name if adder else None),
         )
 
-        if os.path.exists(BG_START):
+        # Prefer the dedicated group-welcome pic; fall back to the start
+        # pic, then to a text-only card.
+        welcome_pic = BG_WELCOME if os.path.exists(BG_WELCOME) else (BG_START if os.path.exists(BG_START) else None)
+
+        if welcome_pic:
             await message.reply_photo(
-                BG_START,
+                welcome_pic,
                 caption=caption,
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=buttons,
