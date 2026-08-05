@@ -11,7 +11,12 @@ from melody.core.call import pause_stream, resume_stream, skip_stream, stop_stre
 from melody.core.queue import format_queue, get_current
 from melody.logging import log_activity
 from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
-from utils.formatters import format_duration, send_quote
+from utils.formatters import format_duration, send_quote, premium_emoji, PREMIUM_EMOJI_IDS
+
+_PAUSE = premium_emoji(PREMIUM_EMOJI_IDS["pause"], "⏸")
+_RESUME = premium_emoji(PREMIUM_EMOJI_IDS["resume"], "▶️")
+_SKIP = premium_emoji(PREMIUM_EMOJI_IDS["skip"], "⏭")
+_STOP = premium_emoji(PREMIUM_EMOJI_IDS["stop"], "⏹")
 
 
 def _who(message: Message) -> tuple[str, str]:
@@ -29,7 +34,7 @@ def _who(message: Message) -> tuple[str, str]:
 @admin_or_auth
 async def pause_cmd(client: Client, message: Message):
     await pause_stream(message.chat.id)
-    await send_quote(message, "⏸ <b>Paused.</b>", client=client)
+    await send_quote(message, f"{_PAUSE} <b>Paused.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏸ <b>Paused</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -39,7 +44,7 @@ async def pause_cmd(client: Client, message: Message):
 @admin_or_auth
 async def resume_cmd(client: Client, message: Message):
     await resume_stream(message.chat.id)
-    await send_quote(message, "▶️ <b>Resumed.</b>", client=client)
+    await send_quote(message, f"{_RESUME} <b>Resumed.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"▶️ <b>Resumed</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -49,7 +54,7 @@ async def resume_cmd(client: Client, message: Message):
 @admin_or_auth
 async def skip_cmd(client: Client, message: Message):
     await skip_stream(message.chat.id)
-    await send_quote(message, "⏭ <b>Skipped.</b>", client=client)
+    await send_quote(message, f"{_SKIP} <b>Skipped.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏭ <b>Skipped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -59,7 +64,7 @@ async def skip_cmd(client: Client, message: Message):
 @admin_or_auth
 async def stop_cmd(client: Client, message: Message):
     await stop_stream(message.chat.id)
-    await send_quote(message, "⏹ <b>Music stopped and queue cleared.</b>", client=client)
+    await send_quote(message, f"{_STOP} <b>Music stopped and queue cleared.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏹ <b>Stopped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -74,7 +79,7 @@ async def stop_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cpause_cmd(client: Client, message: Message):
     await pause_stream(message.chat.id)
-    await send_quote(message, "⏸ <b>Paused.</b>", client=client)
+    await send_quote(message, f"{_PAUSE} <b>Paused.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏸ <b>Paused (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -84,7 +89,7 @@ async def cpause_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cresume_cmd(client: Client, message: Message):
     await resume_stream(message.chat.id)
-    await send_quote(message, "▶️ <b>Resumed.</b>", client=client)
+    await send_quote(message, f"{_RESUME} <b>Resumed.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"▶️ <b>Resumed (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -94,7 +99,7 @@ async def cresume_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cskip_cmd(client: Client, message: Message):
     await skip_stream(message.chat.id)
-    await send_quote(message, "⏭ <b>Skipped.</b>", client=client)
+    await send_quote(message, f"{_SKIP} <b>Skipped.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏭ <b>Skipped (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -104,7 +109,7 @@ async def cskip_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cstop_cmd(client: Client, message: Message):
     await stop_stream(message.chat.id)
-    await send_quote(message, "⏹ <b>Music stopped and queue cleared.</b>", client=client)
+    await send_quote(message, f"{_STOP} <b>Music stopped and queue cleared.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏹ <b>Stopped (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 

@@ -5,11 +5,11 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from melody import bot
 from utils.decorators import error_handler
-from utils.formatters import send_quote
+from utils.formatters import send_quote, premium_emoji, PREMIUM_EMOJI_IDS
 from strings.themes import RED, btn, fancy
 
 ABOUT_TEXT = (
-    f"<blockquote>🎶 <b>About {fancy('Melody')}</b></blockquote>\n\n"
+    f"<blockquote>{premium_emoji(PREMIUM_EMOJI_IDS['about'], '🎶')} <b>About {fancy('Melody')}</b></blockquote>\n\n"
     "<b>Melody</b> is a premium Telegram music bot that streams\n"
     "high-quality audio from YouTube.\n\n"
     "<blockquote>"

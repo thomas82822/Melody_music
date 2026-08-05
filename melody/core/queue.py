@@ -10,6 +10,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Optional
 from utils.database import get_setting, set_setting
+from utils.formatters import premium_emoji, PREMIUM_EMOJI_IDS
 
 
 @dataclass
@@ -154,7 +155,7 @@ def format_queue(chat_id: int) -> str:
     q = _queues.get(chat_id, [])
     predownloaded = _predownloaded.get(chat_id)
 
-    lines = ["<b>📋 Music Queue</b>\n"]
+    lines = [f"<b>{premium_emoji(PREMIUM_EMOJI_IDS['queue'], '📋')} Music Queue</b>\n"]
     if current:
         safe_title = html.escape(current.title[:45])
         safe_name  = html.escape(current.requester_name)

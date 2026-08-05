@@ -145,6 +145,26 @@ def premium_emoji(emoji_id: str, glyph: str) -> str:
     return f'<emoji id="{emoji_id}">{glyph}</emoji>'
 
 
+# Owner-supplied premium animated emoji ids, wired into the headline glyph of
+# the bot's main quote cards below (send_quote()/verify_custom_emojis() make
+# each one fail safe: an invalid/rotated id just falls back to the plain
+# glyph instead of breaking the message). Re-verify these anytime with the
+# owner-only /emojiid command — reply to a message containing the real
+# premium emoji to get a Telegram-confirmed id.
+PREMIUM_EMOJI_IDS = {
+    "start": "6127406790666623284",
+    "about": "6174884334114182449",
+    "ping": "6199693070238227698",
+    "stats": "6201763545122609648",
+    "pause": "6172610144635983353",
+    "resume": "6197420598746945336",
+    "skip": "6168060795016976899",
+    "stop": "6201638037588285856",
+    "nowplaying": "6199293238847740460",
+    "queue": "6176895538449880631",
+}
+
+
 async def send_quote(handler, text: str, *, client=None, edit: bool = False, **kwargs):
     """Send (or edit) an HTML quote card — built with quote_html()/
     premium_emoji() — through Telegram safely.

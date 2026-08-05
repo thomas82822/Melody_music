@@ -16,7 +16,7 @@ from melody.config import Config
 from melody.logging import log_activity
 from utils.decorators import error_handler
 from utils.database import is_banned, is_gbanned, get_chat_owner
-from utils.formatters import send_quote
+from utils.formatters import send_quote, premium_emoji, PREMIUM_EMOJI_IDS
 from strings.themes import BLUE, RED, GREEN, btn, fancy
 
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets")
@@ -30,7 +30,7 @@ BG_WELCOME = os.path.join(ASSETS, "bg_welcome.png")
 
 WELCOME_DM = (
     "<blockquote>"
-    f"🎶 <b>{fancy('MELODY MUSIC BOT')}</b>\n"
+    f"{premium_emoji(PREMIUM_EMOJI_IDS['start'], '🎶')} <b>{fancy('MELODY MUSIC BOT')}</b>\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━"
     "</blockquote>\n\n"
     "🎵 <b>Premium Telegram Music Bot</b>\n"

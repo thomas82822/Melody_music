@@ -6,7 +6,7 @@ from pyrogram.types import Message
 from melody import bot
 from melody.core.queue import get_current, peek_predownloaded
 from utils.decorators import error_handler
-from utils.formatters import format_duration, send_quote
+from utils.formatters import format_duration, send_quote, premium_emoji, PREMIUM_EMOJI_IDS
 
 
 @bot.on_message(filters.command("np") & filters.group)
@@ -17,8 +17,9 @@ async def nowplaying_cmd(client: Client, message: Message):
         await send_quote(message, "❌ Nothing is playing right now.", client=client)
         return
 
+    _np_emoji = premium_emoji(PREMIUM_EMOJI_IDS["nowplaying"], "🎵")
     text = (
-        f"🎵 **Now Playing**\n\n"
+        f"{_np_emoji} **Now Playing**\n\n"
         f"**{track.title[:50]}**\n"
         f"👤 `{track.uploader}`\n"
         f"⏱ `{format_duration(track.duration)}`\n"
