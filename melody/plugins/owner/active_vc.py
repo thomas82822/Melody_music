@@ -1,11 +1,12 @@
 """
 📡 /activevc — List all active voice chat sessions (owner only)
 """
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
 from utils.decorators import owner_only, error_handler
 from utils.database import get_all_chats
+from utils.formatters import quote_html
 
 
 @bot.on_message(filters.command("activevc") & filters.private)
@@ -19,10 +20,13 @@ async def activevc_cmd(client: Client, message: Message):
 
     if not active_ids:
         return await message.reply(
-            "📡 **Active Voice Chats**\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "🔇 No active voice chats right now.\n\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            quote_html(
+                "📡 **Active Voice Chats**\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "🔇 No active voice chats right now.\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            ),
+            parse_mode=enums.ParseMode.HTML,
         )
 
     # Match IDs to titles from DB
@@ -42,4 +46,4 @@ async def activevc_cmd(client: Client, message: Message):
         lines.append(f"🎵 **{title}**\n   ID: `{cid}`\n   Now: {song}\n")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    await message.reply("\n".join(lines))
+    await message.reply(quote_html("\n".join(lines)), parse_mode=enums.ParseMode.HTML)

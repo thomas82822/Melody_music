@@ -7,7 +7,8 @@ import asyncio
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
-from melody.core.queue import set_autoplay, is_autoplay_on
+from melody.core.queue import set_autoplay, is_autoplay_on, get_current
+from melody.core.autoplay import prefetch_next
 from melody.logging import log_activity
 from utils.decorators import admin_or_auth, error_handler
 
@@ -41,6 +42,11 @@ async def autoplay_cmd(client: Client, message: Message):
             "pre-downloads the next one in advance for zero-gap playback. 🎶",
             parse_mode=enums.ParseMode.HTML,
         )
+        # REQUIREMENT: as soon as AutoPlay is turned on, immediately predict
+        # and pre-download the next song (don't wait for the post-play hook)
+        # so /queue can show it right away as "Requested by: AutoPlay".
+        if get_current(chat.id):
+            asyncio.create_task(prefetch_next(chat.id))
         asyncio.create_task(log_activity(
             f"🤖 <b>AutoPlay Enabled</b>\n"
             f"• By: <code>{actor_name}</code> (<code>{actor.id if actor else '—'}</code>)\n"

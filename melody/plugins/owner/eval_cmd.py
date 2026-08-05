@@ -4,10 +4,11 @@
 import asyncio
 import io
 import sys
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
 from utils.decorators import owner_only, error_handler
+from utils.formatters import quote_html
 
 
 @bot.on_message(filters.command(["eval", "py"]) & filters.private)
@@ -18,9 +19,11 @@ async def eval_cmd(client: Client, message: Message):
     if message.reply_to_message:
         code = message.reply_to_message.text or code
     if not code:
-        return await message.reply("**Usage:** `/eval <python code>`")
+        return await message.reply(
+            quote_html("**Usage:** `/eval <python code>`"), parse_mode=enums.ParseMode.HTML
+        )
 
-    msg = await message.reply("⚙️ Evaluating...")
+    msg = await message.reply(quote_html("⚙️ Evaluating..."), parse_mode=enums.ParseMode.HTML)
 
     old_stdout = sys.stdout
     sys.stdout = buf = io.StringIO()
@@ -47,4 +50,4 @@ async def eval_cmd(client: Client, message: Message):
     if not output:
         output = "✅ Done (no output)"
 
-    await msg.edit(output[:4096])
+    await msg.edit(quote_html(output[:4000], expandable=True), parse_mode=enums.ParseMode.HTML)

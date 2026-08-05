@@ -1,28 +1,37 @@
 """
-🖼️ Thumbnail generator — full-screen "now playing" card
+🖼️ Thumbnail generator — compact "mini player" now playing card
 
-DESIGN (v2 — full-bleed cover + spoiler + requester DP):
-  • Background = the song's own cover art, SHARP (not blurred), scaled and
-    cropped to fill the entire 1280×720 canvas edge-to-edge — this is what
-    makes the card read as a full-screen photo of the song instead of a
-    small framed thumbnail with dead space around it. Only a bottom
-    gradient is added, purely so the text stays legible over any artwork.
-  • The requesting user's profile photo is shown large and prominently
-    (not a small icon) at the bottom-left next to their name, since that's
-    the "played by" identity that matters most to the group.
-  • The bot's own DP appears as a small badge, secondary to the requester.
-  • Sent from play.py with Telegram's native `has_spoiler=True` so the
-    photo is blurred-until-tapped in the chat itself (Telegram's own
-    spoiler mechanic), on top of this full-screen artwork.
+DESIGN (v3 — circular thumbnail + side info, Modi-Meloni theme):
+  Redesigned away from the old full-screen/full-bleed cover-art card. The
+  card is now a short, wide "mini player" strip:
+    • A CIRCULAR crop of the song's YouTube thumbnail sits on the left,
+      framed with a saffron→gold ring (Modi-Meloni palette).
+    • Title / channel / a small "views"-style meta line sit beside it.
+    • A saffron→white→green progress bar runs under the info.
+    • A row of playback-control glyphs (⏮ ⏯ ⏭ + shuffle/repeat) is drawn
+      under the bar, purely as a visual echo of Telegram's own inline
+      keyboard buttons that ship alongside the card.
+  The requester's own avatar (small) + the bot badge sit in the corner
+  instead of dominating the frame like the old design did.
+  No `has_spoiler` blur is used any more — the point of the circular
+  thumbnail is to be seen immediately, like a real music-player widget.
 """
 import io
 import os
 import time
 import aiohttp
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "assets")
 FONTS = os.path.join(ASSETS, "fonts")
+
+# ── Modi-Meloni palette (kept in sync with melody/config.py Config.COLORS) ──
+SAFFRON = "#FF6600"
+GOLD = "#FFD700"
+GREEN = "#009246"
+WHITE = "#FFFFFF"
+DARK = "#1A0500"
+CHAKRA_BLUE = "#000080"
 
 # Bot's own DP rarely changes during a run — fetch it once and reuse.
 _bot_dp_cache: dict = {"path": None, "tried": False}
@@ -112,28 +121,40 @@ def _circle_crop(img: "Image.Image", size: int, ring_color=None, ring_width: int
     return output
 
 
-def _cover_fill_background(cover: "Image.Image", w: int, h: int) -> "Image.Image":
-    """Scale+crop `cover` to fill a w×h canvas (like CSS `background-size: cover`)."""
-    src_w, src_h = cover.size
-    scale = max(w / src_w, h / src_h)
-    new_w, new_h = int(src_w * scale) + 1, int(src_h * scale) + 1
-    resized = cover.resize((new_w, new_h), Image.LANCZOS)
-    left = (new_w - w) // 2
-    top = (new_h - h) // 2
-    return resized.crop((left, top, left + w, top + h))
+def _dual_ring_crop(img: "Image.Image", size: int) -> "Image.Image":
+    """Circular crop with a two-tone saffron→green ring (Modi-Meloni), used
+    for the main mini-player thumbnail avatar."""
+    img = img.convert("RGBA").resize((size, size), Image.LANCZOS)
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, size, size), fill=255)
+    output = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    output.paste(img, (0, 0), mask)
+
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    canvas.paste(output, (0, 0), output)
+    ring_width = max(4, size // 26)
+    ring_draw = ImageDraw.Draw(canvas)
+    box = (ring_width // 2, ring_width // 2, size - ring_width // 2, size - ring_width // 2)
+    # Top-left half saffron, bottom-right half green — a subtle nod to the
+    # tricolour without covering the artwork itself.
+    ring_draw.arc(box, start=225, end=45, fill=SAFFRON, width=ring_width)
+    ring_draw.arc(box, start=45, end=225, fill=GREEN, width=ring_width)
+    return canvas
 
 
-def _placeholder_gradient(w: int, h: int) -> "Image.Image":
-    """Fallback backdrop if the YouTube thumbnail can't be fetched."""
-    bg = Image.new("RGBA", (w, h), (0, 0, 0, 255))
-    draw = ImageDraw.Draw(bg)
-    for y in range(h):
-        ratio = y / h
-        r = int(30 + 20 * ratio)
-        g = int(10 + 5 * ratio)
-        b = int(40 + 30 * ratio)
-        draw.line([(0, y), (w, y)], fill=(r, g, b, 255))
-    return bg
+def _placeholder_avatar(size: int) -> "Image.Image":
+    """Fallback circular art if the YouTube thumbnail can't be fetched."""
+    img = Image.new("RGBA", (size, size), DARK)
+    draw = ImageDraw.Draw(img)
+    for y in range(size):
+        ratio = y / size
+        r = int(int(SAFFRON[1:3], 16) * (1 - ratio) + int(GREEN[1:3], 16) * ratio)
+        g = int(int(SAFFRON[3:5], 16) * (1 - ratio) + int(GREEN[3:5], 16) * ratio)
+        b = int(int(SAFFRON[5:7], 16) * (1 - ratio) + int(GREEN[5:7], 16) * ratio)
+        draw.line([(0, y), (size, y)], fill=(r, g, b, 255))
+    f = _get_font("Poppins-Bold.ttf", int(size * 0.4))
+    draw.text((size * 0.32, size * 0.28), "♪", font=f, fill=WHITE)
+    return img
 
 
 def _initials_avatar(name: str, size: int, color: str) -> "Image.Image":
@@ -143,8 +164,17 @@ def _initials_avatar(name: str, size: int, color: str) -> "Image.Image":
     f = _get_font("Poppins-Bold.ttf", int(size * 0.45))
     bbox = d.textbbox((0, 0), letter, font=f)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    d.text(((size - tw) / 2 - bbox[0], (size - th) / 2 - bbox[1]), letter, font=f, fill="#FFFFFF")
+    d.text(((size - tw) / 2 - bbox[0], (size - th) / 2 - bbox[1]), letter, font=f, fill=WHITE)
     return img
+
+
+def _truncate_to_width(draw: "ImageDraw.ImageDraw", text: str, font, max_w: int) -> str:
+    if draw.textlength(text, font=font) <= max_w:
+        return text
+    ellipsis = "…"
+    while text and draw.textlength(text + ellipsis, font=font) > max_w:
+        text = text[:-1]
+    return text + ellipsis
 
 
 async def make_thumbnail(
@@ -159,107 +189,123 @@ async def make_thumbnail(
     bot_dp_path: str = None,
 ) -> str:
     """
-    Generate a 1280×720 full-screen "now playing" card: the cover art fills
-    the whole frame edge-to-edge (no blur, no side panel), with a bottom
-    gradient carrying the song info and a large, prominent requester avatar.
+    Generate a compact 1280×420 "mini player" now-playing card:
+      [ (●) circular thumbnail ]  Title
+                                  Channel · views-style meta
+                                  ▬▬▬▬▬▬▭▭▭▭▭▭▭▭  00:00 / duration
+                                  ⏮  ⏯  ⏭     🔀        🔁
+    Styled in the Modi-Meloni theme (saffron / white / green / gold).
 
     `requester_dp_path` / `bot_dp_path` are LOCAL file paths (already
     downloaded via fetch_dp()/get_bot_dp()) — not remote URLs.
-    Meant to be sent with Telegram's native `has_spoiler=True` so the chat
-    itself blurs it until tapped, on top of this full-bleed artwork.
     Returns the path to the saved PNG.
     """
-    W, H = 1280, 720
+    W, H = 1280, 420
+    PAD = 40
 
-    cover = await _fetch_image_from_url(yt_thumbnail_url)
-
-    # ── Full-screen sharp cover art — fills the ENTIRE canvas edge-to-edge ──
-    if cover:
-        bg = _cover_fill_background(cover, W, H).convert("RGB")
-        # Very slight enhancement so YouTube's compressed thumbnails pop,
-        # without blurring or darkening the whole image like the old design.
-        bg = ImageEnhance.Contrast(bg).enhance(1.06)
-        bg = ImageEnhance.Color(bg).enhance(1.1)
-        bg = bg.convert("RGBA")
-    else:
-        bg = _placeholder_gradient(W, H)
-
-    # Bottom gradient only (not a full dark overlay) — keeps the artwork
-    # full-screen and bright, just darkens enough for the text to sit on.
-    gradient = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    grad_draw = ImageDraw.Draw(gradient)
-    fade_h = 340
-    for y in range(fade_h):
-        alpha = int(210 * (y / fade_h) ** 1.6)
-        grad_draw.line([(0, H - fade_h + y), (W, H - fade_h + y)], fill=(0, 0, 0, alpha))
-    # Slim top fade too, so the caption text Telegram overlays never
-    # collides invisibly with a bright sky/white background.
-    for y in range(90):
-        alpha = int(120 * (1 - y / 90))
-        grad_draw.line([(0, y), (W, y)], fill=(0, 0, 0, alpha))
-    bg = Image.alpha_composite(bg, gradient)
-
+    # ── Background — soft dark card with a subtle saffron/green edge glow ──
+    bg = Image.new("RGBA", (W, H), (18, 18, 22, 255))
+    edge = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    edge_draw = ImageDraw.Draw(edge)
+    edge_draw.rectangle([(0, 0), (W, 6)], fill=SAFFRON)
+    edge_draw.rectangle([(0, H - 6), (W, H)], fill=GREEN)
+    bg = Image.alpha_composite(bg, edge)
     draw = ImageDraw.Draw(bg)
 
-    # ── Fonts ────────────────────────────────────────────────────────────────
-    font_bold_lg = _get_font("Poppins-Bold.ttf", 48)
-    font_bold_md = _get_font("Poppins-Bold.ttf", 26)
-    font_regular = _get_font("Poppins-Regular.ttf", 22)
+    # ── Fonts ────────────────────────────────────────────────────────────
+    font_title = _get_font("Poppins-Bold.ttf", 42)
+    font_channel = _get_font("Poppins-Bold.ttf", 26)
+    font_meta = _get_font("Poppins-Regular.ttf", 20)
     font_small = _get_font("Poppins-Regular.ttf", 18)
+    font_controls = _get_font("Poppins-Bold.ttf", 34)
 
-    pad = 56
+    # ── Circular thumbnail (left) ───────────────────────────────────────
+    thumb_size = H - PAD * 2
+    cover = await _fetch_image_from_url(yt_thumbnail_url)
+    cover_circle = _dual_ring_crop(cover if cover else _placeholder_avatar(thumb_size), thumb_size)
+    thumb_x, thumb_y = PAD, PAD
+    bg.paste(cover_circle, (thumb_x, thumb_y), cover_circle)
 
-    # ── Song info, bottom-left over the gradient ───────────────────────────
-    text_y = H - 300
-    draw.text((pad, text_y), song_title[:42], font=font_bold_lg, fill="#FFFFFF")
-    draw.text((pad, text_y + 60), artist[:40], font=font_bold_md, fill="#FFD700")
-    draw.text((pad, text_y + 100), f"⏱ {duration}   🏛 {group_name[:28]}", font=font_regular, fill="#EEEEEE")
+    # ── Song info (right of thumbnail) ─────────────────────────────────
+    info_x = thumb_x + thumb_size + 44
+    info_w = W - info_x - PAD
 
-    # ── Progress bar (saffron → gold gradient) ─────────────────────────────
-    bar_x, bar_y, bar_w, bar_h = pad, text_y + 145, W - pad * 2, 10
-    for i in range(bar_w):
-        ratio = i / bar_w
-        r = 255
-        g = int(102 * (1 - ratio) + 215 * ratio)
-        b = 0
-        draw.rectangle([(bar_x + i, bar_y), (bar_x + i, bar_y + bar_h)], fill=(r, g, b))
-    draw.rectangle([(bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h)], outline="#FFD700", width=1)
+    title_y = PAD + 6
+    safe_title = _truncate_to_width(draw, song_title, font_title, info_w)
+    draw.text((info_x, title_y), safe_title, font=font_title, fill=WHITE)
 
-    # ── Requester identity — LARGE and prominent (the main ask: "requester
-    # ka DP dikhe"), bot DP shown small as a secondary badge on top of it ───
-    row_y = bar_y + 34
-    requester_size = 108
+    channel_y = title_y + 58
+    safe_channel = _truncate_to_width(draw, artist, font_channel, info_w)
+    draw.text((info_x, channel_y), safe_channel, font=font_channel, fill=GOLD)
 
+    meta_y = channel_y + 42
+    meta_line = f"👁 Playing now  •  🎧 {group_name[:24]}"
+    safe_meta = _truncate_to_width(draw, meta_line, font_meta, info_w)
+    draw.text((info_x, meta_y), safe_meta, font=font_meta, fill="#CFCFCF")
+
+    # ── Progress bar (saffron → white → green, Modi-Meloni tricolour) ──
+    bar_y = meta_y + 46
+    bar_h = 10
+    bar_w = info_w
+    third = bar_w // 3
+    draw.rounded_rectangle([(info_x, bar_y), (info_x + bar_w, bar_y + bar_h)], radius=bar_h // 2, fill="#3A3A3A")
+    filled_w = int(bar_w * 0.28)  # static preview position for the "now playing" card
+    for i in range(filled_w):
+        ratio = i / max(third * 2, 1)
+        if i < third:
+            r, g, b = 255, int(153 + 100 * (i / third)), int(51 + 150 * (i / third))
+        else:
+            r = int(255 - 117 * ((i - third) / max(third, 1)))
+            g = int(255 - 119 * ((i - third) / max(third, 1)))
+            b = int(255 - 247 * ((i - third) / max(third, 1)))
+        draw.line([(info_x + i, bar_y), (info_x + i, bar_y + bar_h)], fill=(max(r,0), max(g,0), max(b,0)))
+    knob_x = info_x + filled_w
+    draw.ellipse([(knob_x - 9, bar_y - 4), (knob_x + 9, bar_y + bar_h + 4)], fill=GOLD)
+
+    time_y = bar_y + bar_h + 10
+    draw.text((info_x, time_y), "00:00", font=font_small, fill="#AAAAAA")
+    dur_w = draw.textlength(duration, font=font_small)
+    draw.text((info_x + bar_w - dur_w, time_y), duration, font=font_small, fill="#AAAAAA")
+
+    # ── Playback control glyphs row ────────────────────────────────────
+    controls_y = time_y + 34
+    glyphs = ["🔀", "⏮", "⏯", "⏭", "🔁"]
+    gap = info_w / (len(glyphs) + 1)
+    for idx, g in enumerate(glyphs, 1):
+        gw = draw.textlength(g, font=font_controls)
+        gx = info_x + gap * idx - gw / 2
+        draw.text((gx, controls_y), g, font=font_controls, fill=WHITE if g in ("⏮", "⏯", "⏭") else GOLD)
+
+    # ── Requester + bot badge, small, top-right corner ─────────────────
+    badge_size = 54
     bot_img = _load_image_any(bot_dp_path) if bot_dp_path else None
     user_img = _load_image_any(requester_dp_path) if requester_dp_path else None
 
     user_circle = _circle_crop(
-        user_img if user_img else _initials_avatar(requester_name, requester_size, "#8B0000"),
-        requester_size, ring_color="#FFD700", ring_width=5,
+        user_img if user_img else _initials_avatar(requester_name, badge_size, "#8B0000"),
+        badge_size, ring_color=GOLD, ring_width=3,
     )
-    bg.paste(user_circle, (pad, row_y), user_circle)
+    badge_x = W - PAD - badge_size
+    badge_y = PAD // 2
+    bg.paste(user_circle, (badge_x, badge_y), user_circle)
 
-    # Small bot-DP badge overlapping the bottom-right of the big requester
-    # avatar (secondary, like a "played via" mark).
-    bot_badge_size = 46
+    bot_badge_size = 26
     bot_circle = _circle_crop(
         bot_img if bot_img else _initials_avatar("Melody", bot_badge_size, "#B8860B"),
-        bot_badge_size, ring_color="#FFFFFF", ring_width=3,
+        bot_badge_size, ring_color=WHITE, ring_width=2,
     )
     bg.paste(
         bot_circle,
-        (pad + requester_size - bot_badge_size + 8, row_y + requester_size - bot_badge_size + 8),
+        (badge_x + badge_size - bot_badge_size + 6, badge_y + badge_size - bot_badge_size + 6),
         bot_circle,
     )
+    req_label = _truncate_to_width(draw, requester_name, font_small, 160)
+    label_w = draw.textlength(req_label, font=font_small)
+    draw.text((badge_x - label_w - 12, badge_y + badge_size // 2 - 10), req_label, font=font_small, fill="#CCCCCC")
 
-    label_x = pad + requester_size + 24
-    draw.text((label_x, row_y + 14), "🙋 Requested by", font=font_small, fill="#CCCCCC")
-    draw.text((label_x, row_y + 40), requester_name[:24], font=font_bold_md, fill="#FFFFFF")
-    draw.text((label_x, row_y + 76), f"🤖 via Melody · ♛ {owner_name[:18]}", font=font_small, fill="#FFD700")
-
-    # ── Watermark ─────────────────────────────────────────────────────────
+    # ── Watermark ───────────────────────────────────────────────────────
     wm_draw = ImageDraw.Draw(bg)
-    wm_draw.text((W - 190, 24), "🎶 Melody", font=font_bold_md, fill=(255, 255, 255, 170))
+    wm_draw.text((PAD, H - PAD // 2 - 4), f"🎶 Melody · ♛ {owner_name[:18]}", font=font_small, fill=(255, 255, 255, 150))
 
     # ── Save ──────────────────────────────────────────────────────────────
     out_path = f"/tmp/melody_thumb_{int(time.time() * 1000)}.png"

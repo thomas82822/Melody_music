@@ -8,12 +8,13 @@ FIX: genius.search_song() is a SYNCHRONOUS/blocking HTTP call. Calling it
      in a thread pool so the bot stays responsive.
 """
 import asyncio
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
 from melody.config import Config
 from melody.core.queue import get_current
 from utils.decorators import error_handler
+from utils.formatters import quote_html
 
 
 @bot.on_message(filters.command("lyrics") & filters.group)
@@ -23,15 +24,17 @@ async def lyrics_cmd(client: Client, message: Message):
     if not query:
         current = get_current(message.chat.id)
         if not current:
-            await message.reply("❌ Nothing is playing. Use `/lyrics <song name>`")
+            await message.reply(
+                quote_html("❌ Nothing is playing. Use `/lyrics <song name>`"), parse_mode=enums.ParseMode.HTML
+            )
             return
         query = current.title
 
     if not Config.GENIUS_API_TOKEN:
-        await message.reply("⚠️ Genius API token not configured.")
+        await message.reply(quote_html("⚠️ Genius API token not configured."), parse_mode=enums.ParseMode.HTML)
         return
 
-    msg = await message.reply(f"🔍 Fetching lyrics for: `{query}`...")
+    msg = await message.reply(quote_html(f"🔍 Fetching lyrics for: `{query}`..."), parse_mode=enums.ParseMode.HTML)
 
     try:
         import lyricsgenius
@@ -45,12 +48,15 @@ async def lyrics_cmd(client: Client, message: Message):
         song = await loop.run_in_executor(None, lambda: genius.search_song(query))
 
         if not song:
-            await msg.edit("❌ Lyrics not found 🌸")
+            await msg.edit(quote_html("❌ Lyrics not found 🌸"), parse_mode=enums.ParseMode.HTML)
             return
 
-        lyrics = song.lyrics[:4000]
-        text = f"**🎵 {song.title}** — _{song.artist}_\n\n{lyrics}"
-        await msg.edit(text[:4096])
+        lyrics = song.lyrics[:3500]
+        header = f"**🎵 {song.title}** — _{song.artist}_\n\n"
+        await msg.edit(
+            quote_html(header) + quote_html(lyrics, expandable=True),
+            parse_mode=enums.ParseMode.HTML,
+        )
 
     except Exception:
-        await msg.edit("❌ Could not fetch lyrics 🌸")
+        await msg.edit(quote_html("❌ Could not fetch lyrics 🌸"), parse_mode=enums.ParseMode.HTML)

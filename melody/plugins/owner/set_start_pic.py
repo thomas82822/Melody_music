@@ -17,6 +17,7 @@ from pyrogram.types import Message
 from melody import bot
 from melody.config import Config
 from utils.decorators import owner_only, error_handler
+from utils.formatters import quote_html
 
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets")
 BG_START = os.path.join(ASSETS, "bg_start.png")
@@ -103,21 +104,25 @@ async def setpic_cmd(client: Client, message: Message):
 
     if not photo:
         return await message.reply(
-            "🖼️ <b>Set Start Picture</b>\n\n"
-            "Send a photo with caption <code>/setpic</code>\n"
-            "or reply to a photo with <code>/setpic</code>",
+            quote_html(
+                "🖼️ <b>Set Start Picture</b>\n\n"
+                "Send a photo with caption <code>/setpic</code>\n"
+                "or reply to a photo with <code>/setpic</code>"
+            ),
             parse_mode=enums.ParseMode.HTML,
         )
 
-    msg = await message.reply("⏳ Downloading and saving image...")
+    msg = await message.reply(quote_html("⏳ Downloading and saving image..."), parse_mode=enums.ParseMode.HTML)
 
     try:
         _ensure_assets()
         # Download photo to assets/bg_start.png
         await client.download_media(photo.file_id, file_name=BG_START)
     except Exception as e:
-        await msg.edit(f"❌ <b>Failed to save image.</b>\n<code>{e}</code>",
-                       parse_mode=enums.ParseMode.HTML)
+        await msg.edit(
+            quote_html(f"❌ <b>Failed to save image.</b>\n<code>{e}</code>"),
+            parse_mode=enums.ParseMode.HTML,
+        )
         return
 
     # Push to GitHub (best-effort, in background)
@@ -130,10 +135,12 @@ async def setpic_cmd(client: Client, message: Message):
     )
 
     await msg.edit(
-        "✅ <b>Start picture updated!</b>\n\n"
-        "The new image will be shown on the next <code>/start</code> command "
-        "and whenever the bot is added to a new group."
-        + gh_line,
+        quote_html(
+            "✅ <b>Start picture updated!</b>\n\n"
+            "The new image will be shown on the next <code>/start</code> command "
+            "and whenever the bot is added to a new group."
+            + gh_line
+        ),
         parse_mode=enums.ParseMode.HTML,
     )
 
@@ -146,12 +153,14 @@ async def delpic_cmd(client: Client, message: Message):
     if os.path.exists(BG_START):
         os.remove(BG_START)
         await message.reply(
-            "🗑️ <b>Start picture removed.</b>\n"
-            "The bot will now use text-only start messages.",
+            quote_html(
+                "🗑️ <b>Start picture removed.</b>\n"
+                "The bot will now use text-only start messages."
+            ),
             parse_mode=enums.ParseMode.HTML,
         )
     else:
         await message.reply(
-            "ℹ️ No custom start picture is set.",
+            quote_html("ℹ️ No custom start picture is set."),
             parse_mode=enums.ParseMode.HTML,
         )

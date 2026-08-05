@@ -1,12 +1,12 @@
 """
 📊 /np — Now Playing
 """
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
-from melody.core.queue import get_current
+from melody.core.queue import get_current, peek_predownloaded
 from utils.decorators import error_handler
-from utils.formatters import format_duration
+from utils.formatters import format_duration, quote_html
 
 
 @bot.on_message(filters.command("np") & filters.group)
@@ -14,7 +14,7 @@ from utils.formatters import format_duration
 async def nowplaying_cmd(client: Client, message: Message):
     track = get_current(message.chat.id)
     if not track:
-        await message.reply("❌ Nothing is playing right now.")
+        await message.reply(quote_html("❌ Nothing is playing right now."), parse_mode=enums.ParseMode.HTML)
         return
 
     text = (
@@ -24,4 +24,13 @@ async def nowplaying_cmd(client: Client, message: Message):
         f"⏱ `{format_duration(track.duration)}`\n"
         f"🙋 Requested by `{track.requester_name}`"
     )
-    await message.reply(text)
+
+    up_next = peek_predownloaded(message.chat.id)
+    if up_next:
+        text += (
+            f"\n\n🤖 **Up Next (AutoPlay):**\n"
+            f"`{up_next.title[:45]}`\n"
+            f"🙋 Requested by `AutoPlay`"
+        )
+
+    await message.reply(quote_html(text), parse_mode=enums.ParseMode.HTML)

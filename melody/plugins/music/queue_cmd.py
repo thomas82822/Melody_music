@@ -11,11 +11,13 @@ from pyrogram.types import Message
 from melody import bot
 from melody.core.queue import format_queue, clear_queue, remove_from_queue
 from utils.decorators import admin_or_auth, error_handler
+from utils.formatters import quote_html
 
 
 @bot.on_message(filters.command(["queue", "q"]) & filters.group)
 @error_handler
 async def queue_cmd(client: Client, message: Message):
+    # format_queue() already wraps its own <blockquote> — send as-is.
     text = format_queue(message.chat.id)
     await message.reply(text, parse_mode=enums.ParseMode.HTML)
 
@@ -25,7 +27,7 @@ async def queue_cmd(client: Client, message: Message):
 @admin_or_auth
 async def clearqueue_cmd(client: Client, message: Message):
     clear_queue(message.chat.id)
-    await message.reply("🗑 <b>Queue cleared.</b>", parse_mode=enums.ParseMode.HTML)
+    await message.reply(quote_html("🗑 <b>Queue cleared.</b>"), parse_mode=enums.ParseMode.HTML)
 
 
 @bot.on_message(filters.command("remove") & filters.group)
@@ -37,7 +39,7 @@ async def remove_cmd(client: Client, message: Message):
         # FIX: was `"**Usage:** \`/remove <position>\`"` — mixing Markdown bold
         # with backtick code AND literal '<' '>' chars caused ENTITY_BOUNDS_INVALID.
         await message.reply(
-            "<b>Usage:</b> <code>/remove &lt;position&gt;</code>",
+            quote_html("<b>Usage:</b> <code>/remove &lt;position&gt;</code>"),
             parse_mode=enums.ParseMode.HTML,
         )
         return
@@ -46,11 +48,11 @@ async def remove_cmd(client: Client, message: Message):
     if removed:
         safe_title = html.escape(removed.title[:40])
         await message.reply(
-            f"🗑 Removed: <code>{safe_title}</code>",
+            quote_html(f"🗑 Removed: <code>{safe_title}</code>"),
             parse_mode=enums.ParseMode.HTML,
         )
     else:
         await message.reply(
-            "❌ <b>Invalid position.</b>",
+            quote_html("❌ <b>Invalid position.</b>"),
             parse_mode=enums.ParseMode.HTML,
         )

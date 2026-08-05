@@ -1,12 +1,12 @@
 """
 🔍 /search command — inline YouTube search results
 """
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from melody import bot
 from melody.core.ytdl import search_youtube
 from utils.decorators import error_handler
-from utils.formatters import format_duration
+from utils.formatters import format_duration, quote_html
 from strings.themes import BLUE, RED, GREEN, btn
 
 
@@ -15,14 +15,14 @@ from strings.themes import BLUE, RED, GREEN, btn
 async def search_cmd(client: Client, message: Message):
     query = " ".join(message.command[1:])
     if not query:
-        await message.reply("**Usage:** `/search <song name>`")
+        await message.reply(quote_html("**Usage:** `/search <song name>`"), parse_mode=enums.ParseMode.HTML)
         return
 
-    msg = await message.reply("🔍 Searching YouTube...")
+    msg = await message.reply(quote_html("🔍 Searching YouTube..."), parse_mode=enums.ParseMode.HTML)
     results = await search_youtube(query, limit=5)
 
     if not results:
-        await msg.edit("❌ No results found.")
+        await msg.edit(quote_html("❌ No results found."), parse_mode=enums.ParseMode.HTML)
         return
 
     text = "**🔍 Search Results:**\n\n"
@@ -38,7 +38,7 @@ async def search_cmd(client: Client, message: Message):
             )
         ])
 
-    await msg.edit(text, reply_markup=InlineKeyboardMarkup(buttons))
+    await msg.edit(quote_html(text), parse_mode=enums.ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
 
 
 @bot.on_callback_query(filters.regex(r"^play_search_(.+)$"))
@@ -82,5 +82,6 @@ async def play_search_cb(client, cb):
 
     status = "▶️ Now Playing" if playing else "📋 Added to Queue"
     await cb.message.reply(
-        f"🎵 **{status}**\n`{info['title'][:50]}`\n⏱ `{format_duration(info['duration'])}`"
+        quote_html(f"🎵 **{status}**\n`{info['title'][:50]}`\n⏱ `{format_duration(info['duration'])}`"),
+        parse_mode=enums.ParseMode.HTML,
     )

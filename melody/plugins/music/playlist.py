@@ -8,7 +8,7 @@ already playing) and queues the rest in order.
 """
 import asyncio
 import html
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
 from melody.config import Config
@@ -18,6 +18,7 @@ from melody.core.call import play_stream, pre_join, abort_prejoin_if_idle
 from melody.logging import log_activity
 from utils.database import add_history
 from utils.decorators import admin_or_auth, error_handler
+from utils.formatters import quote_html
 
 MAX_PLAYLIST_TRACKS = 50
 
@@ -32,15 +33,18 @@ async def playlist_cmd(client: Client, message: Message):
 
     if not query:
         await message.reply(
-            "**Usage:** `/playlist <YouTube playlist URL>`\n"
-            "Example: `/playlist https://youtube.com/playlist?list=XXXXXXXX`"
+            quote_html(
+                "**Usage:** `/playlist <YouTube playlist URL>`\n"
+                "Example: `/playlist https://youtube.com/playlist?list=XXXXXXXX`"
+            ),
+            parse_mode=enums.ParseMode.HTML,
         )
         return
 
     requester_id = user.id if user else chat.id
     requester_name = user.first_name if user else (chat.title or "Channel")
 
-    msg = await message.reply("📃 Loading playlist...")
+    msg = await message.reply(quote_html("📃 Loading playlist..."), parse_mode=enums.ParseMode.HTML)
 
     join_task = asyncio.create_task(pre_join(chat.id))
     entries = await get_playlist_entries(query, limit=MAX_PLAYLIST_TRACKS)
@@ -48,7 +52,10 @@ async def playlist_cmd(client: Client, message: Message):
     if not entries:
         await join_task
         await abort_prejoin_if_idle(chat.id)
-        await msg.edit("❌ Playlist load nahi ho payi — link check karo ya baad me try karo.")
+        await msg.edit(
+            quote_html("❌ Playlist load nahi ho payi — link check karo ya baad me try karo."),
+            parse_mode=enums.ParseMode.HTML,
+        )
         return
 
     queued = 0
@@ -84,16 +91,22 @@ async def playlist_cmd(client: Client, message: Message):
         queued += 1
 
     if queued == 0:
-        await msg.edit("❌ Koi bhi track queue nahi ho payi (sab duration limit se bade the).")
+        await msg.edit(
+            quote_html("❌ Koi bhi track queue nahi ho payi (sab duration limit se bade the)."),
+            parse_mode=enums.ParseMode.HTML,
+        )
         return
 
     status = "▶️ Now Playing + " if first_playing else "📋 Added "
     safe_first_title = html.escape((first_title or "")[:50])
     skipped_note = f"\n⚠️ Skipped `{skipped}` (too long)." if skipped else ""
     await msg.edit(
-        f"📃 **Playlist Queued**\n"
-        f"{status}`{queued}` track(s) to the queue.\n"
-        f"First: `{safe_first_title}`{skipped_note}"
+        quote_html(
+            f"📃 **Playlist Queued**\n"
+            f"{status}`{queued}` track(s) to the queue.\n"
+            f"First: `{safe_first_title}`{skipped_note}"
+        ),
+        parse_mode=enums.ParseMode.HTML,
     )
 
     asyncio.create_task(log_activity(

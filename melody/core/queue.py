@@ -145,12 +145,14 @@ async def set_autoplay(chat_id: int, enabled: bool):
 
 def format_queue(chat_id: int) -> str:
     """
-    Returns an HTML-formatted queue string safe for parse_mode=HTML.
+    Returns an HTML-formatted queue string, wrapped in a native Telegram
+    <blockquote> so /queue always renders as a quote card.
     Song titles / requester names are html.escape()'d so characters like
     & < > ' " never break Telegram's HTML entity parser.
     """
     current = _current.get(chat_id)
     q = _queues.get(chat_id, [])
+    predownloaded = _predownloaded.get(chat_id)
 
     lines = ["<b>📋 Music Queue</b>\n"]
     if current:
@@ -166,7 +168,15 @@ def format_queue(chat_id: int) -> str:
             lines.append(f"<code>{i}.</code> {safe_t} — <i>{safe_n}</i>")
         if len(q) > 10:
             lines.append(f"\n<i>...and {len(q) - 10} more</i>")
+        if predownloaded:
+            safe_p = html.escape(predownloaded.title[:40])
+            lines.append(f"\n<b>🤖 AutoPlay ready:</b> <code>{safe_p}</code> (pre-downloaded)")
+    elif predownloaded:
+        safe_p = html.escape(predownloaded.title[:40])
+        lines.append("<b>⏳ Up Next (AutoPlay):</b>")
+        lines.append(f"<code>{safe_p}</code>")
+        lines.append("🙋 Requested by: <i>AutoPlay</i>")
     else:
         lines.append("<i>Queue is empty</i>")
 
-    return "\n".join(lines)
+    return f"<blockquote>{chr(10).join(lines)}</blockquote>"

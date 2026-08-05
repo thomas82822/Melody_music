@@ -102,7 +102,9 @@ async def try_autoplay(chat_id: int):
         safe_title = html.escape(track.title[:60])
         await bot.send_message(
             chat_id,
-            f"🎶 <b>AutoPlay ▶️</b> <code>{safe_title}</code>\n<i>Melody ne sunwaya!</i>",
+            f"<blockquote>🎶 <b>AutoPlay ▶️</b> <code>{safe_title}</code>\n"
+            f"<i>Melody ne sunwaya!</i>\n"
+            f"🙋 Requested by: <i>AutoPlay</i></blockquote>",
             parse_mode="html",
         )
         asyncio.create_task(log_activity(

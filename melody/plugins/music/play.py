@@ -33,7 +33,7 @@ from melody.core.call import play_stream, force_play_stream, pre_join, abort_pre
 from melody.logging import log_activity
 from utils.database import add_history
 from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
-from utils.formatters import format_duration
+from utils.formatters import format_duration, quote_html
 from utils.thumbnails import make_thumbnail, fetch_dp, get_bot_dp
 from utils.animation import AnimatedStatus
 from strings.themes import BLUE, RED, GREEN, btn
@@ -65,7 +65,10 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
 
     if not query:
         usage_cmd = "/cplay" if chat.type == enums.ChatType.CHANNEL else "/play"
-        await message.reply(f"**Usage:** `{usage_cmd} <song name or YouTube URL>`")
+        await message.reply(
+            quote_html(f"**Usage:** `{usage_cmd} <song name or YouTube URL>`"),
+            parse_mode=enums.ParseMode.HTML,
+        )
         return
 
     # Channel posts have no from_user — attribute the request to the channel
@@ -74,7 +77,9 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
     requester_name = user.first_name if user else (chat.title or "Channel")
     requester_mention = user.mention if user else html.escape(requester_name)
 
-    processing = await message.reply("🔥 Getting your vibe ready...")
+    processing = await message.reply(
+        quote_html("🔥 Getting your vibe ready..."), parse_mode=enums.ParseMode.HTML
+    )
     anim = AnimatedStatus(processing, "Getting your vibe ready").start()
 
     # ⚡ Kick off the VC join AND the profile-photo downloads immediately, in
@@ -89,13 +94,16 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
         if not info:
             await abort_prejoin_if_idle(chat.id)
             await anim.stop()
-            await processing.edit("❌ Song nahi mili 🌸")
+            await processing.edit(quote_html("❌ Song nahi mili 🌸"), parse_mode=enums.ParseMode.HTML)
             return
 
         if Config.MAX_DURATION and info["duration"] > Config.MAX_DURATION:
             await abort_prejoin_if_idle(chat.id)
             await anim.stop()
-            await processing.edit(f"⚠️ Song too long! Max allowed: {format_duration(Config.MAX_DURATION)}")
+            await processing.edit(
+                quote_html(f"⚠️ Song too long! Max allowed: {format_duration(Config.MAX_DURATION)}"),
+                parse_mode=enums.ParseMode.HTML,
+            )
             return
 
         track = Track(
@@ -150,27 +158,31 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                 bot_dp_path=bot_dp_path,
             )
             caption = (
-                f"🎶 <b>{html.escape(status_label)}</b>\n\n"
+                f"<blockquote>🎶 <b>{html.escape(status_label)}</b>\n\n"
                 f"<b>{safe_title}</b>\n"
                 f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
-                f"🙋 Requested by {requester_mention}"
+                f"🙋 Requested by {requester_mention}</blockquote>"
             )
             await anim.stop()
             await processing.delete()
+            # NOTE: no has_spoiler — the new compact circular-thumbnail mini
+            # player card is meant to be seen immediately, like a real
+            # music-player widget, not blurred behind a spoiler.
             await message.reply_photo(
                 thumb_path,
                 caption=caption,
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=get_play_buttons(chat.title or ""),
-                has_spoiler=True,
             )
         except Exception:
             status = "Force Played ⚡" if force else ("Now Playing ▶️" if playing_now else "Added to Queue 📋")
             await anim.stop()
             await processing.edit(
-                f"🎵 <b>{html.escape(status)}</b>\n\n"
-                f"<code>{safe_title}</code>\n"
-                f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>",
+                quote_html(
+                    f"🎵 <b>{html.escape(status)}</b>\n\n"
+                    f"<code>{safe_title}</code>\n"
+                    f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>"
+                ),
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=get_play_buttons(chat.title or ""),
             )

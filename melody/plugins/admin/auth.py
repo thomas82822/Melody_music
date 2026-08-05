@@ -1,11 +1,12 @@
 """
 👑 Auth management — authorize/unauthorize users in groups
 """
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
 from utils.database import auth_user, unauth_user, get_auth_users
 from utils.decorators import error_handler
+from utils.formatters import quote_html, mention_html
 
 
 @bot.on_message(filters.command("auth") & filters.group)
@@ -13,28 +14,38 @@ from utils.decorators import error_handler
 async def auth_cmd(client: Client, message: Message):
     # Only group admins or creator
     if not await _is_admin(client, message):
-        return await message.reply("⚠️ Admins only.")
+        return await message.reply(quote_html("⚠️ Admins only."), parse_mode=enums.ParseMode.HTML)
 
     user = await _get_target_user(message)
     if not user:
-        return await message.reply("**Usage:** `/auth @user` or reply to a user")
+        return await message.reply(
+            quote_html("**Usage:** `/auth @user` or reply to a user"), parse_mode=enums.ParseMode.HTML
+        )
 
     await auth_user(message.chat.id, user.id)
-    await message.reply(f"✅ {user.mention} authorized to use bot commands.")
+    await message.reply(
+        quote_html(f"✅ {mention_html(user.id, user.first_name)} authorized to use bot commands."),
+        parse_mode=enums.ParseMode.HTML,
+    )
 
 
 @bot.on_message(filters.command("unauth") & filters.group)
 @error_handler
 async def unauth_cmd(client: Client, message: Message):
     if not await _is_admin(client, message):
-        return await message.reply("⚠️ Admins only.")
+        return await message.reply(quote_html("⚠️ Admins only."), parse_mode=enums.ParseMode.HTML)
 
     user = await _get_target_user(message)
     if not user:
-        return await message.reply("**Usage:** `/unauth @user` or reply to a user")
+        return await message.reply(
+            quote_html("**Usage:** `/unauth @user` or reply to a user"), parse_mode=enums.ParseMode.HTML
+        )
 
     await unauth_user(message.chat.id, user.id)
-    await message.reply(f"🚫 {user.mention} unauthorized.")
+    await message.reply(
+        quote_html(f"🚫 {mention_html(user.id, user.first_name)} unauthorized."),
+        parse_mode=enums.ParseMode.HTML,
+    )
 
 
 @bot.on_message(filters.command("authlist") & filters.group)
@@ -42,16 +53,18 @@ async def unauth_cmd(client: Client, message: Message):
 async def authlist_cmd(client: Client, message: Message):
     auth_ids = await get_auth_users(message.chat.id)
     if not auth_ids:
-        return await message.reply("📋 No authorized users in this group.")
+        return await message.reply(
+            quote_html("📋 No authorized users in this group."), parse_mode=enums.ParseMode.HTML
+        )
 
-    lines = ["**📋 Authorized Users:**\n"]
+    lines = ["<b>📋 Authorized Users:</b>\n"]
     for uid in auth_ids:
         try:
             user = await client.get_users(uid)
-            lines.append(f"• {user.mention} (`{uid}`)")
+            lines.append(f"• {mention_html(user.id, user.first_name)} (<code>{uid}</code>)")
         except Exception:
-            lines.append(f"• `{uid}`")
-    await message.reply("\n".join(lines))
+            lines.append(f"• <code>{uid}</code>")
+    await message.reply(quote_html("\n".join(lines)), parse_mode=enums.ParseMode.HTML)
 
 
 async def _is_admin(client: Client, message: Message) -> bool:

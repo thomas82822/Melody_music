@@ -154,7 +154,7 @@ async def stop_callback(client: Client, cb: CallbackQuery):
 async def queue_callback(client: Client, cb: CallbackQuery):
     await cb.answer()
     text = format_queue(cb.message.chat.id)
-    await cb.message.reply(text)
+    await cb.message.reply(text, parse_mode=enums.ParseMode.HTML)
 
 
 @bot.on_callback_query(filters.regex("^lyrics$"))

@@ -11,10 +11,11 @@ import os
 import sys
 import importlib
 import pkgutil
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
 from utils.decorators import owner_only, error_handler
+from utils.formatters import quote_html
 from melody.logging import LOGGER
 
 
@@ -23,7 +24,10 @@ from melody.logging import LOGGER
 @error_handler
 async def reboot_cmd(client: Client, message: Message):
     """Full reboot — restarts the entire process."""
-    await message.reply("🔁 **Rebooting Melody...**\n_Thodi der mein wapas aaunga!_")
+    await message.reply(
+        quote_html("🔁 **Rebooting Melody...**\n_Thodi der mein wapas aaunga!_"),
+        parse_mode=enums.ParseMode.HTML,
+    )
     await asyncio.sleep(1)
     os.execv(sys.executable, [sys.executable, "-m", "melody"])
 
@@ -33,7 +37,7 @@ async def reboot_cmd(client: Client, message: Message):
 @error_handler
 async def reload_cmd(client: Client, message: Message):
     """Hot-reload all plugins without full restart."""
-    msg = await message.reply("🔄 **Reloading plugins...**")
+    msg = await message.reply(quote_html("🔄 **Reloading plugins...**"), parse_mode=enums.ParseMode.HTML)
     reloaded = []
     failed = []
 
@@ -60,4 +64,4 @@ async def reload_cmd(client: Client, message: Message):
     if failed:
         text += f"\n❌ **Failed ({len(failed)}):** `{'`, `'.join(failed)}`"
 
-    await msg.edit(text)
+    await msg.edit(quote_html(text), parse_mode=enums.ParseMode.HTML)
