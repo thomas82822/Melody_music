@@ -8,6 +8,7 @@ from pyrogram.types import Message
 from melody import bot
 from utils.database import get_stats
 from utils.decorators import error_handler
+from utils.formatters import send_quote
 from strings.themes import fancy
 
 _start_time = time.time()
@@ -44,4 +45,4 @@ async def stats_cmd(client: Client, message: Message):
         f"  ▸ Globally Banned: <code>{db_stats['gbanned']}</code>"
         "</blockquote>"
     )
-    await message.reply(text, parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, text, client=client)

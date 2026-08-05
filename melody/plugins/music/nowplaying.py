@@ -6,7 +6,7 @@ from pyrogram.types import Message
 from melody import bot
 from melody.core.queue import get_current, peek_predownloaded
 from utils.decorators import error_handler
-from utils.formatters import format_duration, quote_html
+from utils.formatters import format_duration, send_quote
 
 
 @bot.on_message(filters.command("np") & filters.group)
@@ -14,7 +14,7 @@ from utils.formatters import format_duration, quote_html
 async def nowplaying_cmd(client: Client, message: Message):
     track = get_current(message.chat.id)
     if not track:
-        await message.reply(quote_html("❌ Nothing is playing right now."), parse_mode=enums.ParseMode.HTML)
+        await send_quote(message, "❌ Nothing is playing right now.", client=client)
         return
 
     text = (
@@ -33,4 +33,4 @@ async def nowplaying_cmd(client: Client, message: Message):
             f"🙋 Requested by `AutoPlay`"
         )
 
-    await message.reply(quote_html(text), parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, text, client=client)

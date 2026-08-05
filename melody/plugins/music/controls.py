@@ -11,7 +11,7 @@ from melody.core.call import pause_stream, resume_stream, skip_stream, stop_stre
 from melody.core.queue import format_queue, get_current
 from melody.logging import log_activity
 from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
-from utils.formatters import format_duration
+from utils.formatters import format_duration, send_quote
 
 
 def _who(message: Message) -> tuple[str, str]:
@@ -29,7 +29,7 @@ def _who(message: Message) -> tuple[str, str]:
 @admin_or_auth
 async def pause_cmd(client: Client, message: Message):
     await pause_stream(message.chat.id)
-    await message.reply("<blockquote>⏸ <b>Paused.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, "⏸ <b>Paused.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏸ <b>Paused</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -39,7 +39,7 @@ async def pause_cmd(client: Client, message: Message):
 @admin_or_auth
 async def resume_cmd(client: Client, message: Message):
     await resume_stream(message.chat.id)
-    await message.reply("<blockquote>▶️ <b>Resumed.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, "▶️ <b>Resumed.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"▶️ <b>Resumed</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -49,7 +49,7 @@ async def resume_cmd(client: Client, message: Message):
 @admin_or_auth
 async def skip_cmd(client: Client, message: Message):
     await skip_stream(message.chat.id)
-    await message.reply("<blockquote>⏭ <b>Skipped.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, "⏭ <b>Skipped.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏭ <b>Skipped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -59,10 +59,7 @@ async def skip_cmd(client: Client, message: Message):
 @admin_or_auth
 async def stop_cmd(client: Client, message: Message):
     await stop_stream(message.chat.id)
-    await message.reply(
-        "<blockquote>⏹ <b>Music stopped and queue cleared.</b></blockquote>",
-        parse_mode=enums.ParseMode.HTML,
-    )
+    await send_quote(message, "⏹ <b>Music stopped and queue cleared.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏹ <b>Stopped</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -77,7 +74,7 @@ async def stop_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cpause_cmd(client: Client, message: Message):
     await pause_stream(message.chat.id)
-    await message.reply("<blockquote>⏸ <b>Paused.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, "⏸ <b>Paused.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏸ <b>Paused (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -87,7 +84,7 @@ async def cpause_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cresume_cmd(client: Client, message: Message):
     await resume_stream(message.chat.id)
-    await message.reply("<blockquote>▶️ <b>Resumed.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, "▶️ <b>Resumed.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"▶️ <b>Resumed (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -97,7 +94,7 @@ async def cresume_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cskip_cmd(client: Client, message: Message):
     await skip_stream(message.chat.id)
-    await message.reply("<blockquote>⏭ <b>Skipped.</b></blockquote>", parse_mode=enums.ParseMode.HTML)
+    await send_quote(message, "⏭ <b>Skipped.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏭ <b>Skipped (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -107,10 +104,7 @@ async def cskip_cmd(client: Client, message: Message):
 @channel_admin_or_auth
 async def cstop_cmd(client: Client, message: Message):
     await stop_stream(message.chat.id)
-    await message.reply(
-        "<blockquote>⏹ <b>Music stopped and queue cleared.</b></blockquote>",
-        parse_mode=enums.ParseMode.HTML,
-    )
+    await send_quote(message, "⏹ <b>Music stopped and queue cleared.</b>", client=client)
     actor, chat_name = _who(message)
     asyncio.create_task(log_activity(f"⏹ <b>Stopped (channel)</b>\n• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"))
 
@@ -154,7 +148,7 @@ async def stop_callback(client: Client, cb: CallbackQuery):
 async def queue_callback(client: Client, cb: CallbackQuery):
     await cb.answer()
     text = format_queue(cb.message.chat.id)
-    await cb.message.reply(text, parse_mode=enums.ParseMode.HTML)
+    await send_quote(cb.message, text, client=client)
 
 
 @bot.on_callback_query(filters.regex("^lyrics$"))
@@ -163,14 +157,14 @@ async def lyrics_callback(client: Client, cb: CallbackQuery):
     await cb.answer("🎵 Fetching lyrics...")
     track = get_current(cb.message.chat.id)
     if not track:
-        await cb.message.reply("<blockquote>❌ Nothing is playing right now.</blockquote>", parse_mode=enums.ParseMode.HTML)
+        await send_quote(cb.message, "❌ Nothing is playing right now.", client=client)
         return
 
     try:
         import lyricsgenius
         from melody.config import Config
         if not Config.GENIUS_API_TOKEN:
-            await cb.message.reply("<blockquote>⚠️ Genius API token not configured.</blockquote>", parse_mode=enums.ParseMode.HTML)
+            await send_quote(cb.message, "⚠️ Genius API token not configured.", client=client)
             return
 
         genius = lyricsgenius.Genius(Config.GENIUS_API_TOKEN, verbose=False, remove_section_headers=True)
@@ -180,11 +174,12 @@ async def lyrics_callback(client: Client, cb: CallbackQuery):
         if song and song.lyrics:
             safe_title = html.escape(track.title)
             lyrics_text = html.escape(song.lyrics[:3500])
-            await cb.message.reply(
+            await send_quote(
+                cb.message,
                 f"🎵 <b>{safe_title}</b>\n\n<blockquote expandable>{lyrics_text}</blockquote>",
-                parse_mode=enums.ParseMode.HTML,
+                client=client,
             )
         else:
-            await cb.message.reply("<blockquote>❌ Lyrics not found.</blockquote>", parse_mode=enums.ParseMode.HTML)
+            await send_quote(cb.message, "❌ Lyrics not found.", client=client)
     except Exception:
-        await cb.message.reply("<blockquote>❌ Could not fetch lyrics.</blockquote>", parse_mode=enums.ParseMode.HTML)
+        await send_quote(cb.message, "❌ Could not fetch lyrics.", client=client)

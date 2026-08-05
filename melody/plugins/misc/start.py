@@ -16,6 +16,7 @@ from melody.config import Config
 from melody.logging import log_activity
 from utils.decorators import error_handler
 from utils.database import is_banned, is_gbanned, get_chat_owner
+from utils.formatters import send_quote
 from strings.themes import BLUE, RED, GREEN, btn, fancy
 
 ASSETS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets")
@@ -198,11 +199,7 @@ async def start_dm(client: Client, message: Message):
             reply_markup=markup,
         )
     else:
-        await message.reply(
-            WELCOME_DM,
-            parse_mode=enums.ParseMode.HTML,
-            reply_markup=markup,
-        )
+        await send_quote(message, WELCOME_DM, client=client, reply_markup=markup)
 
 
 # ─── /start in Groups ─────────────────────────────────────────────────────────
@@ -228,12 +225,13 @@ async def start_group(client: Client, message: Message):
             ),
         ],
     ])
-    await message.reply(
+    await send_quote(
+        message,
         f"<blockquote>🎶 <b>{fancy('MELODY')}</b> is ready to rock this group! 🎵</blockquote>\n\n"
         "Use <code>/play &lt;song name or YouTube link&gt;</code> to start the music.\n"
         "Use <code>/help</code> to see all available commands.\n\n"
         f"♛ <i>Powered by {html.escape(Config.OWNER_NAME)}</i>",
-        parse_mode=enums.ParseMode.HTML,
+        client=client,
         reply_markup=buttons,
     )
 
@@ -303,13 +301,14 @@ async def new_group_handler(client: Client, message: Message):
         else:
             # No custom pic set yet — send an attractive text card with a
             # blockquote header so it still looks polished in the chat.
-            await message.reply(
+            await send_quote(
+                message,
                 "<blockquote>"
                 "🎶 <b>𝑴𝒆𝒍𝒐𝒅𝒚 𝑴𝒖𝒔𝒊𝒄 𝑩𝒐𝒕</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━"
                 "</blockquote>\n\n"
                 + caption,
-                parse_mode=enums.ParseMode.HTML,
+                client=client,
                 reply_markup=buttons,
             )
         break
@@ -333,7 +332,8 @@ async def cb_cute_owner(client: Client, cb: CallbackQuery):
 @bot.on_callback_query(filters.regex(r"^about_cb$"))
 @error_handler
 async def cb_about(client: Client, cb: CallbackQuery):
-    await cb.message.edit_text(
+    await send_quote(
+        cb.message,
         "<blockquote>🎶 <b>About Melody</b></blockquote>\n\n"
         "<b>Melody</b> is a premium Telegram music bot that streams\n"
         "high-quality audio from YouTube.\n\n"
@@ -349,7 +349,8 @@ async def cb_about(client: Client, cb: CallbackQuery):
         "━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "Made with 💀 by <b>Sasta Developer</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━",
-        parse_mode=enums.ParseMode.HTML,
+        client=client,
+        edit=True,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton(btn("◀ Back", RED), callback_data="start_back")],
         ]),
@@ -365,11 +366,7 @@ async def cb_owner_back_home(client: Client, cb: CallbackQuery):
     if cb.from_user.id != Config.OWNER_ID:
         return await cb.answer("❌ Owner only!", show_alert=True)
 
-    await cb.message.edit_text(
-        WELCOME_DM,
-        parse_mode=enums.ParseMode.HTML,
-        reply_markup=owner_buttons(),
-    )
+    await send_quote(cb.message, WELCOME_DM, client=client, edit=True, reply_markup=owner_buttons())
     await cb.answer()
 
 
@@ -377,9 +374,11 @@ async def cb_owner_back_home(client: Client, cb: CallbackQuery):
 @error_handler
 async def cb_start_back(client: Client, cb: CallbackQuery):
     is_owner = cb.from_user.id == Config.OWNER_ID
-    await cb.message.edit_text(
+    await send_quote(
+        cb.message,
         WELCOME_DM,
-        parse_mode=enums.ParseMode.HTML,
+        client=client,
+        edit=True,
         reply_markup=owner_buttons() if is_owner else user_buttons(),
     )
     await cb.answer()

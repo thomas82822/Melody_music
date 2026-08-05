@@ -97,3 +97,88 @@ def quote_html(text: str, expandable: bool = False) -> str:
 def mention_html(user_id: int, name: str) -> str:
     """Telegram inline mention using HTML parse mode."""
     return f'<a href="tg://user?id={user_id}">{_html.escape(name)}</a>'
+
+
+# ── Telegram "premium animated emoji" + resilient sending ──────────────────
+#
+# BUG BEING FIXED (reported: "premium animated emoji work nahi kiya" +
+# "telegram quote not working"):
+#
+# A previous change added <emoji id="..."> premium-emoji entities ONLY to
+# the old, unused `MelodiX/` codebase — the bot that Heroku/Replit actually
+# runs is `melody/` (see Procfile / .replit: `python -m melody`), which
+# never had the feature and never had the bug fix either. That previous fix
+# also proved *why* hand-typed emoji ids are dangerous: Telegram rejects an
+# entire message outright when one <emoji id> entity doesn't resolve to a
+# real custom-emoji document, which silently takes the surrounding
+# <blockquote> "quote" down with it — one bad id breaks both symptoms at
+# once.
+#
+# FIX: route every quote/emoji message in the LIVE bot through send_quote()
+# below, which verifies each <emoji id> against Telegram first (dropping
+# only the ones that don't resolve — the glyph and the blockquote always
+# survive) and progressively degrades if the send still fails for any other
+# reason, so the user always gets *a* reply instead of silence.
+#
+# We do NOT hand-type new custom-emoji ids here — that is exactly the
+# anti-pattern that caused this bug. Real ids can only come from Telegram
+# itself (a genuine premium emoji message). Use the owner-only /emojiid
+# command (melody/plugins/owner/emoji_id.py) to extract real, verified ids
+# from any message containing premium animated emoji, then wrap them with
+# premium_emoji() below.
+
+from pyrogram import enums as _enums
+from pyrogram.errors import RPCError as _RPCError
+import logging as _logging
+from utils.telegram_html import verify_custom_emojis, strip_all_emoji_tags, strip_blockquote
+
+_log = _logging.getLogger(__name__)
+
+
+def premium_emoji(emoji_id: str, glyph: str) -> str:
+    """Wrap `glyph` as a Telegram premium animated custom-emoji entity.
+
+    Only ever send this through send_quote() (or verify_custom_emojis()
+    directly) — that is what makes a wrong/rotated `emoji_id` fail safe
+    (falls back to the plain glyph) instead of breaking the whole message.
+    """
+    return f'<emoji id="{emoji_id}">{glyph}</emoji>'
+
+
+async def send_quote(handler, text: str, *, client=None, edit: bool = False, **kwargs):
+    """Send (or edit) an HTML quote card — built with quote_html()/
+    premium_emoji() — through Telegram safely.
+
+    1. Verifies every <emoji id> against Telegram (pass `client` for a full
+       check; without it, only impossible/out-of-range ids are dropped) —
+       the <blockquote> quote formatting is never touched by this step.
+    2. If the send still fails, retries with every <emoji> tag stripped.
+    3. If it still fails, strips <blockquote> too and sends as plain text
+       — so the user always gets *a* reply instead of silence.
+
+    `handler` is anything with `.reply(text, parse_mode=..., **kwargs)`
+    (e.g. a Message) — pass `edit=True` to call `.edit_text(...)` instead
+    (e.g. editing a Message or CallbackQuery.message).
+
+    `text` may already be full HTML (starting with <blockquote>, as most
+    call sites in this bot write it inline) — in that case it's sent as-is.
+    Anything else is auto-wrapped with quote_html() first, so plain text
+    always renders as a native Telegram quote card.
+    """
+    if "<blockquote" not in text:
+        text = quote_html(text)
+    send = handler.edit_text if edit else handler.reply
+    prepared = await verify_custom_emojis(client, text)
+    try:
+        return await send(prepared, parse_mode=_enums.ParseMode.HTML, **kwargs)
+    except _RPCError as e:
+        _log.warning("send_quote: retrying without premium emoji entities (%s)", e)
+
+    stripped = strip_all_emoji_tags(prepared)
+    try:
+        return await send(stripped, parse_mode=_enums.ParseMode.HTML, **kwargs)
+    except _RPCError as e:
+        _log.error("send_quote: retrying as plain text (%s)", e)
+
+    plain = strip_blockquote(stripped)
+    return await send(plain, parse_mode=_enums.ParseMode.DISABLED, **kwargs)

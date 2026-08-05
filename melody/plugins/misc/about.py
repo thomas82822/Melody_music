@@ -5,6 +5,7 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from melody import bot
 from utils.decorators import error_handler
+from utils.formatters import send_quote
 from strings.themes import RED, btn, fancy
 
 ABOUT_TEXT = (
@@ -29,9 +30,10 @@ ABOUT_TEXT = (
 @bot.on_message(filters.command("about"))
 @error_handler
 async def about_cmd(client: Client, message: Message):
-    await message.reply(
+    await send_quote(
+        message,
         ABOUT_TEXT,
-        parse_mode=enums.ParseMode.HTML,
+        client=client,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton(btn("✵ CLOSE ✵", RED), callback_data="about_close")],
         ]),
