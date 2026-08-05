@@ -2,11 +2,13 @@
 🔒 Decorators for permission checks
 BUG FIX: error_handler now also handles errors from admin_or_auth (DB failures etc.)
 """
+import asyncio
 import functools
 from pyrogram import Client
+from pyrogram.errors import FloodWait
 from pyrogram.types import Message, CallbackQuery
 from melody.config import Config
-from melody.logging import send_error_log
+from melody.logging import LOGGER, send_error_log
 from utils.database import is_banned, is_gbanned, get_auth_users
 
 
@@ -115,11 +117,36 @@ def error_handler(func):
     Catch ALL exceptions (including from nested decorators like admin_or_auth).
     Send traceback to LOG_GROUP and show friendly message to user.
     Works for both Message handlers and CallbackQuery handlers.
+
+    BUG FIX (⚠️ Melody Error Log spam / crash on FloodWait):
+    A FloodWait raised by Telegram (420 FLOOD_WAIT_X) is normal rate-limit
+    back-pressure, not a bug — it used to be treated exactly like any other
+    exception here: logged to LOG_GROUP as an "error" AND immediately
+    retried by sending yet another message ("Something went wrong 🌸") to
+    the same flood-controlled chat/method, which just as easily hits the
+    SAME flood wait again (or a longer one) and raises a second, uncaught
+    FloodWait right out of this handler. Client.sleep_threshold (see
+    melody/__init__.py) now makes Pyrogram auto-sleep-and-retry any
+    FLOOD_WAIT_X up to 60s transparently, so this branch only ever fires
+    for waits longer than that. In that rarer case: sleep out the wait
+    once and retry the original command a single time instead of sending
+    a second message into the same flood window; never re-log FloodWait
+    as an "error" (it isn't one) and never let a retry's own FloodWait
+    cascade into more exceptions.
     """
     @functools.wraps(func)
     async def wrapper(client, update, *args, **kwargs):
         try:
             return await func(client, update, *args, **kwargs)
+        except FloodWait as e:
+            LOGGER.warning("FloodWait %ss in %s — sleeping once and retrying.", e.value, func.__name__)
+            try:
+                await asyncio.sleep(e.value)
+                return await func(client, update, *args, **kwargs)
+            except Exception:
+                # Retry itself failed (likely flooded again) — give up quietly.
+                # No user-facing message and no error-log spam for flood control.
+                pass
         except Exception as e:
             await send_error_log(f"Error in {func.__name__}: {e}", exc=e)
             try:
