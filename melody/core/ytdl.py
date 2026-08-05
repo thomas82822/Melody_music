@@ -909,17 +909,23 @@ def _cache_tag(audio_only: bool) -> str:
     return "a" if audio_only else "v"
 
 
-# SPEED FIX (strict <2-3s play requirement): bytes of audio that must already
-# be on disk before we hand the (still-growing) file to PyTgCalls. This is
-# comfortably more than webm/opus needs for its header + a first packet, but
-# small enough that a normal connection clears it in well under a second —
-# it is NOT "wait for N seconds", it's "wait for enough bytes to exist".
-_EARLY_HANDOFF_BYTES = 96_000
+# SPEED FIX (strict "<1s after download starts" requirement): bytes of audio
+# that must already be on disk before we hand the (still-growing) file to
+# PyTgCalls. WebM/Opus only needs its EBML header + cluster start (a few KB)
+# before ffprobe can identify the stream and ffmpeg can start decoding —
+# 96KB was already far more than that, chosen conservatively; shrinking it
+# to ~20KB is still comfortably more than the header needs while getting
+# the handoff several times closer to "as soon as bytes exist on disk"
+# instead of "wait for ~1-6s of audio". This is a byte threshold, not a
+# time delay — on any real connection it's cleared in well under 100ms.
+_EARLY_HANDOFF_BYTES = 20_000
 # Hard ceiling on how long we wait for that early-handoff threshold before
 # giving up and blocking on the full download instead (matches this file's
 # previous, safe behaviour exactly — this is a pure fallback, never a
-# regression).
-_EARLY_HANDOFF_TIMEOUT = 3.0
+# regression). Kept well above what the (now tiny) threshold actually needs
+# so a genuinely slow/stalled connection still gets a real chance before we
+# fall back, instead of bailing out early into a needless full re-wait.
+_EARLY_HANDOFF_TIMEOUT = 4.0
 
 
 def _download_audio_sync(video_id: str, audio_only: bool = True,
