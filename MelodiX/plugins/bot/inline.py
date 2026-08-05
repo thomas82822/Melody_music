@@ -7,6 +7,7 @@
 #
 # All rights reserved.
 
+from pyrogram.enums import ParseMode
 from pyrogram.types import (InlineKeyboardButton,
                             InlineKeyboardMarkup,
                             InlineQueryResultPhoto)
@@ -15,6 +16,7 @@ from youtubesearchpython.__future__ import VideosSearch
 from config import BANNED_USERS, MUSIC_BOT_NAME
 from MelodiX import app
 from MelodiX.utils.inlinequery import answer
+from utils.telegram_html import verify_custom_emojis
 
 
 @app.on_inline_query(~BANNED_USERS)
@@ -54,17 +56,23 @@ async def inline_query_handler(client, query):
                 ]
             )
             searched_text = f"""<blockquote>
-<emoji id='95282968352862527007'>❇️</emoji>**Title:** [{title}]({link})
+<emoji id='6210578145158895902'>❇️</emoji>**Title:** [{title}]({link})
 
 <emoji id='5098255325723625291'>⏳</emoji>**Duration:** {duration} Mins
 <emoji id='6298429115628259446'>👀</emoji>**Views:** `{views}`
-<emoji id='95282968352862527007'>⏰</emoji>**Published Time:** {published}
+<emoji id='6197426719075342898'>⏰</emoji>**Published Time:** {published}
 <emoji id='5098567638565520047'>🎥</emoji>**Channel Name:** {channel}
 <emoji id='5397971251873873206'>📎</emoji>**Channel Link:** [Visit From Here]({channellink})
 
 __Reply with /play on this searched message to stream it on voice chat.__
 
 <emoji id='5337260982911655617'>⚡</emoji>️ ** Inline Search By {MUSIC_BOT_NAME} **</blockquote>"""
+            # BUG FIX: verify premium-emoji ids against Telegram before they
+            # ever reach an inline result. Inline query answers can't be
+            # retried after the fact like a normal message, so any bad id
+            # here used to take the whole <blockquote> "quote" card down
+            # with it — this drops only the invalid emoji, keeps the quote.
+            searched_text = await verify_custom_emojis(client, searched_text)
             answers.append(
                 InlineQueryResultPhoto(
                     photo_url=thumbnail,
@@ -72,6 +80,7 @@ __Reply with /play on this searched message to stream it on voice chat.__
                     thumb_url=thumbnail,
                     description=description,
                     caption=searched_text,
+                    parse_mode=ParseMode.HTML,
                     reply_markup=buttons,
                 )
             )

@@ -10,6 +10,7 @@
 import asyncio
 
 from pyrogram import filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import (InlineKeyboardButton,
                             InlineKeyboardMarkup, Message)
 from youtubesearchpython.__future__ import VideosSearch
@@ -31,6 +32,7 @@ from MelodiX.utils.database import (add_served_chat,
 from MelodiX.utils.decorators.language import LanguageStart
 from MelodiX.utils.inline import (help_pannel, private_panel,
                                      start_pannel)
+from utils.telegram_html import verify_custom_emojis
 
 loop = asyncio.get_running_loop()
 
@@ -55,7 +57,11 @@ async def start_comm(client, message: Message, _):
             return await message.reply_text(_["song_2"])
         if name[0:3] == "sta":
             m = await message.reply_text(
-                "<blockquote><emoji id='5359317697265951988'>🔎</emoji> Fetching your personal stats.!</blockquote>"
+                await verify_custom_emojis(
+                    client,
+                    "<blockquote><emoji id='5359317697265951988'>🔎</emoji> Fetching your personal stats.!</blockquote>",
+                ),
+                parse_mode=ParseMode.HTML,
             )
             stats = await get_userss(message.from_user.id)
             tot = len(stats)
@@ -106,7 +112,11 @@ async def start_comm(client, message: Message, _):
                 return
             thumbnail = await YouTube.thumbnail(videoid, True)
             await m.delete()
-            await message.reply_photo(photo=thumbnail, caption=msg)
+            await message.reply_photo(
+                photo=thumbnail,
+                caption=await verify_custom_emojis(client, msg),
+                parse_mode=ParseMode.HTML,
+            )
             return
         if name[0:3] == "sud":
             await sudoers_list(client=client, message=message, _=_)
@@ -131,7 +141,13 @@ async def start_comm(client, message: Message, _):
         if name[0:3] == "del":
             await del_plist_msg(client=client, message=message, _=_)
         if name[0:3] == "inf":
-            m = await message.reply_text("<blockquote><emoji id='5359317697265951988'>🔎</emoji> Fetching Info!</blockquote>")
+            m = await message.reply_text(
+                await verify_custom_emojis(
+                    client,
+                    "<blockquote><emoji id='5359317697265951988'>🔎</emoji> Fetching Info!</blockquote>",
+                ),
+                parse_mode=ParseMode.HTML,
+            )
             query = (str(name)).replace("info_", "", 1)
             query = f"https://www.youtube.com/watch?v={query}"
             results = VideosSearch(query, limit=1)
@@ -149,16 +165,18 @@ async def start_comm(client, message: Message, _):
             searched_text = f"""<blockquote>
 <emoji id='6210578145158895902'>🔍</emoji>__**Video Track Information**__
 
-<emoji id='95282968352862527007'>❇️</emoji>**Title:** {title}
+<emoji id='6210578145158895902'>❇️</emoji>**Title:** {title}
 
 <emoji id='5224628072619216265'>⏳</emoji>**Duration:** {duration} Mins
 <emoji id='6276044051024189481'>👀</emoji>**Views:** `{views}`
 <emoji id='6197426719075342898'>⏰</emoji>**Published Time:** {published}
 <emoji id='5098601044821148525'>🎥</emoji>**Channel Name:** {channel}
 <emoji id='6197420598746945336'>📎</emoji>**Channel Link:** [Visit From Here]({channellink})
-<emoji id='0525810728685695556'>🔗</emoji>**Video Link:** [Link]({link})
+<emoji id='525810728685695556'>🔗</emoji>**Video Link:** [Link]({link})
 
 <emoji id='2536607353479367155'>⚡</emoji>️ __Searched Powered By {config.MUSIC_BOT_NAME}__</blockquote>"""
+            # BUG FIX: verify premium-emoji ids before sending.
+            searched_text = await verify_custom_emojis(client, searched_text)
             key = InlineKeyboardMarkup(
                 [
                     [
@@ -176,7 +194,12 @@ async def start_comm(client, message: Message, _):
                 message.chat.id,
                 photo=thumbnail,
                 caption=searched_text,
-                parse_mode="markdown",
+                # BUG FIX: this previously forced parse_mode="markdown",
+                # which HTML-escapes the text before parsing (strict mode).
+                # That turned every <emoji>/<blockquote> tag above into
+                # literal visible text instead of rendering the premium
+                # emoji or the native Telegram "quote" strip.
+                parse_mode=ParseMode.HTML,
                 reply_markup=key,
             )
             if await is_on_off(config.LOG):

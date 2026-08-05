@@ -37,6 +37,8 @@ from MelodiX.utils.inline.stats import (back_stats_buttons,
                                            overallback_stats_markup,
                                            stats_buttons,
                                            top_ten_stats_markup)
+from pyrogram.enums import ParseMode
+from utils.telegram_html import verify_custom_emojis
 
 loop = asyncio.get_running_loop()
 
@@ -189,7 +191,7 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
                 details = stats.get(items)
                 title = (details["title"][:35]).title()
                 if items == "telegram":
-                    msg += f"<emoji id='95282968352862527007'>🔗</emoji>[Telegram Files and Audios](https://t.me/telegram) ** played {count} times**\n\n"
+                    msg += f"<emoji id='5283147556077982460'>🔗</emoji>[Telegram Files and Audios](https://t.me/telegram) ** played {count} times**\n\n"
                 else:
                     msg += f"<emoji id='5283147556077982460'>🔗</emoji> [{title}](https://www.youtube.com/watch?v={items}) ** played {count} times**\n\n"
 
@@ -240,14 +242,20 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
             else _["gstats_6"].format(limit, MUSIC_BOT_NAME)
         )
         msg = temp + msg
-    med = InputMediaPhoto(media=config.GLOBAL_IMG_URL, caption=msg)
+    msg = await verify_custom_emojis(client, msg)
+    med = InputMediaPhoto(
+        media=config.GLOBAL_IMG_URL, caption=msg, parse_mode=ParseMode.HTML
+    )
     try:
         await CallbackQuery.edit_message_media(
             media=med, reply_markup=upl
         )
     except MessageIdInvalid:
         await CallbackQuery.message.reply_photo(
-            photo=config.GLOBAL_IMG_URL, caption=msg, reply_markup=upl
+            photo=config.GLOBAL_IMG_URL,
+            caption=msg,
+            parse_mode=ParseMode.HTML,
+            reply_markup=upl,
         )
 
 

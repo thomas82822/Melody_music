@@ -12,6 +12,7 @@ import os
 from random import randint
 
 from pyrogram import filters
+from pyrogram.enums import ParseMode
 from pyrogram.errors import FloodWait
 from pyrogram.types import CallbackQuery, InputMediaPhoto, Message
 
@@ -26,6 +27,7 @@ from MelodiX.utils.database import (get_cmode, is_active_chat,
                                        is_music_playing)
 from MelodiX.utils.decorators.language import language, languageCB
 from MelodiX.utils.inline import queue_back_markup, queue_markup
+from utils.telegram_html import verify_custom_emojis
 
 ###Commands
 QUEUE_COMMAND = get_command("QUEUE_COMMAND")
@@ -122,7 +124,10 @@ async def ping_com(client, message: Message, _):
     )
     basic[videoid] = True
     mystic = await message.reply_photo(
-        IMAGE, caption=cap, reply_markup=upl
+        IMAGE,
+        caption=await verify_custom_emojis(client, cap),
+        parse_mode=ParseMode.HTML,
+        reply_markup=upl,
     )
     if DUR != "Unknown":
         try:
@@ -302,7 +307,11 @@ async def queue_back(client, CallbackQuery: CallbackQuery, _):
     )
     basic[videoid] = True
 
-    med = InputMediaPhoto(media=IMAGE, caption=cap)
+    med = InputMediaPhoto(
+        media=IMAGE,
+        caption=await verify_custom_emojis(client, cap),
+        parse_mode=ParseMode.HTML,
+    )
     mystic = await CallbackQuery.edit_message_media(
         media=med, reply_markup=upl
     )
