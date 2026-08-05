@@ -62,10 +62,21 @@ _MD_ITALIC = _re.compile(r"(?<!_)_([^_]+?)_(?!_)")
 def md_to_html(text: str) -> str:
     """Convert the small subset of Markdown this bot used to use (```pre```,
     **bold**, `code`, _italic_) into HTML tags, so old plain-text strings
-    render correctly once every message switches to parse_mode=HTML."""
-    text = _MD_PRE.sub(lambda m: f"<pre>{m.group(1)}</pre>", text)
+    render correctly once every message switches to parse_mode=HTML.
+
+    BUG FIX (ENTITY_BOUNDS_INVALID / "can't parse entities"): code/pre spans
+    are meant to hold verbatim text (usage hints like `/play <song name>`,
+    raw shell output, exception messages, user queries, etc). Previously
+    their captured content was inserted into <code>/<pre> tags UNESCAPED —
+    any literal `<`, `>` or `&` inside (e.g. the `<song name>` placeholder
+    in usage strings, or `<` in raw shell/exception output) was parsed by
+    Telegram as the start of a real HTML tag/entity, which is invalid and
+    makes the *entire* message fail to send with a 400 error. Escaping the
+    captured text before wrapping it keeps it verbatim and always valid.
+    """
+    text = _MD_PRE.sub(lambda m: f"<pre>{_html.escape(m.group(1))}</pre>", text)
     text = _MD_BOLD.sub(r"<b>\1</b>", text)
-    text = _MD_CODE.sub(r"<code>\1</code>", text)
+    text = _MD_CODE.sub(lambda m: f"<code>{_html.escape(m.group(1))}</code>", text)
     text = _MD_ITALIC.sub(r"<i>\1</i>", text)
     return text
 

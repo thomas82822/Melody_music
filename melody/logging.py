@@ -72,9 +72,14 @@ async def send_error_log(text: str, exc: Exception = None):
             safe_tb = html.escape(tb[:3000])
             msg += f"\n\n<pre>{safe_tb}</pre>"
         await bot.send_message(Config.LOG_GROUP_ID, msg, parse_mode=enums.ParseMode.HTML)
-    except Exception:
-        # Always keep the real traceback visible in the Heroku console, even
-        # when delivery to the Telegram log group itself fails (e.g. bad
-        # parse_mode, peer not found, network issue). Previously only the
-        # short "text" summary was logged and the traceback was lost.
-        LOGGER.error("Failed to send log to group: %s", text, exc_info=exc)
+    except Exception as delivery_exc:
+        # BUG FIX: this used to pass `exc_info=exc` — the *original* error
+        # being reported, not the exception raised by send_message() itself.
+        # That hid the real delivery failure (bad parse_mode, peer not
+        # found, network issue, etc.) behind an unrelated traceback, making
+        # "Failed to send log to group" impossible to actually debug.
+        # Log both: the delivery failure (with its own traceback) and the
+        # original error text/traceback that failed to reach LOG_GROUP_ID.
+        LOGGER.error("Failed to send log to group: %s", text, exc_info=delivery_exc)
+        if exc:
+            LOGGER.error("Original error that failed to deliver: %r", exc, exc_info=exc)

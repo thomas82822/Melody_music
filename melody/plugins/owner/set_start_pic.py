@@ -10,6 +10,7 @@ FIX: After saving bg_start.png locally, the image is also pushed to the
 """
 import asyncio
 import base64
+import html
 import json
 import os
 from pyrogram import Client, filters, enums
@@ -120,7 +121,7 @@ async def setpic_cmd(client: Client, message: Message):
         await client.download_media(photo.file_id, file_name=BG_START)
     except Exception as e:
         await msg.edit(
-            quote_html(f"❌ <b>Failed to save image.</b>\n<code>{e}</code>"),
+            quote_html(f"❌ <b>Failed to save image.</b>\n<code>{html.escape(str(e))}</code>"),
             parse_mode=enums.ParseMode.HTML,
         )
         return
