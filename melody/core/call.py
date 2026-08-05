@@ -36,6 +36,7 @@ import time
 
 from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream, StreamEnded
+from pyrogram.errors import ChannelInvalid, ChannelPrivate, PeerIdInvalid
 from melody.logging import LOGGER, send_error_log
 from melody.core.queue import (
     get_current, set_current, pop_next, clear_queue,
@@ -272,7 +273,54 @@ async def _stream_track(chat_id: int, track, video: bool = False):
     except Exception as exc:
         _active.pop(chat_id, None)
         _silence_playing.pop(chat_id, None)
+
+        # ROOT-CAUSE FIX (⚠️ Melody Error Log: ChannelInvalid / PeerIdInvalid
+        # / ChannelPrivate — "_stream_track failed"): joining a Telegram
+        # group/voice-chat call happens over the ASSISTANT (userbot) account,
+        # not the bot account. MTProto requires the calling account to
+        # actually be a member of that chat to resolve its peer at all — if
+        # the assistant was never added to the group (or was removed from
+        # it), Telegram rejects the join with CHANNEL_INVALID/PEER_ID_INVALID
+        # every single time, and no amount of retrying fixes it. Previously
+        # this only reached send_error_log() (LOG_GROUP_ID only — see
+        # logging.py) so the group itself saw a false "✅ Now Playing" card
+        # (play.py assumes success as soon as play_stream() returns) and the
+        # bot silently never made any sound, with zero clue why. Detect this
+        # specific failure and tell the group exactly what to do, and — for
+        # every other failure too — tell the group playback actually failed
+        # instead of leaving the earlier "Now Playing" card as a lie.
+        if isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid)):
+            LOGGER.warning("Assistant cannot resolve chat %s (%s) — assistant is likely not a member.",
+                            chat_id, type(exc).__name__)
+            await _notify_playback_failed(
+                chat_id,
+                "⚠️ <b>Melody ka voice-assistant account is group mein nahi hai.</b>\n\n"
+                "Voice chat me gaana bajane ke liye assistant account ka bhi is group ka "
+                "member hona zaroori hai (sirf bot add karna kaafi nahi hai).\n\n"
+                "Assistant ko group mein add karke phir se <code>/play</code> try karo.",
+            )
+        else:
+            await _notify_playback_failed(
+                chat_id,
+                "❌ <b>Gaana play nahi ho paya.</b>\n\nDobara <code>/play</code> try karo.",
+            )
+
         await send_error_log(f"_stream_track failed in {chat_id}", exc)
+
+
+async def _notify_playback_failed(chat_id: int, text: str):
+    """Best-effort user-facing failure notice — never raises, never blocks.
+    _stream_track() runs fire-and-forget (see play_stream()'s docstring), so
+    without this a failed download/join was previously invisible to the
+    group: play.py already shows "Now Playing" optimistically before this
+    background task even resolves.
+    """
+    try:
+        from melody import bot
+        from pyrogram import enums
+        await bot.send_message(chat_id, text, parse_mode=enums.ParseMode.HTML)
+    except Exception:
+        pass
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────

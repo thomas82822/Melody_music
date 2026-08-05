@@ -252,17 +252,21 @@ def _ydl_opts(audio_only: bool = True) -> dict:
       AAC/M4A requires the moov atom at end-of-file → breaks pipe mode.
     • geo_bypass — Heroku USA servers sometimes hit geo-restricted content;
       bypass declaration helps with most non-DRM videos.
-    • concurrent_fragment_downloads=1 — sequential fragments keep the FIFO
-      data stream continuous; parallel downloads create write bursts → pipe
-      starvation → ntgcalls EOF → Broken pipe.
+    • concurrent_fragment_downloads=4 (SPEED FIX — see below).
     """
     fmt = (
-        # Use broad selector — ext constraints removed since FIFO pipe was
-        # removed; full file download supports any container.  YouTube
-        # occasionally does not serve a specific ext (region/age restrictions),
-        # causing "Requested format is not available".  bestaudio/best lets
-        # yt-dlp pick whatever is actually available.
-        "bestaudio/best"
+        # SPEED FIX (5-10s /play delay): FIFO pipe streaming was removed, so
+        # every track is now a full file download BEFORE playback can start
+        # (see download_audio()'s docstring) — the download itself sits
+        # directly on the critical path to "song plays". The old selector
+        # ("bestaudio/best") happily grabbed the highest-bitrate stream
+        # available (often 160-250kbps opus/webm), which can be 2-3x the
+        # bytes of a perfectly good voice-chat-quality stream for zero
+        # audible benefit over Telegram voice chat. Capping to <=128kbps
+        # (falling back to whatever's available if nothing matches) cuts
+        # download size — and therefore wait time — substantially without
+        # a noticeable quality drop.
+        "bestaudio[abr<=128]/bestaudio/best"
         if audio_only
         else "best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]/best"
     )
@@ -320,7 +324,14 @@ def _ydl_opts(audio_only: bool = True) -> dict:
         "retries": 5,
         "fragment_retries": 5,
         "check_formats": False,
-        "concurrent_fragment_downloads": 1,
+        # SPEED FIX: this used to be 1, left over from a removed FIFO-pipe
+        # trick that needed sequential fragment writes to keep the pipe fed
+        # continuously (see download_audio()'s docstring — FIFO streaming
+        # was removed entirely). Now that every track is a plain full-file
+        # download with no pipe involved, sequential fragments only slow
+        # the download down for no reason. 4 parallel fragments cuts
+        # download time noticeably on typical DASH-fragmented audio.
+        "concurrent_fragment_downloads": 4,
         # yt-dlp's YouTube extractor needs an external JS runtime to solve
         # the player challenge and to run the bgutil PO-token script.
         "js_runtimes": {"deno": {"path": _deno_path()}},
@@ -1065,6 +1076,129 @@ async def download_audio(video_id: str, audio_only: bool = True) -> str:
 #  Autoplay helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
+    """AutoPlay fallback: fetch YouTube's "up next" related videos via the
+    InnerTube API directly (ANDROID client) — same bot-detection bypass
+    trick as `_innertube_search_sync()`.
+
+    ROOT-CAUSE FIX ("autoplay on hai phir bhi kaam nahi karta"):
+    `get_related_videos()` used to rely ONLY on yt-dlp's mix/Radio playlist
+    extraction. Unlike `get_video_info()` (which has a 3-way yt-dlp ->
+    InnerTube -> Invidious fallback chain), it had NO fallback at all — any
+    yt-dlp failure (bot-detection block, empty mix, transient error) made
+    `_pick_related_track()` return None, `try_autoplay()` return False, and
+    `_play_next()` silently leave the call. AutoPlay looked "on" (the DB
+    flag was set correctly) but nothing ever actually played. This mirrors
+    that same fallback pattern for the related-videos lookup specifically.
+    """
+    import json
+    import urllib.request
+
+    _API_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
+    _NEXT_URL = f"https://www.youtube.com/youtubei/v1/next?key={_API_KEY}&prettyPrint=false"
+
+    payload = json.dumps({
+        "context": {
+            "client": {
+                "clientName": "ANDROID",
+                "clientVersion": "19.09.37",
+                "androidSdkVersion": 30,
+                "hl": "en",
+                "gl": "US",
+                "utcOffsetMinutes": 0,
+            }
+        },
+        "videoId": video_id,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        _NEXT_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
+            "X-YouTube-Client-Name": "3",
+            "X-YouTube-Client-Version": "19.09.37",
+        },
+        method="POST",
+    )
+
+    try:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=10) as resp:
+            if resp.status != 200:
+                LOGGER.warning("InnerTube related HTTP %s for video_id=%s", resp.status, video_id)
+                return []
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:
+        LOGGER.warning("InnerTube related network error: %s", exc)
+        return []
+
+    def _walk(node, out):
+        """Recursively find every compactVideoRenderer / videoRenderer in the
+        response — the exact nesting path varies by client/layout version,
+        so walking the whole tree is far more resilient than one fixed path.
+        """
+        if isinstance(node, dict):
+            renderer = node.get("compactVideoRenderer") or node.get("videoRenderer")
+            if renderer and renderer.get("videoId"):
+                out.append(renderer)
+            for v in node.values():
+                _walk(v, out)
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item, out)
+
+    renderers: list = []
+    try:
+        _walk(data, renderers)
+    except Exception as exc:
+        LOGGER.warning("InnerTube related parse error: %s", exc)
+        return []
+
+    results = []
+    seen = set()
+    for r in renderers:
+        vid = r.get("videoId", "")
+        if not vid or vid in exclude or vid in seen or vid == video_id:
+            continue
+        seen.add(vid)
+        title = (
+            r.get("title", {}).get("simpleText")
+            or (r.get("title", {}).get("runs", [{}])[0].get("text"))
+            or "Unknown"
+        )
+        length_text = (
+            r.get("lengthText", {}).get("simpleText", "")
+            or (r.get("lengthText", {}).get("runs", [{}])[0].get("text", "") if r.get("lengthText") else "")
+        )
+        duration = 0
+        if length_text:
+            parts = [int(p) for p in length_text.split(":") if p.isdigit()]
+            if len(parts) == 2:
+                duration = parts[0] * 60 + parts[1]
+            elif len(parts) == 3:
+                duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
+        thumbs = (r.get("thumbnail", {}).get("thumbnails") or [])
+        thumbnail = thumbs[-1].get("url", "") if thumbs else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+        results.append({
+            "id": vid,
+            "title": title,
+            "duration": duration,
+            "url": f"https://www.youtube.com/watch?v={vid}",
+            "thumbnail": thumbnail,
+            "uploader": "Unknown",
+        })
+        if len(results) >= 10:
+            break
+
+    if results:
+        LOGGER.info("✅ InnerTube related fallback OK: %d candidates for %s", len(results), video_id)
+    else:
+        LOGGER.warning("❌ InnerTube related fallback: no candidates for %s", video_id)
+    return results
+
+
 async def get_related_videos(video_id: str, exclude_ids: list[str] = None) -> list[dict]:
     """Fetch related videos for autoplay (skip excluded IDs)."""
     exclude = set(exclude_ids or [])
@@ -1112,7 +1246,19 @@ async def get_related_videos(video_id: str, exclude_ids: list[str] = None) -> li
                     "thumbnail": e.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
                     "uploader": e.get("uploader", "Unknown"),
                 })
+        if results:
+            return results
+        LOGGER.info("yt-dlp related-videos returned nothing — trying InnerTube fallback | %s", video_id)
+    except Exception as exc:
+        LOGGER.warning("get_related_videos (yt-dlp) failed — trying InnerTube fallback: %s", exc)
+
+    # yt-dlp's mix/Radio extraction returned nothing (or raised) — fall back
+    # to a direct InnerTube "up next" lookup so AutoPlay doesn't just go
+    # silent (see _innertube_related_sync()'s docstring for the root cause).
+    try:
+        loop = asyncio.get_running_loop()
+        results = await loop.run_in_executor(None, _innertube_related_sync, video_id, exclude)
         return results
     except Exception as exc:
-        await send_error_log("get_related_videos failed", exc)
+        await send_error_log("get_related_videos failed (all fallbacks exhausted)", exc)
         return []
