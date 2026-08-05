@@ -53,18 +53,18 @@ async def inline_query_handler(client, query):
                     ],
                 ]
             )
-            searched_text = f"""
-❇️**Title:** [{title}]({link})
+            searched_text = f"""<blockquote>
+<emoji id='95282968352862527007'>❇️</emoji>**Title:** [{title}]({link})
 
-⏳**Duration:** {duration} Mins
-👀**Views:** `{views}`
-⏰**Published Time:** {published}
-🎥**Channel Name:** {channel}
-📎**Channel Link:** [Visit From Here]({channellink})
+<emoji id='5098255325723625291'>⏳</emoji>**Duration:** {duration} Mins
+<emoji id='6298429115628259446'>👀</emoji>**Views:** `{views}`
+<emoji id='95282968352862527007'>⏰</emoji>**Published Time:** {published}
+<emoji id='5098567638565520047'>🎥</emoji>**Channel Name:** {channel}
+<emoji id='5397971251873873206'>📎</emoji>**Channel Link:** [Visit From Here]({channellink})
 
 __Reply with /play on this searched message to stream it on voice chat.__
 
-⚡️ ** Inline Search By {MUSIC_BOT_NAME} **"""
+<emoji id='5337260982911655617'>⚡</emoji>️ ** Inline Search By {MUSIC_BOT_NAME} **</blockquote>"""
             answers.append(
                 InlineQueryResultPhoto(
                     photo_url=thumbnail,
