@@ -36,11 +36,23 @@ import time
 
 from pytgcalls import PyTgCalls
 from pytgcalls.types import MediaStream, StreamEnded
-from pyrogram.errors import ChannelInvalid, ChannelPrivate, PeerIdInvalid
+from pytgcalls.exceptions import NoActiveGroupCall
+from pyrogram import enums
+from pyrogram.types import ChatPermissions
+from pyrogram.errors import ChannelInvalid, ChannelPrivate, PeerIdInvalid, UserBannedInChannel
 from melody.logging import LOGGER, send_error_log
 from melody.core.queue import (
     get_current, set_current, pop_next, clear_queue,
     get_volume, set_volume_local, is_autoplay_on, get_queue,
+)
+
+# Shown to the group whenever we try to (re)join / stream but Telegram
+# reports there is no active voice/video chat at all (py-tgcalls raises
+# NoActiveGroupCall — a video chat must already be started by someone in
+# the app before the bot/assistant can join it).
+NO_ACTIVE_VC_MESSAGE = (
+    "ɴᴏ ᴀᴄᴛɪᴠᴇ ᴠɪᴅᴇᴏᴄʜᴀᴛ ꜰᴏᴜɴᴅ.\n\n"
+    "ᴘʟᴇᴀsᴇ sᴛᴀʀᴛ ᴠɪᴅᴇᴏᴄʜᴀᴛ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘ / ᴄʜᴀɴɴᴇʟ ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ."
 )
 
 # Lazy — set by start_call_py() on first call
@@ -299,12 +311,41 @@ async def _stream_track(chat_id: int, track, video: bool = False, _retry: bool =
         # automatically — no human action required. Only if that auto-join
         # itself fails (bot lacks invite permission, assistant banned, etc.)
         # do we fall back to telling the group to add the assistant manually.
-        if isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid)) and not _retry:
-            LOGGER.warning("Assistant cannot resolve chat %s (%s) — attempting auto-join.",
+        # FEATURE: no active voice/video chat in the group at all — this is
+        # an expected user-side condition (nobody started the VC yet), not a
+        # bug, so show the clear instructional message instead of the
+        # generic failure text and skip the error-log spam.
+        if isinstance(exc, NoActiveGroupCall):
+            await _notify_playback_failed(chat_id, NO_ACTIVE_VC_MESSAGE)
+            return
+
+        # ROOT-CAUSE FIX (⚠️ Melody Error Log: ChannelInvalid / PeerIdInvalid
+        # / ChannelPrivate — "_stream_track failed"): joining a Telegram
+        # group/voice-chat call happens over the ASSISTANT (userbot) account,
+        # not the bot account. MTProto requires the calling account to
+        # actually be a member of that chat to resolve its peer at all — if
+        # the assistant was never added to the group (or was removed from
+        # it), Telegram rejects the join with CHANNEL_INVALID/PEER_ID_INVALID
+        # every single time, and no amount of retrying fixes it.
+        #
+        # FEATURE (auto-unban/unmute): UserBannedInChannel means the
+        # assistant WAS a member but got banned or muted — handled the same
+        # way, since _auto_join_assistant() now lifts a ban/mute with the
+        # bot's own admin rights before attempting the invite-link rejoin.
+        #
+        # AUTO-FIX (no more manual "add the assistant" step): the BOT account
+        # is already in the group (that's how it received /play at all) and
+        # is normally group-admin (needed for other commands), so it can
+        # export/reuse an invite link and have the ASSISTANT join through it
+        # automatically — no human action required. Only if that auto-join
+        # itself fails (bot lacks invite permission, assistant banned, etc.)
+        # do we fall back to telling the group to add the assistant manually.
+        if isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid, UserBannedInChannel)) and not _retry:
+            LOGGER.warning("Assistant cannot resolve chat %s (%s) — attempting auto-join/unban.",
                             chat_id, type(exc).__name__)
             joined = await _auto_join_assistant(chat_id)
             if joined:
-                LOGGER.info("✅ Assistant auto-joined chat %s — retrying playback.", chat_id)
+                LOGGER.info("✅ Assistant auto-joined/unbanned in chat %s — retrying playback.", chat_id)
                 await _stream_track(chat_id, track, video=video, _retry=True)
                 return
             await _notify_playback_failed(
@@ -315,11 +356,11 @@ async def _stream_track(chat_id: int, track, video: bool = False, _retry: bool =
                 "(ya bot ko 'Invite Users via Link' admin permission do) aur phir se "
                 "<code>/play</code> try karo.",
             )
-        elif isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid)):
-            # Already retried once after auto-join and it still failed.
+        elif isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid, UserBannedInChannel)):
+            # Already retried once after auto-join/unban and it still failed.
             await _notify_playback_failed(
                 chat_id,
-                "⚠️ <b>Assistant ko group mein add karne ke baad bhi gaana play nahi ho paya.</b>\n\n"
+                "⚠️ <b>Assistant ko group mein add/unban karne ke baad bhi gaana play nahi ho paya.</b>\n\n"
                 "Dobara <code>/play</code> try karo.",
             )
         else:
@@ -331,10 +372,77 @@ async def _stream_track(chat_id: int, track, video: bool = False, _retry: bool =
         await send_error_log(f"_stream_track failed in {chat_id}", exc)
 
 
+# Cached assistant user id — resolved once via get_me(), reused everywhere
+# below instead of hitting Telegram on every auto-join check.
+_assistant_id: "int | None" = None
+
+
+async def _get_assistant_id() -> "int | None":
+    global _assistant_id
+    if _assistant_id is not None:
+        return _assistant_id
+    try:
+        from melody import assistant
+        me = await assistant.get_me()
+        _assistant_id = me.id
+        return _assistant_id
+    except Exception as exc:
+        LOGGER.warning("Could not resolve assistant's own user id: %s", exc)
+        return None
+
+
+async def _unban_or_unmute_assistant(chat_id: int) -> None:
+    """FEATURE: if the assistant account is banned or muted (restricted) in
+    `chat_id`, lift that with the BOT's own admin rights before attempting
+    to (re)join — no group admin has to do this by hand.
+
+    Safe / best-effort: if the bot itself lacks ban/restrict rights, or the
+    assistant was never a member at all (get_chat_member 404s), this just
+    logs and falls through so the normal invite-link join below still runs.
+    """
+    try:
+        from melody import bot
+    except Exception:
+        return
+
+    assistant_id = await _get_assistant_id()
+    if not assistant_id:
+        return
+
+    try:
+        member = await bot.get_chat_member(chat_id, assistant_id)
+    except Exception:
+        # Not a member yet at all (or never was) — nothing to unban/unmute.
+        return
+
+    try:
+        if member.status == enums.ChatMemberStatus.BANNED:
+            LOGGER.warning("Assistant is banned in %s — auto-unbanning with bot's admin rights.", chat_id)
+            await bot.unban_chat_member(chat_id, assistant_id)
+        elif member.status == enums.ChatMemberStatus.RESTRICTED:
+            perms = member.permissions
+            is_muted = not (perms and perms.can_send_messages)
+            if is_muted:
+                LOGGER.warning("Assistant is muted/restricted in %s — auto-lifting restriction.", chat_id)
+                await bot.restrict_chat_member(
+                    chat_id, assistant_id, permissions=ChatPermissions(all_perms=True),
+                )
+    except Exception as exc:
+        # Bot may not actually have ban/restrict rights in this chat — that's
+        # a real limitation, not a bug, so just log and let the join attempt
+        # below proceed (and fail with its own clear message if it must).
+        LOGGER.warning("Could not auto-unban/unmute assistant in %s: %s", chat_id, exc)
+
+
 async def _auto_join_assistant(chat_id: int) -> bool:
     """Make the assistant (userbot) account join `chat_id` automatically via
     an invite link exported by the bot account, so a group admin never has
     to manually add the assistant for voice chat playback to work.
+
+    Also auto-fixes the far more common cause of the assistant "not being
+    in the group": it WAS a member but got banned or muted at some point
+    (e.g. an over-eager anti-raid bot, or a leftover restriction from
+    before Melody was even added) — see _unban_or_unmute_assistant().
 
     Requires the BOT to already be a member with "invite users via link"
     permission (true for any group where /play works at all, since that's
@@ -346,6 +454,8 @@ async def _auto_join_assistant(chat_id: int) -> bool:
     except Exception as exc:
         LOGGER.warning("Auto-join: could not import bot/assistant clients: %s", exc)
         return False
+
+    await _unban_or_unmute_assistant(chat_id)
 
     try:
         link = await bot.export_chat_invite_link(chat_id)
