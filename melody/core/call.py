@@ -210,13 +210,17 @@ async def _play_next(chat_id: int):
         pass
 
 
-async def _stream_track(chat_id: int, track, video: bool = False):
+async def _stream_track(chat_id: int, track, video: bool = False, _retry: bool = False):
     """
     Download (or pipe-stream) a track and start/swap into the active VC.
 
     If the bot joined VC early with silence (_active[chat_id] is already True),
     this calls change_stream() which is near-instant — the user hears music
     within ~100 ms of the download path returning.
+
+    `_retry` is internal-only: set when this call is a single automatic
+    retry after `_auto_join_assistant()` successfully joined the assistant
+    to the chat, so a second failure doesn't loop forever.
     """
     try:
         from melody.core.ytdl import download_audio
@@ -281,23 +285,37 @@ async def _stream_track(chat_id: int, track, video: bool = False):
         # actually be a member of that chat to resolve its peer at all — if
         # the assistant was never added to the group (or was removed from
         # it), Telegram rejects the join with CHANNEL_INVALID/PEER_ID_INVALID
-        # every single time, and no amount of retrying fixes it. Previously
-        # this only reached send_error_log() (LOG_GROUP_ID only — see
-        # logging.py) so the group itself saw a false "✅ Now Playing" card
-        # (play.py assumes success as soon as play_stream() returns) and the
-        # bot silently never made any sound, with zero clue why. Detect this
-        # specific failure and tell the group exactly what to do, and — for
-        # every other failure too — tell the group playback actually failed
-        # instead of leaving the earlier "Now Playing" card as a lie.
-        if isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid)):
-            LOGGER.warning("Assistant cannot resolve chat %s (%s) — assistant is likely not a member.",
+        # every single time, and no amount of retrying fixes it.
+        #
+        # AUTO-FIX (no more manual "add the assistant" step): the BOT account
+        # is already in the group (that's how it received /play at all) and
+        # is normally group-admin (needed for other commands), so it can
+        # export/reuse an invite link and have the ASSISTANT join through it
+        # automatically — no human action required. Only if that auto-join
+        # itself fails (bot lacks invite permission, assistant banned, etc.)
+        # do we fall back to telling the group to add the assistant manually.
+        if isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid)) and not _retry:
+            LOGGER.warning("Assistant cannot resolve chat %s (%s) — attempting auto-join.",
                             chat_id, type(exc).__name__)
+            joined = await _auto_join_assistant(chat_id)
+            if joined:
+                LOGGER.info("✅ Assistant auto-joined chat %s — retrying playback.", chat_id)
+                await _stream_track(chat_id, track, video=video, _retry=True)
+                return
             await _notify_playback_failed(
                 chat_id,
-                "⚠️ <b>Melody ka voice-assistant account is group mein nahi hai.</b>\n\n"
+                "⚠️ <b>Melody ka voice-assistant account is group mein nahi hai, aur auto-join bhi fail ho gaya.</b>\n\n"
                 "Voice chat me gaana bajane ke liye assistant account ka bhi is group ka "
-                "member hona zaroori hai (sirf bot add karna kaafi nahi hai).\n\n"
-                "Assistant ko group mein add karke phir se <code>/play</code> try karo.",
+                "member hona zaroori hai. Please assistant ko group mein manually add karo "
+                "(ya bot ko 'Invite Users via Link' admin permission do) aur phir se "
+                "<code>/play</code> try karo.",
+            )
+        elif isinstance(exc, (ChannelInvalid, ChannelPrivate, PeerIdInvalid)):
+            # Already retried once after auto-join and it still failed.
+            await _notify_playback_failed(
+                chat_id,
+                "⚠️ <b>Assistant ko group mein add karne ke baad bhi gaana play nahi ho paya.</b>\n\n"
+                "Dobara <code>/play</code> try karo.",
             )
         else:
             await _notify_playback_failed(
@@ -306,6 +324,46 @@ async def _stream_track(chat_id: int, track, video: bool = False):
             )
 
         await send_error_log(f"_stream_track failed in {chat_id}", exc)
+
+
+async def _auto_join_assistant(chat_id: int) -> bool:
+    """Make the assistant (userbot) account join `chat_id` automatically via
+    an invite link exported by the bot account, so a group admin never has
+    to manually add the assistant for voice chat playback to work.
+
+    Requires the BOT to already be a member with "invite users via link"
+    permission (true for any group where /play works at all, since that's
+    the standard admin permission set music bots ask for). Returns True only
+    if the assistant is confirmedly a member afterwards.
+    """
+    try:
+        from melody import bot, assistant
+    except Exception as exc:
+        LOGGER.warning("Auto-join: could not import bot/assistant clients: %s", exc)
+        return False
+
+    try:
+        link = await bot.export_chat_invite_link(chat_id)
+    except Exception as exc:
+        LOGGER.warning("Auto-join: bot could not export invite link for %s: %s", chat_id, exc)
+        return False
+
+    try:
+        await assistant.join_chat(link)
+    except Exception as exc:
+        # "USER_ALREADY_PARTICIPANT" etc. — assistant may already be in the
+        # chat but pyrogram's local peer cache just doesn't know about it
+        # yet (e.g. added by someone else after the assistant last started).
+        # Either way, fall through to the get_chat() re-check below instead
+        # of giving up immediately.
+        LOGGER.debug("Auto-join: assistant.join_chat raised (may be harmless): %s", exc)
+
+    try:
+        await assistant.get_chat(chat_id)
+        return True
+    except Exception as exc:
+        LOGGER.warning("Auto-join: assistant still cannot resolve %s after join attempt: %s", chat_id, exc)
+        return False
 
 
 async def _notify_playback_failed(chat_id: int, text: str):
