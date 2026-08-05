@@ -127,13 +127,17 @@ def new_group_buttons(owner_id: int = None, owner_name: str = None) -> InlineKey
         ],
     ]
     if owner_id and owner_name:
-        # NOTE: intentionally callback_data, not a `tg://user?id=` url button —
-        # Telegram's Bot API only guarantees http(s)/t.me url schemes for
-        # inline buttons, and an unrecognized scheme risks BUTTON_URL_INVALID
-        # at send-time. A callback (see cb_cute_owner below) shows the same
-        # info via a popup and always works.
+        # FIX: tapping this button used to only pop up a text alert
+        # (callback_data="cute_owner") instead of actually opening the
+        # owner's profile. `tg://user?id=<id>` IS a Bot-API-supported URL
+        # scheme for inline buttons (Telegram resolves it to that user's
+        # profile inside the client) — it opens their chat/profile directly,
+        # which is what was actually requested.
         rows.append([
-            InlineKeyboardButton(btn(f"👑 My Cute Owner: {owner_name}", GREEN), callback_data="cute_owner"),
+            InlineKeyboardButton(
+                btn(f"👑 My Cute Owner: {owner_name}", GREEN),
+                url=f"tg://user?id={owner_id}",
+            ),
         ])
     rows.extend([
         [

@@ -159,10 +159,16 @@ async def start_call_py():
 # ─── Internal helpers ─────────────────────────────────────────────────────────
 
 def _cleanup_track_file(video_id: str):
-    """Delete /tmp/melody_<video_id>.* after playback.
+    """Delete /tmp/melody_<video_id>_<a|v>.* after playback.
     Skips FIFO pipe paths (they clean themselves up in the writer thread).
+
+    NOTE: matches both the "_a" (audio-only) and "_v" (video) cache variants
+    — see ytdl.download_audio()'s audio/video cache-key fix — so leftover
+    files from either variant are actually removed instead of silently
+    surviving because the old glob (`melody_<id>.*`, no variant suffix)
+    no longer matches the new filenames.
     """
-    for f in glob.glob(f"/tmp/melody_{video_id}.*"):
+    for f in glob.glob(f"/tmp/melody_{video_id}_*.*"):
         try:
             os.unlink(f)
         except Exception:

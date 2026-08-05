@@ -892,10 +892,17 @@ def _start_pipe_download(video_id: str, audio_only: bool = True) -> str:
 #  Full file download (fallback for when FIFO is unavailable or pipe fails)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _cache_tag(audio_only: bool) -> str:
+    """Suffix distinguishing an audio-only download from a video download of
+    the same YouTube video_id — see download_audio() for why this matters."""
+    return "a" if audio_only else "v"
+
+
 def _download_audio_sync(video_id: str, audio_only: bool = True) -> str:
     """Synchronous full-file download — used as fallback when FIFO unavailable."""
     url = f"https://www.youtube.com/watch?v={video_id}"
-    outtmpl = f"/tmp/melody_{video_id}.%(ext)s"
+    tag = _cache_tag(audio_only)
+    outtmpl = f"/tmp/melody_{video_id}_{tag}.%(ext)s"
     opts = {
         **_ydl_opts(audio_only=audio_only),
         "outtmpl": outtmpl,
@@ -905,7 +912,7 @@ def _download_audio_sync(video_id: str, audio_only: bool = True) -> str:
         info = ydl.extract_info(url, download=True)
         filepath = ydl.prepare_filename(info)
     if not os.path.exists(filepath):
-        found = glob.glob(f"/tmp/melody_{video_id}.*")
+        found = glob.glob(f"/tmp/melody_{video_id}_{tag}.*")
         if found:
             return found[0]
         raise FileNotFoundError(f"Downloaded file not found for video_id={video_id}")
@@ -913,10 +920,23 @@ def _download_audio_sync(video_id: str, audio_only: bool = True) -> str:
 
 
 async def download_audio(video_id: str, audio_only: bool = True) -> str:
-    """Return a path to play audio from.
+    """Return a path to play audio (or audio+video) from.
 
     Strategy: always do a full file download to /tmp, then hand the finished
     file's path to PyTgCalls.
+
+    ROOT-CAUSE FIX (audio/video mismatch on /vplay): the cache lookup used to
+    key ONLY on video_id (`/tmp/melody_<video_id>.*`), with no distinction
+    between an audio-only download and a video download of the very same
+    YouTube video. So if a chat played a track with /play first (caching an
+    AUDIO-ONLY file) and someone then ran /vplay on that same track, this
+    function found the cached audio-only file and happily returned it —
+    which _stream_track then wrapped in a MediaStream with video_parameters
+    set, producing a "video" stream that actually carried no video track at
+    all (or, in the opposite order, wasted a full video re-download for a
+    plain /play). The cache key now includes an audio/video tag
+    (`/tmp/melody_<video_id>_a.*` vs `/tmp/melody_<video_id>_v.*`) so /play
+    and /vplay always fetch (and reuse) the correct variant independently.
 
     FIFO pipe streaming was REMOVED (root-cause fix): PyTgCalls' MediaStream
     always calls ffmpeg.check_stream() before playback, which runs `ffprobe`
@@ -935,11 +955,14 @@ async def download_audio(video_id: str, audio_only: bool = True) -> str:
     the VC join (pre_join) and the download both run concurrently — only the
     download itself is no longer piped.
 
-    Files written to /tmp/melody_<video_id>.* are cleaned up by call.py after
-    each track finishes to avoid filling the 512 MB /tmp on Heroku.
+    Files written to /tmp/melody_<video_id>_<a|v>.* are cleaned up by
+    call.py after each track finishes to avoid filling the 512 MB /tmp on
+    Heroku.
     """
-    # Cache check — reuse if already downloaded
-    cached = glob.glob(f"/tmp/melody_{video_id}.*")
+    tag = _cache_tag(audio_only)
+    # Cache check — reuse if already downloaded IN THE SAME VARIANT (audio
+    # vs video). Never reuse a file downloaded for the other variant.
+    cached = glob.glob(f"/tmp/melody_{video_id}_{tag}.*")
     if cached:
         return cached[0]
 
