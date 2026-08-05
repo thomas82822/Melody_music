@@ -24,6 +24,16 @@ class Track:
     requester_id: int
     requester_name: str
     requested_in: int  # chat_id
+    # BUG FIX ("kabhi vplay kabhi play" — video intent silently lost): this
+    # used to have no field at all recording whether the track was requested
+    # via /vplay (video) or /play (audio-only). _play_next() and
+    # try_autoplay() re-play tracks from the queue / AutoPlay without any
+    # video argument, so they always defaulted to audio-only — meaning any
+    # /vplay request that got queued (something else already playing) came
+    # back as audio-only the moment it was actually dequeued and played.
+    # Storing the intent on the Track itself makes it survive being queued,
+    # popped, looped, or replayed by AutoPlay.
+    video: bool = False
 
 
 # In-memory per-chat state

@@ -120,6 +120,10 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
             requester_id=requester_id,
             requester_name=requester_name,
             requested_in=chat.id,
+            # BUG FIX: record whether this was /play or /vplay on the track
+            # itself so the video intent survives queuing / auto-advance /
+            # loop-single instead of silently reverting to audio-only.
+            video=video,
         )
 
         # Make sure the pre-join attempt has finished before play_stream()

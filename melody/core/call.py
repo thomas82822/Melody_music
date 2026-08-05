@@ -193,7 +193,12 @@ async def _play_next(chat_id: int):
 
     next_track = pop_next(chat_id)
     if next_track:
-        await _stream_track(chat_id, next_track)
+        # BUG FIX ("kabhi vplay kabhi play"): this used to call _stream_track
+        # with no `video` argument at all, so it always defaulted to False —
+        # a queued /vplay track silently turned into audio-only the moment
+        # it advanced from the queue. Track now carries its own video intent
+        # (see queue.Track), so replay it exactly as it was requested.
+        await _stream_track(chat_id, next_track, video=next_track.video)
         return
 
     if await is_autoplay_on(chat_id) and await try_autoplay(chat_id):
@@ -625,6 +630,14 @@ async def change_volume(chat_id: int, volume: int):
 
 def is_active(chat_id: int) -> bool:
     return bool(_active.get(chat_id))
+
+
+def is_video_active(chat_id: int) -> bool:
+    """Whether the call currently connected for `chat_id` was joined with
+    video capability. Used by AutoPlay to keep replaying in the same mode
+    the call was actually negotiated in, instead of silently guessing.
+    """
+    return bool(_is_video.get(chat_id))
 
 
 async def get_participants(chat_id: int) -> list:

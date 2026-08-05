@@ -102,7 +102,7 @@ async def try_autoplay(chat_id: int) -> bool:
     to play (caller should then actually leave the call).
     """
     try:
-        from melody.core.call import _stream_track, play_stream, is_active
+        from melody.core.call import _stream_track, play_stream, is_active, is_video_active
 
         track = pop_predownloaded(chat_id)
         if not track:
@@ -110,11 +110,20 @@ async def try_autoplay(chat_id: int) -> bool:
         if not track:
             return False
 
+        # BUG FIX ("kabhi vplay kabhi play"): this used to call _stream_track
+        # / play_stream with no `video` argument, always defaulting to
+        # audio-only — so AutoPlay silently dropped video the moment it took
+        # over from a /vplay session. If the call is still connected, keep
+        # streaming in whatever mode it was actually joined in (video can't
+        # be renegotiated mid-call anyway — see pre_join()'s docstring).
+        # If starting a fresh call, carry over the track's own video intent.
+        video = is_video_active(chat_id) if is_active(chat_id) else track.video
+        track.video = video
         set_current(chat_id, track)
         if is_active(chat_id):
-            await _stream_track(chat_id, track)
+            await _stream_track(chat_id, track, video=video)
         else:
-            await play_stream(chat_id, track)
+            await play_stream(chat_id, track, video=video)
         await add_history(chat_id, track.video_id, track.title)
 
         from melody import bot
