@@ -174,7 +174,14 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=get_play_buttons(chat.title or ""),
             )
-        except Exception:
+        except Exception as thumb_exc:
+            # BUG FIX: this fallback used to swallow the thumbnail failure
+            # completely silently — no log line, no error report — so a
+            # broken circular-thumbnail render always looked identical to
+            # "the feature was never built", with zero clue why. Now it's
+            # reported like every other failure path in this file.
+            from melody.logging import send_error_log
+            await send_error_log(f"make_thumbnail failed in {chat.id}", thumb_exc)
             status = "Force Played ⚡" if force else ("Now Playing ▶️" if playing_now else "Added to Queue 📋")
             await anim.stop()
             await processing.edit(

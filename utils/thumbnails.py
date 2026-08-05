@@ -37,12 +37,38 @@ CHAKRA_BLUE = "#000080"
 _bot_dp_cache: dict = {"path": None, "tried": False}
 
 
+# BUG FIX: assets/fonts previously shipped empty (only a .gitkeep) — every
+# _get_font() call silently fell back to PIL's tiny built-in bitmap font,
+# so the whole "side info" text block (title/channel/meta/time) rendered
+# almost unreadably small no matter how the layout code sized it. The real
+# Poppins .ttf files are now committed to assets/fonts; this also keeps a
+# couple of common system-font fallbacks so the card still looks like an
+# actual card (not a wireframe) even if a font file ever goes missing again.
+_SYSTEM_FONT_FALLBACKS = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/nix/store/*/share/fonts/**/DejaVuSans-Bold.ttf",
+]
+
+
 def _get_font(name: str, size: int) -> ImageFont.FreeTypeFont:
     path = os.path.join(FONTS, name)
     try:
         return ImageFont.truetype(path, size)
     except Exception:
-        return ImageFont.load_default()
+        pass
+    for fallback in _SYSTEM_FONT_FALLBACKS:
+        try:
+            if "*" in fallback:
+                import glob
+                matches = glob.glob(fallback, recursive=True)
+                if not matches:
+                    continue
+                fallback = matches[0]
+            return ImageFont.truetype(fallback, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
 
 
 async def _fetch_image_from_url(url: str) -> "Image.Image | None":
@@ -74,12 +100,21 @@ async def fetch_dp(client, user_id: int) -> "str | None":
     and return the path, or None if they have no photo / it fails.
     Pyrogram doesn't expose a direct CDN URL for profile photos — they must
     be downloaded through the client.
+
+    BUG FIX: Pyrogram has no `get_profile_photos` method (that name doesn't
+    exist on Client at all — every call here raised AttributeError, silently
+    swallowed by the except below, so requester/bot avatars on the thumbnail
+    ALWAYS fell back to the plain initials badge). The real method is
+    `get_chat_photos()`, and it returns an async generator, not a list —
+    it must be iterated with `async for`, not indexed.
     """
     try:
-        photos = await client.get_profile_photos(user_id, limit=1)
-        if not photos or not photos[0]:
+        photo = None
+        async for p in client.get_chat_photos(user_id, limit=1):
+            photo = p
+            break
+        if not photo:
             return None
-        photo = photos[0]
         dest = f"/tmp/melody_dp_{user_id}_{int(time.time() * 1000)}.jpg"
         path = await client.download_media(photo.file_id, file_name=dest)
         return path
@@ -152,8 +187,26 @@ def _placeholder_avatar(size: int) -> "Image.Image":
         g = int(int(SAFFRON[3:5], 16) * (1 - ratio) + int(GREEN[3:5], 16) * ratio)
         b = int(int(SAFFRON[5:7], 16) * (1 - ratio) + int(GREEN[5:7], 16) * ratio)
         draw.line([(0, y), (size, y)], fill=(r, g, b, 255))
-    f = _get_font("Poppins-Bold.ttf", int(size * 0.4))
-    draw.text((size * 0.32, size * 0.28), "♪", font=f, fill=WHITE)
+    # BUG FIX: was drawing the "♪" text glyph, which Poppins has no design
+    # for (and Heroku has no emoji/symbol font fallback) — it rendered as an
+    # empty tofu box, which is exactly the broken placeholder users saw
+    # whenever a YouTube thumbnail failed to fetch. Draw a real music-note
+    # shape with primitives instead so it always renders.
+    note_w = size * 0.34
+    stem_x = size * 0.5 + note_w * 0.32
+    stem_top = size * 0.28
+    stem_bottom = size * 0.68
+    draw.line([(stem_x, stem_top), (stem_x, stem_bottom)], fill=WHITE, width=max(3, int(size * 0.035)))
+    draw.polygon(
+        [(stem_x, stem_top), (stem_x + note_w * 0.3, stem_top + note_w * 0.12),
+         (stem_x + note_w * 0.3, stem_top + note_w * 0.32), (stem_x, stem_top + note_w * 0.22)],
+        fill=WHITE,
+    )
+    head_r = size * 0.11
+    draw.ellipse(
+        [(stem_x - head_r * 2, stem_bottom - head_r), (stem_x, stem_bottom + head_r)],
+        fill=WHITE,
+    )
     return img
 
 
@@ -175,6 +228,35 @@ def _truncate_to_width(draw: "ImageDraw.ImageDraw", text: str, font, max_w: int)
     while text and draw.textlength(text + ellipsis, font=font) > max_w:
         text = text[:-1]
     return text + ellipsis
+
+
+def _draw_control_icon(draw: "ImageDraw.ImageDraw", kind: str, cx: float, cy: float, size: int, color) -> None:
+    """Draw a playback-control icon as real vector shapes.
+
+    Replaces emoji glyphs (see BUG FIX note above the caller) so the row
+    always renders identically regardless of what fonts happen to be
+    installed on the host.
+    """
+    h = size / 2
+    if kind == "playpause":
+        draw.polygon([(cx - h * 0.6, cy - h), (cx - h * 0.6, cy + h), (cx + h * 0.9, cy)], fill=color)
+    elif kind == "prev":
+        draw.polygon([(cx + h * 0.2, cy - h), (cx + h * 0.2, cy + h), (cx - h * 0.9, cy)], fill=color)
+        draw.rectangle([(cx - h * 1.1, cy - h), (cx - h * 0.85, cy + h)], fill=color)
+    elif kind == "next":
+        draw.polygon([(cx - h * 0.2, cy - h), (cx - h * 0.2, cy + h), (cx + h * 0.9, cy)], fill=color)
+        draw.rectangle([(cx + h * 0.85, cy - h), (cx + h * 1.1, cy + h)], fill=color)
+    elif kind == "shuffle":
+        draw.line([(cx - h, cy - h * 0.5), (cx + h, cy + h * 0.5)], fill=color, width=2)
+        draw.line([(cx - h, cy + h * 0.5), (cx + h, cy - h * 0.5)], fill=color, width=2)
+        for sx, sy in ((cx + h, cy + h * 0.5), (cx + h, cy - h * 0.5)):
+            draw.polygon([(sx, sy - 4), (sx, sy + 4), (sx + 6, sy)], fill=color)
+    elif kind == "repeat":
+        bbox = [cx - h, cy - h, cx + h, cy + h]
+        draw.arc(bbox, start=20, end=340, fill=color, width=2)
+        ax = cx + h * 0.6
+        ay = cy - h * 0.75
+        draw.polygon([(ax - 6, ay - 5), (ax - 6, ay + 5), (ax + 5, ay)], fill=color)
 
 
 async def make_thumbnail(
@@ -239,7 +321,14 @@ async def make_thumbnail(
     draw.text((info_x, channel_y), safe_channel, font=font_channel, fill=GOLD)
 
     meta_y = channel_y + 42
-    meta_line = f"👁 Playing now  •  🎧 {group_name[:24]}"
+    # BUG FIX: emoji glyphs (👁 🎧 🎶 ♛ etc.) have NO real design in the
+    # Poppins font, and Heroku's default python buildpack ships no color
+    # emoji font either — PIL silently draws them as empty "tofu" boxes.
+    # That's why the redesigned card could still look broken/unfinished in
+    # production even though the circular-thumbnail layout itself worked.
+    # Stick to plain characters (• and —) that Poppins actually has glyphs
+    # for, and draw the transport controls below as real vector shapes.
+    meta_line = f"Playing now  •  {group_name[:24]}"
     safe_meta = _truncate_to_width(draw, meta_line, font_meta, info_w)
     draw.text((info_x, meta_y), safe_meta, font=font_meta, fill="#CFCFCF")
 
@@ -268,13 +357,21 @@ async def make_thumbnail(
     draw.text((info_x + bar_w - dur_w, time_y), duration, font=font_small, fill="#AAAAAA")
 
     # ── Playback control glyphs row ────────────────────────────────────
+    # BUG FIX: these were drawn as emoji TEXT (🔀 ⏮ ⏯ ⏭ 🔁). Poppins has no
+    # glyph for any of them, and Heroku's buildpack has no color-emoji font
+    # to fall back to either, so every one of the five icons rendered as an
+    # empty tofu box — the control row looked broken in production even
+    # though the code "had" the icons. Draw them as real vector shapes
+    # instead so they always render correctly regardless of font/host.
     controls_y = time_y + 34
-    glyphs = ["🔀", "⏮", "⏯", "⏭", "🔁"]
-    gap = info_w / (len(glyphs) + 1)
-    for idx, g in enumerate(glyphs, 1):
-        gw = draw.textlength(g, font=font_controls)
-        gx = info_x + gap * idx - gw / 2
-        draw.text((gx, controls_y), g, font=font_controls, fill=WHITE if g in ("⏮", "⏯", "⏭") else GOLD)
+    icon_size = 22
+    kinds = ["shuffle", "prev", "playpause", "next", "repeat"]
+    gap = info_w / (len(kinds) + 1)
+    cy = controls_y + icon_size // 2
+    for idx, kind in enumerate(kinds, 1):
+        cx = info_x + gap * idx
+        color = WHITE if kind in ("prev", "playpause", "next") else GOLD
+        _draw_control_icon(draw, kind, cx, cy, icon_size, color)
 
     # ── Requester + bot badge, small, top-right corner ─────────────────
     badge_size = 54
@@ -305,7 +402,7 @@ async def make_thumbnail(
 
     # ── Watermark ───────────────────────────────────────────────────────
     wm_draw = ImageDraw.Draw(bg)
-    wm_draw.text((PAD, H - PAD // 2 - 4), f"🎶 Melody · ♛ {owner_name[:18]}", font=font_small, fill=(255, 255, 255, 150))
+    wm_draw.text((PAD, H - PAD // 2 - 4), f"Melody · {owner_name[:18]}", font=font_small, fill=(255, 255, 255, 150))
 
     # ── Save ──────────────────────────────────────────────────────────────
     out_path = f"/tmp/melody_thumb_{int(time.time() * 1000)}.png"
