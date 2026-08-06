@@ -791,12 +791,33 @@ async def seek_stream(chat_id: int, seconds: int) -> int:
     return seconds
 
 
-async def change_volume(chat_id: int, volume: int):
+async def change_volume(chat_id: int, volume: int, _retry: bool = False) -> bool:
+    """Returns True on success, False on failure — so callers (e.g.
+    /volume, /mute, /unmute) can tell the user the truth instead of always
+    replying "Volume set" even when nothing actually happened.
+
+    BUG FIX (GROUPCALL_FORBIDDEN): this Telegram error means the assistant
+    isn't currently a recognized participant of the chat's voice call — the
+    exact same recoverable situation _stream_track already handles via
+    _auto_join_assistant() for ChannelInvalid/PeerIdInvalid/etc. Previously
+    change_volume() only logged this to LOG_GROUP_ID and gave up, so a
+    fixable "assistant not in the call" state looked like a dead end from
+    /volume even though /play's auto-join would have fixed it.
+    """
     set_volume_local(chat_id, volume)
     try:
         await _pytgcalls.change_volume_call(chat_id, volume)
-    except Exception as exc:
+        return True
+    except (ChannelInvalid, ChannelPrivate, PeerIdInvalid, UserBannedInChannel) as exc:
+        if not _retry and await _auto_join_assistant(chat_id):
+            return await change_volume(chat_id, volume, _retry=True)
         await send_error_log(f"change_volume failed in {chat_id}", exc)
+        return False
+    except Exception as exc:
+        if not _retry and "GROUPCALL_FORBIDDEN" in str(exc) and await _auto_join_assistant(chat_id):
+            return await change_volume(chat_id, volume, _retry=True)
+        await send_error_log(f"change_volume failed in {chat_id}", exc)
+        return False
 
 
 def is_active(chat_id: int) -> bool:
