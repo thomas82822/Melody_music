@@ -3,7 +3,7 @@
 
 Why this exists: the Bot API cannot color a normal chat button, but it can
 open a Telegram Mini App (a plain HTML page rendered inside the client),
-and an HTML page can be colored however we like. `web_app/menu.html` is a
+and an HTML page can be colored however we like. `docs/menu.html` is a
 single generic page that renders whatever button grid it's told to via a
 `spec` query param; this module builds that param.
 

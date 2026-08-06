@@ -33,7 +33,7 @@
 | `OWNER_ID` | Your Telegram numeric user ID | ✅ |
 | `LOG_GROUP_ID` | Private group ID for error logs | ✅ |
 | `OWNER_NAME` | Alias shown in play cards (default: Maestro) | ❌ |
-| `WEBAPP_URL` | HTTPS URL to `web_app/index.html` (host the `web_app/` folder anywhere static, e.g. GitHub Pages/Vercel/Netlify). Powers the colored playback-controls mini-app **and** the colored `/help` category menu (`web_app/menu.html`, same folder). | ❌ |
+| `WEBAPP_URL` | HTTPS URL to `docs/index.html` (host the `docs/` folder anywhere static, e.g. GitHub Pages/Vercel/Netlify). Powers the colored playback-controls mini-app **and** the colored `/help` category menu (`docs/menu.html`, same folder). | ❌ |
 | `BOT_USERNAME` | Your bot's @username | ❌ |
 | `GENIUS_API_TOKEN` | From [genius.com/api-clients](https://genius.com/api-clients) | ❌ |
 | `YT_COOKIES` | Base64-encoded cookies.txt for YouTube | ❌ |
@@ -118,18 +118,18 @@
 
 ## 🌐 Web App (Colored Controls)
 
-The Mini App at `web_app/index.html` gives users colored music control buttons inside Telegram.
+The Mini App at `docs/index.html` gives users colored music control buttons inside Telegram.
 
 **Host it (HTTPS required):**
 
 **Option A — GitHub Pages (free, easiest):**
 1. Go to repo **Settings → Pages**
-2. Source: `Deploy from branch` → `main` → `/web_app`
+2. Source: `Deploy from branch` → `main` → `/docs`
 3. Your URL: `https://thomas82822.github.io/Melody_music/index.html`
 4. Set `WEBAPP_URL` to that URL
 
 **Option B — Vercel (free):**
-1. Import `web_app/` folder to Vercel
+1. Import `docs/` folder to Vercel
 2. Set `WEBAPP_URL` to the Vercel HTTPS URL
 
 ---

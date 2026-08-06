@@ -2,9 +2,9 @@
 🌐 Web App data handler — handles actions sent back from any Mini App page.
 
 Two Mini App pages exist:
-  - `web_app/index.html` — playback controls, sends plain action strings
+  - `docs/index.html` — playback controls, sends plain action strings
     (e.g. "pause", "skip").
-  - `web_app/menu.html`  — generic colored menu grid (see `strings/webmenu.py`),
+  - `docs/menu.html`  — generic colored menu grid (see `strings/webmenu.py`),
     sends "<menu_id>:<action>" (e.g. "help:admin").
 
 Note: filters.web_app_data is not available in Pyrogram 2.0.106, so we use

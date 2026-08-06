@@ -3,7 +3,7 @@
 
 Colors match the reference screenshot exactly (Admin/Auth/Loop/Ping/Shuffle
 = blue, C-Play/Play/Song/Other = red, Seek/Speed/Mode = green) — but real
-button backgrounds are only possible via the Mini App (`web_app/menu.html`),
+button backgrounds are only possible via the Mini App (`docs/menu.html`),
 since the Bot API can't color a normal chat button. When `WEBAPP_URL` is
 configured, `/help` opens that colored grid; otherwise it falls back to a
 plain (uncolored) native keyboard so the command still works.

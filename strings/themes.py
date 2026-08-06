@@ -35,7 +35,7 @@ def fancy(text: str) -> str:
 #  The only way to get real colored button backgrounds (like the reference
 #  screenshot) is Telegram's Mini App / Web App surface, which is plain HTML
 #  and can be styled however you want. See `strings/webmenu.py` +
-#  `web_app/menu.html` for the reusable "colored menu" system built for this —
+#  `docs/menu.html` for the reusable "colored menu" system built for this —
 #  `melody/plugins/misc/help.py` is the reference implementation.
 #
 #  Rule for any NEW button going forward:
