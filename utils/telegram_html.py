@@ -38,6 +38,8 @@ from typing import Awaitable, Callable, Dict, Optional
 from pyrogram.enums import ParseMode
 from pyrogram.errors import RPCError
 
+from utils.emoji_map import EMOJI_ID_MAP
+
 log = logging.getLogger(__name__)
 
 _EMOJI_TAG_RE = re.compile(r"<emoji id=[\"']?(-?\d+)[\"']?>(.*?)</emoji>", re.DOTALL)
@@ -46,6 +48,48 @@ _INT64_MAX = 2**63 - 1
 # Per-client cache of {custom_emoji_id: is_valid}, so we only ever hit
 # Telegram once per id instead of on every message.
 _verified_cache: Dict[int, Dict[int, bool]] = {}
+
+# ── Auto premium-emoji wrapping (ALL glyphs, not just headline cards) ──────
+#
+# Splits `text` into segments that must stay untouched (existing
+# <emoji id="...">...</emoji> entities, and <pre>/<code> spans — Telegram's
+# HTML parser does not allow nested tags inside those two) versus segments
+# where a plain literal glyph can be safely auto-wrapped. Only glyphs present
+# in EMOJI_ID_MAP (built from the owner's real custom-emoji ids) are wrapped;
+# anything else is left as-is. A glyph optionally followed by the U+FE0F
+# "emoji presentation" variation selector is matched and wrapped as one unit
+# so e.g. "▶️" round-trips correctly.
+_PROTECTED_RE = re.compile(
+    r"<emoji id=[\"']?-?\d+[\"']?>.*?</emoji>"
+    r"|<pre(?:\s[^>]*)?>.*?</pre>"
+    r"|<code(?:\s[^>]*)?>.*?</code>",
+    re.DOTALL,
+)
+_GLYPH_RE = re.compile(
+    "(" + "|".join(re.escape(g) for g in sorted(EMOJI_ID_MAP, key=len, reverse=True)) + ")(\ufe0f?)"
+) if EMOJI_ID_MAP else None
+
+
+def auto_premium_emoji(text: str) -> str:
+    """Wrap every known plain emoji glyph in `text` with its real premium
+    custom-emoji entity, skipping glyphs already inside an <emoji> tag or
+    inside a <pre>/<code> span (where nested tags aren't allowed)."""
+    if not text or not _GLYPH_RE:
+        return text
+
+    def _wrap_glyphs(segment: str) -> str:
+        return _GLYPH_RE.sub(
+            lambda m: f'<emoji id="{EMOJI_ID_MAP[m.group(1)]}">{m.group(1)}{m.group(2)}</emoji>',
+            segment,
+        )
+
+    parts = _PROTECTED_RE.split(text)
+    protected = _PROTECTED_RE.findall(text)
+    out = [_wrap_glyphs(parts[0])]
+    for chunk, tail in zip(protected, parts[1:]):
+        out.append(chunk)
+        out.append(_wrap_glyphs(tail))
+    return "".join(out)
 
 
 def strip_out_of_range_emoji(text: str) -> str:
@@ -81,6 +125,7 @@ async def verify_custom_emojis(client, text: str) -> str:
     silently fall back to the plain glyph for any id that isn't a real,
     resolvable custom emoji — so one bad/fake id can never sink the whole
     message (and the <blockquote> quote around it)."""
+    text = auto_premium_emoji(text)
     text = strip_out_of_range_emoji(text)
 
     if client is None:

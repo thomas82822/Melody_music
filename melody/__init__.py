@@ -50,4 +50,14 @@ def create_clients() -> tuple:
         session_string=Config.STRING_SESSION,
         sleep_threshold=60,
     )
+
+    # Premium emoji everywhere: patch Client.send_message/edit_message_text/
+    # send_photo so every outgoing text/caption from either client is
+    # automatically wrapped with real premium custom-emoji ids (see
+    # utils/emoji_patch.py for why this is done centrally instead of
+    # per-plugin).
+    from utils.emoji_patch import apply_emoji_patch
+
+    apply_emoji_patch()
+
     return bot, assistant
