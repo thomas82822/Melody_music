@@ -483,6 +483,14 @@ async def main():
     await start_call_py()
     LOGGER.info("PyTgCalls started.")
 
+    # SPEED FIX ("gana bajne me 5-10 sec lag rahe hai"): warm up bgutil's
+    # PO-token HTTP server now, in the background, so it's already live by
+    # the time the first /play needs a token — instead of the old script
+    # provider paying a fresh Deno-process-spawn cost on every single track.
+    # See ensure_bgutil_http_server()/warm_up_bgutil_server() in ytdl.py.
+    from melody.core.ytdl import warm_up_bgutil_server
+    asyncio.create_task(warm_up_bgutil_server())
+
     # Register slash commands with BotFather
     await register_slash_commands(bot)
 

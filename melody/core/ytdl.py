@@ -54,6 +54,114 @@ def _bgutil_server_home() -> str:
     ))
 
 
+_BGUTIL_HTTP_PORT = 4416
+_BGUTIL_HTTP_PROC: "subprocess.Popen | None" = None
+_BGUTIL_HTTP_READY = False
+_BGUTIL_HTTP_LOCK = threading.Lock()
+
+
+def ensure_bgutil_http_server() -> bool:
+    """Start bgutil's PO-token provider as a persistent local HTTP server
+    (idempotent — safe to call more than once) and return whether it's up.
+
+    SPEED FIX ("gana bajne me 5-10 sec lag rahe hai" even after the
+    early-handoff/pre-download work): every /play still has to resolve a
+    fresh PO token before yt-dlp can pick a downloadable format — YouTube
+    requires one for essentially all clients now. This bot got that token
+    via bgutil's "script" method (`generate_once.ts`), which the upstream
+    project itself documents as much slower than the HTTP server: EVERY
+    single call spins up a brand-new Deno runtime + BotGuard/session state
+    from scratch, solves the challenge, prints the token, and exits — there
+    is nothing warm to reuse, so this cost was paid again on every track,
+    stacking directly on top of the search + download time already on the
+    critical path. That reliably accounts for multiple extra seconds of the
+    "5-10 sec" delay on every single song, not just occasionally.
+
+    The bundled `server/src/main.ts` is the same provider running as a
+    long-lived process instead: it keeps the Deno/BotGuard session and a
+    per-video token cache warm across requests, so once it's up, each
+    subsequent PO-token fetch is a fast local HTTP call instead of a fresh
+    process spawn. Starting it once here (in the background, at bot
+    startup) means it's already warmed up long before the first /play.
+
+    Falls back cleanly to the old script-based provider (see _ydl_opts())
+    if Deno/the server files aren't available or the server never comes up
+    — this is a pure addition, never a regression.
+    """
+    global _BGUTIL_HTTP_PROC, _BGUTIL_HTTP_READY
+
+    with _BGUTIL_HTTP_LOCK:
+        if _BGUTIL_HTTP_READY:
+            return True
+        if _BGUTIL_HTTP_PROC is not None and _BGUTIL_HTTP_PROC.poll() is None:
+            return False  # already starting; caller can retry _bgutil_http_alive() shortly
+
+        server_home = _bgutil_server_home()
+        main_ts = os.path.join(server_home, "src", "main.ts")
+        deno = _deno_path()
+        if not os.path.isfile(main_ts) or not (os.path.isfile(deno) or shutil.which(deno)):
+            return False
+
+        try:
+            os.makedirs(os.path.join(server_home, "cache"), exist_ok=True)
+            _BGUTIL_HTTP_PROC = subprocess.Popen(
+                [
+                    deno, "run",
+                    "--allow-env", "--allow-net",
+                    f"--allow-ffi={os.path.join(server_home, 'node_modules')}",
+                    f"--allow-write={os.path.join(server_home, 'cache')}",
+                    f"--allow-read={os.path.join(server_home, 'cache')},{os.path.join(server_home, 'node_modules')}",
+                    main_ts, "--port", str(_BGUTIL_HTTP_PORT),
+                ],
+                cwd=server_home,
+                env={**os.environ, "XDG_CACHE_HOME": os.path.join(server_home, "cache")},
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            LOGGER.info("🚀 bgutil PO-token HTTP server starting on 127.0.0.1:%d", _BGUTIL_HTTP_PORT)
+            return False  # not confirmed ready yet — see _bgutil_http_alive()
+        except Exception as exc:
+            LOGGER.warning("Could not start bgutil HTTP server, falling back to script mode: %s", exc)
+            _BGUTIL_HTTP_PROC = None
+            return False
+
+
+def _bgutil_http_alive() -> bool:
+    """Best-effort /ping check against the local bgutil HTTP server."""
+    global _BGUTIL_HTTP_READY
+    if _BGUTIL_HTTP_READY:
+        return True
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"http://127.0.0.1:{_BGUTIL_HTTP_PORT}/ping", timeout=1.5) as resp:
+            if resp.status == 200:
+                _BGUTIL_HTTP_READY = True
+                LOGGER.info("✅ bgutil PO-token HTTP server is up — using warm HTTP provider (fast path)")
+                return True
+    except Exception:
+        pass
+    return False
+
+
+async def warm_up_bgutil_server(timeout: float = 20.0) -> None:
+    """Called once at bot startup: kick off the persistent bgutil HTTP
+    server and poll until it responds (or times out), so it's warmed up
+    well before the first /play instead of racing the first request.
+    """
+    if not ensure_bgutil_http_server() and _BGUTIL_HTTP_PROC is None:
+        return  # server files not available — script-mode fallback will be used
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while loop.time() < deadline:
+        if await loop.run_in_executor(None, _bgutil_http_alive):
+            return
+        await asyncio.sleep(0.5)
+    LOGGER.warning(
+        "bgutil HTTP server did not respond within %.0fs — falling back to (slower) script mode",
+        timeout,
+    )
+
+
 def _deno_path() -> str:
     """Return the build-bundled (or system) Deno binary path.
 
@@ -296,12 +404,25 @@ def _ydl_opts(audio_only: bool = True) -> dict:
     bgutil_server = _bgutil_server_home()
     bgutil_script = os.path.join(bgutil_server, "src", "generate_once.ts")
     global _BGUTIL_STATUS_LOGGED
-    if os.path.isfile(bgutil_script):
+    # SPEED FIX: prefer the warm HTTP server (see ensure_bgutil_http_server())
+    # — reuses a live Deno/BotGuard session + per-video token cache, so a
+    # token fetch is a fast local HTTP call instead of spawning a whole new
+    # Deno process from scratch on every single track. Only fall back to the
+    # slower one-process-per-call script provider if the HTTP server never
+    # came up (e.g. Deno/server files missing).
+    if _bgutil_http_alive():
+        provider_args["youtubepot-bgutilhttp"] = {
+            "base_url": [f"http://127.0.0.1:{_BGUTIL_HTTP_PORT}"],
+        }
+        if not _BGUTIL_STATUS_LOGGED:
+            LOGGER.info("✅ bgutil PO-token provider configured (HTTP, warm): 127.0.0.1:%d", _BGUTIL_HTTP_PORT)
+            _BGUTIL_STATUS_LOGGED = True
+    elif os.path.isfile(bgutil_script):
         provider_args["youtubepot-bgutilscript"] = {
             "server_home": [bgutil_server],
         }
         if not _BGUTIL_STATUS_LOGGED:
-            LOGGER.info("✅ bgutil PO-token provider configured: %s", bgutil_server)
+            LOGGER.info("✅ bgutil PO-token provider configured (script, slower): %s", bgutil_server)
             _BGUTIL_STATUS_LOGGED = True
     elif not _BGUTIL_STATUS_LOGGED:
         LOGGER.warning(
