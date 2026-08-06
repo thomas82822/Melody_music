@@ -7,7 +7,7 @@ import asyncio
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
-from melody.core.queue import set_autoplay, is_autoplay_on, get_current, add_to_queue
+from melody.core.queue import set_autoplay, is_autoplay_on, get_current, add_to_queue, set_predownloaded
 from melody.core.autoplay import prefetch_next
 from melody.logging import log_activity
 from utils.decorators import admin_or_auth, error_handler
@@ -54,6 +54,22 @@ async def autoplay_cmd(client: Client, message: Message):
                 track = await prefetch_next(chat.id)
                 if track:
                     add_to_queue(chat.id, track)
+                    # BUG FIX ("autoplay on hota hai but uske baad kuch nahi
+                    # hota hai"): this track is now tracked by the VISIBLE
+                    # queue, so it will be consumed by pop_next() the normal
+                    # way. If we leave it sitting in _predownloaded too,
+                    # peek_predownloaded()/prefetch_next() keeps treating it
+                    # as "already cached" forever (see prefetch_next's early
+                    # `if cached: return cached`), so every future AutoPlay
+                    # hop after this one just replays this exact same stale
+                    # Track object instead of predicting a genuinely new
+                    # song — AutoPlay looks like it silently stops advancing
+                    # after the first track. Clearing it here makes the
+                    # queue the single source of truth for this track, so
+                    # the next real prefetch_next() call (triggered once
+                    # this track actually starts playing) computes a fresh
+                    # pick instead of returning a used-up reference.
+                    set_predownloaded(chat.id, None)
             asyncio.create_task(_queue_next_autoplay_track())
         asyncio.create_task(log_activity(
             f"🤖 <b>AutoPlay Enabled</b>\n"

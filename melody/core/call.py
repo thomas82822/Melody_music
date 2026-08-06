@@ -77,6 +77,18 @@ _seek_offset: dict = {}        # chat_id → int seconds; playback position bake
 # of trying to start a second stream simultaneously.
 _play_locks: dict[int, asyncio.Lock] = {}
 
+# BUG FIX ("next song must download krke rakh taki delay na lage"): the old
+# pre-download logic only ever warmed the /tmp cache for AutoPlay's own
+# prediction — a manually queued song (e.g. /play used twice in a row) was
+# NEVER pre-fetched, so every queued track still paid the full yt-dlp search
+# + download latency the instant its turn came up, which is exactly the
+# "gana bajne me time leta hai" delay for anything beyond the first song.
+# chat_id -> video_id currently being (or already) pre-downloaded for
+# whichever track will play next, so repeated triggers (a track starts
+# playing, then someone queues another song) don't kick off duplicate
+# concurrent yt-dlp downloads of the very same upcoming video.
+_prefetch_inflight: dict[int, str] = {}
+
 
 def _get_play_lock(chat_id: int) -> asyncio.Lock:
     if chat_id not in _play_locks:
@@ -232,6 +244,10 @@ async def _play_next(chat_id: int):
 
     next_track = pop_next(chat_id)
     if next_track:
+        # This track is now actually playing — drop any stale "upcoming"
+        # prefetch guard for it so a genuinely different next-in-queue track
+        # can be pre-downloaded fresh (see _prefetch_upcoming()).
+        _prefetch_inflight.pop(chat_id, None)
         # BUG FIX ("kabhi vplay kabhi play"): this used to call _stream_track
         # with no `video` argument at all, so it always defaulted to False —
         # a queued /vplay track silently turned into audio-only the moment
@@ -252,6 +268,36 @@ async def _play_next(chat_id: int):
         await _pytgcalls.leave_call(chat_id)
     except Exception:
         pass
+
+
+async def _prefetch_upcoming(chat_id: int) -> None:
+    """Pre-download whichever track will actually play next for `chat_id` —
+    the head of the manual queue if one exists, otherwise AutoPlay's own
+    prediction — so download_audio() is a guaranteed /tmp cache hit the
+    instant it's really needed, eliminating the gap between songs.
+
+    Safe to call repeatedly (e.g. once when the current song starts, and
+    again whenever someone queues another track): `_prefetch_inflight`
+    tracks which video_id is already being warmed for this chat so the same
+    upcoming track is never downloaded by two concurrent yt-dlp calls.
+    """
+    from melody.core.ytdl import download_audio
+
+    queue = get_queue(chat_id)
+    if queue:
+        upcoming = queue[0]
+        if _prefetch_inflight.get(chat_id) == upcoming.video_id:
+            return  # this exact upcoming track is already being/has been warmed
+        _prefetch_inflight[chat_id] = upcoming.video_id
+        try:
+            await download_audio(upcoming.video_id, audio_only=not upcoming.video)
+        except Exception as exc:
+            await send_error_log(f"prefetch of queued track failed in {chat_id}", exc)
+        return
+
+    if await is_autoplay_on(chat_id):
+        from melody.core.autoplay import prefetch_next
+        await prefetch_next(chat_id)
 
 
 async def _stream_track(chat_id: int, track, video: bool = False, _retry: bool = False):
@@ -310,13 +356,10 @@ async def _stream_track(chat_id: int, track, video: bool = False, _retry: bool =
                 except Exception:
                     pass
 
-        # ⚡ AutoPlay pre-download: this song is now live. If nothing is
-        # manually queued after it and AutoPlay is ON for this chat, predict
-        # + download the next track RIGHT NOW in the background so there is
-        # zero download wait once this one ends (see autoplay.prefetch_next).
-        if not get_queue(chat_id) and await is_autoplay_on(chat_id):
-            from melody.core.autoplay import prefetch_next
-            asyncio.create_task(prefetch_next(chat_id))
+        # ⚡ Pre-download whatever plays next — the manual queue's head if
+        # there is one, otherwise AutoPlay's prediction — RIGHT NOW in the
+        # background so there is zero download wait once this song ends.
+        asyncio.create_task(_prefetch_upcoming(chat_id))
 
     except Exception as exc:
         _active.pop(chat_id, None)
@@ -676,6 +719,12 @@ async def play_stream(chat_id: int, track, video: bool = False) -> bool:
         # queue this one instead of interrupting it.
         if _active.get(chat_id) and not _silence_playing.get(chat_id):
             add_to_queue(chat_id, track)
+            # BUG FIX ("next song must download krke rakh taki delay na
+            # lage"): don't wait for the currently-playing track to finish
+            # before warming the cache for this one — if this is the first
+            # (or a new) queue head, start downloading it right away so
+            # it's already cached by the time its turn comes.
+            asyncio.create_task(_prefetch_upcoming(chat_id))
             return False
 
         set_current(chat_id, track)
@@ -720,6 +769,7 @@ async def stop_stream(chat_id: int):
     _is_video.pop(chat_id, None)
     _play_start_time.pop(chat_id, None)
     _seek_offset.pop(chat_id, None)
+    _prefetch_inflight.pop(chat_id, None)
     try:
         await _pytgcalls.leave_call(chat_id)
     except Exception:
