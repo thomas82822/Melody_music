@@ -136,6 +136,26 @@ async def get_bot_dp(client) -> "str | None":
         return None
 
 
+# Bot's own username/display-name rarely changes during a run — cache it
+# once and reuse it for the "bot branding" button appended to every play
+# card, instead of hitting get_me() on every /play.
+_bot_identity_cache: dict = {"username": None, "name": None, "tried": False}
+
+
+async def get_bot_identity(client) -> tuple[str | None, str]:
+    """Returns (username_without_at, display_name) for the bot account."""
+    if _bot_identity_cache["tried"]:
+        return _bot_identity_cache["username"], _bot_identity_cache["name"]
+    _bot_identity_cache["tried"] = True
+    try:
+        me = await client.get_me()
+        _bot_identity_cache["username"] = me.username
+        _bot_identity_cache["name"] = me.first_name or "Melody"
+    except Exception:
+        _bot_identity_cache["name"] = "Melody"
+    return _bot_identity_cache["username"], _bot_identity_cache["name"]
+
+
 def _circle_crop(img: "Image.Image", size: int, ring_color=None, ring_width: int = 0) -> "Image.Image":
     """Crop image to a circle, optionally with a colored ring border."""
     img = img.convert("RGBA").resize((size, size), Image.LANCZOS)
@@ -259,6 +279,36 @@ def _draw_control_icon(draw: "ImageDraw.ImageDraw", kind: str, cx: float, cy: fl
         draw.polygon([(ax - 6, ay - 5), (ax - 6, ay + 5), (ax + 5, ay)], fill=color)
 
 
+def _blurred_backdrop(cover: "Image.Image | None", w: int, h: int) -> "Image.Image":
+    """Full-bleed, blurred + darkened backdrop from the YouTube cover art,
+    stretched/cropped to (w, h) — the same "paused video player" look as a
+    real YouTube thumbnail card (blurred banner behind the controls)."""
+    from PIL import ImageFilter
+
+    if cover is None:
+        cover = _placeholder_avatar(max(w, h))
+
+    src = cover.convert("RGB")
+    src_ratio = src.width / src.height
+    dst_ratio = w / h
+    if src_ratio > dst_ratio:
+        new_h = h
+        new_w = int(h * src_ratio)
+    else:
+        new_w = w
+        new_h = int(w / src_ratio)
+    src = src.resize((new_w, new_h), Image.LANCZOS)
+    left = (new_w - w) // 2
+    top = (new_h - h) // 2
+    src = src.crop((left, top, left + w, top + h))
+    src = src.filter(ImageFilter.GaussianBlur(18))
+
+    # Darken so white/gold foreground text stays legible over any artwork.
+    dark = Image.new("RGB", (w, h), (0, 0, 0))
+    backdrop = Image.blend(src, dark, 0.55)
+    return backdrop.convert("RGBA")
+
+
 async def make_thumbnail(
     song_title: str,
     artist: str,
@@ -271,68 +321,68 @@ async def make_thumbnail(
     bot_dp_path: str = None,
 ) -> str:
     """
-    Generate a compact 1280×420 "mini player" now-playing card:
-      [ (●) circular thumbnail ]  Title
-                                  Channel · views-style meta
-                                  ▬▬▬▬▬▬▭▭▭▭▭▭▭▭  00:00 / duration
-                                  ⏮  ⏯  ⏭     🔀        🔁
+    Generate a 16:9 "paused video player" now-playing card — same aspect
+    ratio/shape as a normal shared video thumbnail (1280×720):
+      ┌──────────────────────────────────────────────┐
+      │  blurred cover backdrop, darkened             │
+      │      (●)   Title                              │
+      │  thumb     Group · views-style meta           │
+      │            ▬▬▬▬▬▭▭▭▭▭▭▭▭  00:00 / duration     │
+      │              🔀  ⏮  ⏯  ⏭  🔁                  │
+      └──────────────────────────────────────────────┘
     Styled in the Modi-Meloni theme (saffron / white / green / gold).
+
+    BUG FIX ("mene ek pic share ki vese hi size ka thumbnail chaiye"): the
+    card used to render as a thin 1280×420 (~3:1) horizontal strip, which
+    doesn't match the size/shape of a normal shared photo or video
+    thumbnail. It's now a standard 16:9 (1280×720) card — the same
+    proportions as any regular picture/video preview Telegram shows.
 
     `requester_dp_path` / `bot_dp_path` are LOCAL file paths (already
     downloaded via fetch_dp()/get_bot_dp()) — not remote URLs.
     Returns the path to the saved PNG.
     """
-    W, H = 1280, 420
-    PAD = 40
+    W, H = 1280, 720
+    PAD = 56
 
-    # ── Background — soft dark card with a subtle saffron/green edge glow ──
-    bg = Image.new("RGBA", (W, H), (18, 18, 22, 255))
+    cover = await _fetch_image_from_url(yt_thumbnail_url)
+
+    # ── Background — full-bleed blurred cover art + tricolour edge glow ──
+    bg = _blurred_backdrop(cover, W, H)
     edge = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     edge_draw = ImageDraw.Draw(edge)
-    edge_draw.rectangle([(0, 0), (W, 6)], fill=SAFFRON)
-    edge_draw.rectangle([(0, H - 6), (W, H)], fill=GREEN)
+    edge_draw.rectangle([(0, 0), (W, 8)], fill=SAFFRON)
+    edge_draw.rectangle([(0, H - 8), (W, H)], fill=GREEN)
     bg = Image.alpha_composite(bg, edge)
     draw = ImageDraw.Draw(bg)
 
     # ── Fonts ────────────────────────────────────────────────────────────
-    font_title = _get_font("Poppins-Bold.ttf", 42)
-    font_channel = _get_font("Poppins-Bold.ttf", 26)
-    font_meta = _get_font("Poppins-Regular.ttf", 20)
-    font_small = _get_font("Poppins-Regular.ttf", 18)
-    font_controls = _get_font("Poppins-Bold.ttf", 34)
+    font_title = _get_font("Poppins-Bold.ttf", 48)
+    font_channel = _get_font("Poppins-Bold.ttf", 30)
+    font_meta = _get_font("Poppins-Regular.ttf", 24)
+    font_small = _get_font("Poppins-Regular.ttf", 20)
 
-    # ── Circular thumbnail (left) ───────────────────────────────────────
-    # REQUEST: "thumbnail ki width thodi kam kr" — the YouTube-cover circle
-    # used to fill the full card height; shrink it a bit and re-center it
-    # in the freed vertical space instead of just cropping to top-aligned.
-    thumb_avail = H - PAD * 2
-    thumb_size = int(thumb_avail * 0.74)
-    cover = await _fetch_image_from_url(yt_thumbnail_url)
+    # ── Circular thumbnail (left, vertically centered) ─────────────────
+    thumb_size = int(H * 0.52)
     cover_circle = _dual_ring_crop(cover if cover else _placeholder_avatar(thumb_size), thumb_size)
     thumb_x = PAD
-    thumb_y = PAD + (thumb_avail - thumb_size) // 2
+    thumb_y = (H - thumb_size) // 2
     bg.paste(cover_circle, (thumb_x, thumb_y), cover_circle)
 
     # ── Song info (right of thumbnail) ─────────────────────────────────
-    info_x = thumb_x + thumb_size + 44
+    info_x = thumb_x + thumb_size + 52
     info_w = W - info_x - PAD
+    block_top = thumb_y + int(thumb_size * 0.06)
 
-    title_y = PAD + 6
+    title_y = block_top
     safe_title = _truncate_to_width(draw, song_title, font_title, info_w)
     draw.text((info_x, title_y), safe_title, font=font_title, fill=WHITE)
 
-    channel_y = title_y + 58
+    channel_y = title_y + 66
     safe_channel = _truncate_to_width(draw, artist, font_channel, info_w)
     draw.text((info_x, channel_y), safe_channel, font=font_channel, fill=GOLD)
 
-    meta_y = channel_y + 42
-    # BUG FIX: emoji glyphs (👁 🎧 🎶 ♛ etc.) have NO real design in the
-    # Poppins font, and Heroku's default python buildpack ships no color
-    # emoji font either — PIL silently draws them as empty "tofu" boxes.
-    # That's why the redesigned card could still look broken/unfinished in
-    # production even though the circular-thumbnail layout itself worked.
-    # Stick to plain characters (• and —) that Poppins actually has glyphs
-    # for, and draw the transport controls below as real vector shapes.
+    meta_y = channel_y + 48
     # REQUEST: "Play card me group ka name show kr" — lead with the group
     # name (in gold, matching the channel line) instead of burying it after
     # a generic "Playing now" prefix in dim gray, so it's actually visible.
@@ -341,38 +391,33 @@ async def make_thumbnail(
     draw.text((info_x, meta_y), safe_meta, font=font_meta, fill=GOLD)
 
     # ── Progress bar (saffron → white → green, Modi-Meloni tricolour) ──
-    bar_y = meta_y + 46
-    bar_h = 10
+    bar_y = meta_y + 56
+    bar_h = 12
     bar_w = info_w
     third = bar_w // 3
     draw.rounded_rectangle([(info_x, bar_y), (info_x + bar_w, bar_y + bar_h)], radius=bar_h // 2, fill="#3A3A3A")
     filled_w = int(bar_w * 0.28)  # static preview position for the "now playing" card
     for i in range(filled_w):
-        ratio = i / max(third * 2, 1)
         if i < third:
             r, g, b = 255, int(153 + 100 * (i / third)), int(51 + 150 * (i / third))
         else:
             r = int(255 - 117 * ((i - third) / max(third, 1)))
             g = int(255 - 119 * ((i - third) / max(third, 1)))
             b = int(255 - 247 * ((i - third) / max(third, 1)))
-        draw.line([(info_x + i, bar_y), (info_x + i, bar_y + bar_h)], fill=(max(r,0), max(g,0), max(b,0)))
+        draw.line([(info_x + i, bar_y), (info_x + i, bar_y + bar_h)], fill=(max(r, 0), max(g, 0), max(b, 0)))
     knob_x = info_x + filled_w
-    draw.ellipse([(knob_x - 9, bar_y - 4), (knob_x + 9, bar_y + bar_h + 4)], fill=GOLD)
+    draw.ellipse([(knob_x - 10, bar_y - 5), (knob_x + 10, bar_y + bar_h + 5)], fill=GOLD)
 
-    time_y = bar_y + bar_h + 10
-    draw.text((info_x, time_y), "00:00", font=font_small, fill="#AAAAAA")
+    time_y = bar_y + bar_h + 14
+    draw.text((info_x, time_y), "00:00", font=font_small, fill="#DDDDDD")
     dur_w = draw.textlength(duration, font=font_small)
-    draw.text((info_x + bar_w - dur_w, time_y), duration, font=font_small, fill="#AAAAAA")
+    draw.text((info_x + bar_w - dur_w, time_y), duration, font=font_small, fill="#DDDDDD")
 
     # ── Playback control glyphs row ────────────────────────────────────
-    # BUG FIX: these were drawn as emoji TEXT (🔀 ⏮ ⏯ ⏭ 🔁). Poppins has no
-    # glyph for any of them, and Heroku's buildpack has no color-emoji font
-    # to fall back to either, so every one of the five icons rendered as an
-    # empty tofu box — the control row looked broken in production even
-    # though the code "had" the icons. Draw them as real vector shapes
-    # instead so they always render correctly regardless of font/host.
-    controls_y = time_y + 34
-    icon_size = 22
+    # Drawn as real vector shapes (not emoji text) so they always render
+    # correctly regardless of which fonts happen to be installed on host.
+    controls_y = time_y + 40
+    icon_size = 26
     kinds = ["shuffle", "prev", "playpause", "next", "repeat"]
     gap = info_w / (len(kinds) + 1)
     cy = controls_y + icon_size // 2
@@ -382,11 +427,7 @@ async def make_thumbnail(
         _draw_control_icon(draw, kind, cx, cy, icon_size, color)
 
     # ── Requester + bot badge, top-right corner ─────────────────────────
-    # REQUEST: "requested user ka pic aur thoda bada dikha" — the requester's
-    # own avatar was easy to miss at 54px; size it up noticeably (the small
-    # bot badge inset on it scales up to match) while keeping it pinned to
-    # the corner so it doesn't collide with the title/channel text.
-    badge_size = 84
+    badge_size = 92
     bot_img = _load_image_any(bot_dp_path) if bot_dp_path else None
     user_img = _load_image_any(requester_dp_path) if requester_dp_path else None
 
@@ -398,7 +439,7 @@ async def make_thumbnail(
     badge_y = PAD // 2
     bg.paste(user_circle, (badge_x, badge_y), user_circle)
 
-    bot_badge_size = 34
+    bot_badge_size = 38
     bot_circle = _circle_crop(
         bot_img if bot_img else _initials_avatar("Melody", bot_badge_size, "#B8860B"),
         bot_badge_size, ring_color=WHITE, ring_width=2,
@@ -408,13 +449,13 @@ async def make_thumbnail(
         (badge_x + badge_size - bot_badge_size + 8, badge_y + badge_size - bot_badge_size + 8),
         bot_circle,
     )
-    req_label = _truncate_to_width(draw, requester_name, font_small, 160)
+    req_label = _truncate_to_width(draw, requester_name, font_small, 180)
     label_w = draw.textlength(req_label, font=font_small)
-    draw.text((badge_x - label_w - 12, badge_y + badge_size // 2 - 10), req_label, font=font_small, fill="#CCCCCC")
+    draw.text((badge_x - label_w - 14, badge_y + badge_size // 2 - 10), req_label, font=font_small, fill="#EEEEEE")
 
     # ── Watermark ───────────────────────────────────────────────────────
     wm_draw = ImageDraw.Draw(bg)
-    wm_draw.text((PAD, H - PAD // 2 - 4), f"Melody · {owner_name[:18]}", font=font_small, fill=(255, 255, 255, 150))
+    wm_draw.text((PAD, H - PAD // 2 - 10), f"Melody · {owner_name[:18]}", font=font_small, fill=(255, 255, 255, 170))
 
     # ── Save ──────────────────────────────────────────────────────────────
     out_path = f"/tmp/melody_thumb_{int(time.time() * 1000)}.png"

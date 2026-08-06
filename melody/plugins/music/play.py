@@ -28,20 +28,35 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from melody import bot
 from melody.config import Config
 from melody.core.ytdl import get_video_info, download_replied_media, has_playable_media
-from melody.core.queue import Track, add_to_queue
+from melody.core.queue import Track, add_to_queue, is_autoplay_on
 from melody.core.call import play_stream, force_play_stream, pre_join, abort_prejoin_if_idle
 from melody.logging import log_activity
 from utils.database import add_history
 from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
 from utils.formatters import format_duration, quote_html
-from utils.thumbnails import make_thumbnail, fetch_dp, get_bot_dp
+from utils.thumbnails import make_thumbnail, fetch_dp, get_bot_dp, get_bot_identity
 from utils.animation import AnimatedStatus
 from strings.themes import BLUE, RED, GREEN, btn
 
 
-def get_play_buttons(chat_title: str) -> InlineKeyboardMarkup:
+def get_play_buttons(
+    chat_title: str,
+    autoplay_on: bool = False,
+    bot_username: "str | None" = None,
+    bot_name: str = "Melody",
+) -> InlineKeyboardMarkup:
     encoded_title = urllib.parse.quote(chat_title[:30])
     webapp_url = f"{Config.WEBAPP_URL}?chat={encoded_title}" if Config.WEBAPP_URL else "https://t.me"
+    autoplay_label = f"🔁 AutoPlay: {'ON 🟢' if autoplay_on else 'OFF 🔴'}"
+    # REQUEST: "gc me har time inline buttons me [bot ka] uska name add krna"
+    # — every play card sent in a group now carries a branding row with the
+    # bot's own name, linking straight to it (falls back to a harmless
+    # no-op button if BOT_USERNAME was never configured / get_me() failed).
+    bot_branding_button = (
+        InlineKeyboardButton(btn(f"🎧 {bot_name}", GREEN), url=f"https://t.me/{bot_username}")
+        if bot_username else
+        InlineKeyboardButton(btn(f"🎧 {bot_name}", GREEN), callback_data="noop")
+    )
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton(btn("⏸ Pause", RED),  callback_data="pause"),
@@ -53,8 +68,9 @@ def get_play_buttons(chat_title: str) -> InlineKeyboardMarkup:
         ] if Config.WEBAPP_URL else [],
         [
             InlineKeyboardButton(btn("📋 Queue", BLUE),  callback_data="queue"),
-            InlineKeyboardButton(btn("🎵 Lyrics", BLUE), callback_data="lyrics"),
+            InlineKeyboardButton(btn(autoplay_label, GREEN), callback_data="autoplay_toggle"),
         ],
+        [bot_branding_button],
     ])
 
 
@@ -152,6 +168,9 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
         safe_duration = html.escape(format_duration(info["duration"]))
 
         bot_dp_path, user_dp_path = await asyncio.gather(bot_dp_task, user_dp_task)
+        bot_username, bot_name = await get_bot_identity(client)
+        autoplay_on = await is_autoplay_on(chat.id)
+        play_buttons = get_play_buttons(chat.title or "", autoplay_on, bot_username, bot_name)
 
         try:
             thumb_path = await make_thumbnail(
@@ -182,7 +201,7 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                 thumb_path,
                 caption=caption,
                 parse_mode=enums.ParseMode.HTML,
-                reply_markup=get_play_buttons(chat.title or ""),
+                reply_markup=play_buttons,
             )
         except Exception as thumb_exc:
             # BUG FIX: this fallback used to swallow the thumbnail failure
@@ -202,7 +221,7 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                     f"🏠 {html.escape((chat.title or 'Private')[:60])}"
                 ),
                 parse_mode=enums.ParseMode.HTML,
-                reply_markup=get_play_buttons(chat.title or ""),
+                reply_markup=play_buttons,
             )
     finally:
         await anim.stop()

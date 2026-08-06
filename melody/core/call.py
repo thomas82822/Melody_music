@@ -149,24 +149,45 @@ async def start_call_py():
 
     @_pytgcalls.on_update()
     async def _on_stream_end(_, update):
-        if not isinstance(update, StreamEnded):
-            return
-        chat_id = getattr(update, "chat_id", None)
-        if chat_id is None:
-            return
+        # BUG FIX ("autoplay on hai, gana khatam hua, kuch response nahi
+        # aata, jese sab normal ho — silent error"): this handler used to
+        # have NO surrounding try/except at all. py-tgcalls dispatches
+        # `@_pytgcalls.on_update()` handlers as fire-and-forget tasks, so
+        # any unhandled exception raised in here (e.g. `is_autoplay_on()`
+        # hitting a flaky Mongo call inside `_play_next()`) was swallowed by
+        # py-tgcalls' own internal dispatcher — never reaching our
+        # LOG_GROUP_ID, never reaching the chat, never reaching a LOGGER
+        # line anyone would see. From the user's side the song just ends
+        # and nothing happens next, indistinguishable from "everything is
+        # fine". Wrapping the whole body guarantees every failure on this
+        # path is now surfaced instead of vanishing.
+        try:
+            if not isinstance(update, StreamEnded):
+                return
+            chat_id = getattr(update, "chat_id", None)
+            if chat_id is None:
+                return
 
-        # Silence race guard: if the silence stream ends before the real song
-        # is ready, do NOT advance the queue — let _stream_track handle it.
-        if _silence_playing.get(chat_id):
-            LOGGER.debug("stream_end during silence for %d — ignoring (real song loading)", chat_id)
-            return
+            # Silence race guard: if the silence stream ends before the real
+            # song is ready, do NOT advance the queue — let _stream_track
+            # handle it.
+            if _silence_playing.get(chat_id):
+                LOGGER.debug("stream_end during silence for %d — ignoring (real song loading)", chat_id)
+                return
 
-        # Clean up the finished track's /tmp file (skip FIFO paths)
-        current = get_current(chat_id)
-        if current:
-            _cleanup_track_file(current.video_id)
+            # Clean up the finished track's /tmp file (skip FIFO paths)
+            current = get_current(chat_id)
+            if current:
+                _cleanup_track_file(current.video_id)
 
-        await _play_next(chat_id)
+            await _play_next(chat_id)
+        except Exception as exc:
+            chat_id = getattr(update, "chat_id", "?")
+            LOGGER.exception("‼️ _on_stream_end crashed for chat %s", chat_id)
+            try:
+                await send_error_log(f"_on_stream_end crashed in {chat_id} (song ended, autoplay/next-up never ran)", exc)
+            except Exception:
+                pass
 
     await _pytgcalls.start()
     LOGGER.info("PyTgCalls (py-tgcalls 2.x) started.")

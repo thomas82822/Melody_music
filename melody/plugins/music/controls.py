@@ -8,10 +8,12 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import Message, CallbackQuery
 from melody import bot
 from melody.core.call import pause_stream, resume_stream, skip_stream, stop_stream
-from melody.core.queue import format_queue, get_current
+from melody.core.queue import format_queue, get_current, is_autoplay_on, set_autoplay
+from melody.core.autoplay import prefetch_next
 from melody.logging import log_activity
 from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
 from utils.formatters import format_duration, send_quote, premium_emoji, PREMIUM_EMOJI_IDS
+from utils.thumbnails import get_bot_identity
 
 _PAUSE = premium_emoji(PREMIUM_EMOJI_IDS["pause"], "⏸")
 _RESUME = premium_emoji(PREMIUM_EMOJI_IDS["resume"], "▶️")
@@ -154,6 +156,46 @@ async def queue_callback(client: Client, cb: CallbackQuery):
     await cb.answer()
     text = format_queue(cb.message.chat.id)
     await send_quote(cb.message, text, client=client)
+
+
+@bot.on_callback_query(filters.regex("^autoplay_toggle$"))
+@error_handler
+async def autoplay_toggle_callback(client: Client, cb: CallbackQuery):
+    """Inline AutoPlay toggle button on the play card.
+
+    REQUEST: "Play card buttons me add kr autoplay" — lets group members
+    flip AutoPlay on/off directly from the play card instead of typing
+    /autoplay on|off, and re-renders the card's buttons in place so the
+    label always reflects the current state.
+    """
+    chat_id = cb.message.chat.id
+    new_state = not await is_autoplay_on(chat_id)
+    await set_autoplay(chat_id, new_state)
+    await cb.answer(f"🤖 AutoPlay {'ON 🟢' if new_state else 'OFF 🔴'}")
+
+    if new_state and get_current(chat_id):
+        asyncio.create_task(prefetch_next(chat_id))
+
+    try:
+        from melody.plugins.music.play import get_play_buttons
+        bot_username, bot_name = await get_bot_identity(client)
+        await cb.message.edit_reply_markup(
+            reply_markup=get_play_buttons(cb.message.chat.title or "", new_state, bot_username, bot_name)
+        )
+    except Exception:
+        pass  # button label refresh is best-effort; the toggle itself already applied
+
+    actor = html.escape(cb.from_user.first_name) if cb.from_user else "Someone"
+    chat_name = html.escape(cb.message.chat.title or str(cb.message.chat.id))
+    asyncio.create_task(log_activity(
+        f"🤖 <b>AutoPlay {'Enabled' if new_state else 'Disabled'} (via button)</b>\n"
+        f"• By: <code>{actor}</code>\n• Chat: <code>{chat_name}</code>"
+    ))
+
+
+@bot.on_callback_query(filters.regex("^noop$"))
+async def noop_callback(client: Client, cb: CallbackQuery):
+    await cb.answer()
 
 
 @bot.on_callback_query(filters.regex("^lyrics$"))
