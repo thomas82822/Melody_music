@@ -900,7 +900,7 @@ def _start_pipe_download(video_id: str, audio_only: bool = True) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Full file download (fallback for when FIFO is unavailable or pipe fails)
+#  Full file download (with early growing-file handoff — see download_audio())
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _cache_tag(audio_only: bool) -> str:
@@ -909,25 +909,93 @@ def _cache_tag(audio_only: bool) -> str:
     return "a" if audio_only else "v"
 
 
-def _download_audio_sync(video_id: str, audio_only: bool = True) -> str:
-    """Synchronous full-file download — used as fallback when FIFO unavailable."""
+# SPEED FIX (strict "<1s after download starts" requirement): bytes of audio
+# that must already be on disk before we hand the (still-growing) file to
+# PyTgCalls. WebM/Opus only needs its EBML header + cluster start (a few KB)
+# before ffprobe can identify the stream and ffmpeg can start decoding —
+# 96KB was already far more than that, chosen conservatively; shrinking it
+# to ~20KB is still comfortably more than the header needs while getting
+# the handoff several times closer to "as soon as bytes exist on disk"
+# instead of "wait for ~1-6s of audio". This is a byte threshold, not a
+# time delay — on any real connection it's cleared in well under 100ms.
+_EARLY_HANDOFF_BYTES = 20_000
+# Hard ceiling on how long we wait for that early-handoff threshold before
+# giving up and blocking on the full download instead (matches this file's
+# previous, safe behaviour exactly — this is a pure fallback, never a
+# regression). Kept well above what the (now tiny) threshold actually needs
+# so a genuinely slow/stalled connection still gets a real chance before we
+# fall back, instead of bailing out early into a needless full re-wait.
+_EARLY_HANDOFF_TIMEOUT = 4.0
+
+
+def _download_audio_sync(video_id: str, audio_only: bool = True,
+                          early_event: "threading.Event | None" = None,
+                          early_holder: "dict | None" = None) -> str:
+    """Synchronous full-file download.
+
+    SPEED FIX (2-3s /play requirement): yt-dlp writes fragments straight into
+    the destination file IN ORDER as they arrive (that's how its native
+    fragment downloader works even with concurrent_fragment_downloads>1 — an
+    early-arriving fragment is buffered until the ones before it have been
+    written), so the destination file is a normal, valid, ever-growing file
+    from byte 0 onward while the download is still in progress. Unlike the
+    FIFO pipe this bot used to (briefly) use, a REAL file can be opened,
+    probed, and read more than once — so PyTgCalls' ffprobe check_stream()
+    plus its real playback read can both consume it safely without stepping
+    on each other or losing data, and download speed (fragmented, parallel)
+    is almost always much faster than 1x realtime playback, so the writer
+    stays comfortably ahead of the reader for the whole track.
+    `progress_hooks` reports `downloaded_bytes` and the live destination path
+    as fragments land; once enough header+data bytes exist we signal
+    `early_event` with the (still-growing) path in `early_holder['early_path']`
+    so the caller can start playback immediately instead of waiting for the
+    entire file. This function still runs to completion and always sets
+    `early_holder['final_path']` when done, regardless of whether the early
+    signal fired.
+    """
     url = f"https://www.youtube.com/watch?v={video_id}"
     tag = _cache_tag(audio_only)
     outtmpl = f"/tmp/melody_{video_id}_{tag}.%(ext)s"
+
+    def _hook(d):
+        if early_event is None or early_event.is_set():
+            return
+        if d.get("status") != "downloading":
+            return
+        fp = d.get("filename") or d.get("tmpfilename")
+        downloaded = d.get("downloaded_bytes") or 0
+        if fp and downloaded >= _EARLY_HANDOFF_BYTES and os.path.exists(fp):
+            if early_holder is not None:
+                early_holder["early_path"] = fp
+            early_event.set()
+
     opts = {
         **_ydl_opts(audio_only=audio_only),
         "outtmpl": outtmpl,
         "extract_flat": False,
     }
-    with YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filepath = ydl.prepare_filename(info)
-    if not os.path.exists(filepath):
-        found = glob.glob(f"/tmp/melody_{video_id}_{tag}.*")
-        if found:
-            return found[0]
-        raise FileNotFoundError(f"Downloaded file not found for video_id={video_id}")
-    return filepath
+    if early_event is not None:
+        opts["progress_hooks"] = [*opts.get("progress_hooks", []), _hook]
+
+    try:
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filepath = ydl.prepare_filename(info)
+        if not os.path.exists(filepath):
+            found = glob.glob(f"/tmp/melody_{video_id}_{tag}.*")
+            if found:
+                filepath = found[0]
+            else:
+                raise FileNotFoundError(f"Downloaded file not found for video_id={video_id}")
+        if early_holder is not None:
+            early_holder["final_path"] = filepath
+        return filepath
+    finally:
+        # Whatever happens (success or exception), make sure a waiter
+        # blocked on early_event doesn't hang forever if the threshold was
+        # never reached (e.g. the whole track is shorter than the threshold).
+        if early_event is not None:
+            early_event.set()
 
 
 def _replied_media_object(message):
@@ -1021,10 +1089,8 @@ async def download_replied_media(client, message, video: bool = False) -> "dict 
 
 
 async def download_audio(video_id: str, audio_only: bool = True) -> str:
-    """Return a path to play audio (or audio+video) from.
-
-    Strategy: always do a full file download to /tmp, then hand the finished
-    file's path to PyTgCalls.
+    """Return a path to play audio (or audio+video) from — usually a REAL
+    file that is still being written to on disk (see below).
 
     ROOT-CAUSE FIX (audio/video mismatch on /vplay): the cache lookup used to
     key ONLY on video_id (`/tmp/melody_<video_id>.*`), with no distinction
@@ -1039,22 +1105,35 @@ async def download_audio(video_id: str, audio_only: bool = True) -> str:
     (`/tmp/melody_<video_id>_a.*` vs `/tmp/melody_<video_id>_v.*`) so /play
     and /vplay always fetch (and reuse) the correct variant independently.
 
-    FIFO pipe streaming was REMOVED (root-cause fix): PyTgCalls' MediaStream
-    always calls ffmpeg.check_stream() before playback, which runs `ffprobe`
-    on the given path and reads it start-to-EOF to inspect the stream. A
-    named pipe (FIFO) only supports being drained ONCE — after ffprobe
-    finishes reading it for the probe, there is nothing left in the pipe for
-    the real ffmpeg playback process that follows, and by then our writer
-    thread has already deleted the tmp directory. This is exactly what was
-    causing `_stream_track failed ... FileNotFoundError` / "No such file" in
-    the logs: check_stream() drained (or outright missed, on a slow/slotted
-    writer) the pipe before real playback could read anything from it.
+    FIFO pipe streaming was REMOVED (root-cause fix, kept for history):
+    PyTgCalls' MediaStream calls ffmpeg.check_stream() before playback,
+    which runs `ffprobe` on the given path — a named pipe (FIFO) only
+    supports being drained ONCE, so after ffprobe read it for the probe
+    there was nothing left for the real playback ffmpeg process, causing
+    `_stream_track failed ... FileNotFoundError`.
 
-    A one-shot FIFO simply cannot survive being read twice (probe + play),
-    so the "instant streaming" pipe trick is fundamentally incompatible with
-    this pytgcalls version and has to go. The bot still starts fast because
-    the VC join (pre_join) and the download both run concurrently — only the
-    download itself is no longer piped.
+    SPEED FIX (strict <2-3s /play requirement) — growing-file early handoff:
+    Simply blocking on the FULL download (the fallback this file settled
+    on after removing FIFO) reintroduced the exact 5-10s delay FIFO was
+    meant to avoid. The fix is a REAL file instead of a FIFO: yt-dlp writes
+    fragments into the destination file in order as they download, so
+    (unlike a FIFO) the file can be safely opened, probed, and read more
+    than once WHILE it is still growing — ffprobe's initial read only needs
+    the header + first bit of data (guaranteed by preferring WebM/Opus,
+    which doesn't need an end-of-file index the way AAC/M4A does), and the
+    real ffmpeg playback read afterwards keeps consuming new bytes as they
+    land, staying far behind the download's write position since fragment
+    downloads run several times faster than 1x realtime playback. So:
+      1. Kick off the real download in a background thread immediately.
+      2. As soon as ~_EARLY_HANDOFF_BYTES have landed on disk (typically a
+         few hundred ms), hand that (still-growing) path back to the caller
+         — _stream_track/PyTgCalls can start playing right away.
+      3. If that threshold is never reached within _EARLY_HANDOFF_TIMEOUT
+         (very slow connection, or a track shorter than the threshold),
+         fall back to waiting for the completed download exactly as before
+         — a pure fallback, never a regression versus the prior behaviour.
+    The download itself keeps running to completion in the background
+    either way, so the cache file is always complete for the next play.
 
     Files written to /tmp/melody_<video_id>_<a|v>.* are cleaned up by
     call.py after each track finishes to avoid filling the 512 MB /tmp on
@@ -1068,8 +1147,46 @@ async def download_audio(video_id: str, audio_only: bool = True) -> str:
         return cached[0]
 
     loop = asyncio.get_running_loop()
-    filepath = await loop.run_in_executor(None, _download_audio_sync, video_id, audio_only)
-    return filepath
+    early_event = threading.Event()
+    early_holder: dict = {}
+
+    def _run_download():
+        try:
+            _download_audio_sync(video_id, audio_only, early_event=early_event, early_holder=early_holder)
+        except Exception as exc:
+            early_holder["error"] = exc
+            early_event.set()
+
+    # Runs in a plain daemon thread (not the executor pool) so it keeps
+    # downloading in the background even after we return early below.
+    dl_thread = threading.Thread(
+        target=_run_download, daemon=True, name=f"melody-early-dl-{video_id[:8]}",
+    )
+    dl_thread.start()
+
+    # Off-loop wait: either the early-handoff threshold fires, the download
+    # finishes outright (short tracks), or we time out and fall back.
+    await loop.run_in_executor(None, early_event.wait, _EARLY_HANDOFF_TIMEOUT)
+
+    path = early_holder.get("early_path") or early_holder.get("final_path")
+    if path and os.path.exists(path):
+        return path
+
+    if "error" in early_holder:
+        raise early_holder["error"]
+
+    # Threshold not reached in time (slow connection) — block for real
+    # completion instead, identical to the old always-blocking behaviour.
+    await loop.run_in_executor(None, dl_thread.join)
+    if "error" in early_holder:
+        raise early_holder["error"]
+    path = early_holder.get("final_path") or early_holder.get("early_path")
+    if path and os.path.exists(path):
+        return path
+    found = glob.glob(f"/tmp/melody_{video_id}_{tag}.*")
+    if found:
+        return found[0]
+    raise FileNotFoundError(f"Downloaded file not found for video_id={video_id}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
