@@ -1517,13 +1517,13 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
     _NEXT_URL = "https://www.youtube.com/youtubei/v1/next"
 
     _CLIENT_CONTEXTS = [
-        ("WEB", _WEB_KEY, "2.20240807.01.00",
+        ("WEB", _WEB_KEY, "2.20260801.00.00",
          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"),
-        ("ANDROID", _ANDROID_KEY, "19.29.37",
-         "com.google.android.youtube/19.29.37 (Linux; U; Android 11) gzip"),
-        ("IOS", _ANDROID_KEY, "19.29.1",
-         "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)"),
+         "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"),
+        ("ANDROID", _ANDROID_KEY, "20.57.33",
+         "com.google.android.youtube/20.57.33 (Linux; U; Android 14) gzip"),
+        ("IOS", _ANDROID_KEY, "20.57.3",
+         "com.google.ios.youtube/20.57.3 (iPhone16,2; U; CPU iOS 18_5 like Mac OS X;)"),
     ]
 
     data = None
@@ -1557,13 +1557,38 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
         LOGGER.warning("InnerTube related: all client contexts failed for %s", video_id)
         return []
 
+    def _extract_video_id(renderer):
+        """Extract videoId from any renderer type — YouTube nests it
+        differently depending on the renderer and client version."""
+        # compactVideoRenderer / videoRenderer: videoId is a direct key
+        vid = renderer.get("videoId")
+        if vid:
+            return vid
+        # playlistPanelVideoRenderer: videoId is nested inside
+        # navigationEndpoint.watchEndpoint.videoId
+        nav = renderer.get("navigationEndpoint", {})
+        if isinstance(nav, dict):
+            we = nav.get("watchEndpoint")
+            if isinstance(we, dict) and we.get("videoId"):
+                return we["videoId"]
+            # Sometimes nested deeper: watchEndpoint.videoId
+            we2 = nav.get("watchNextEndpoint", {})
+            if isinstance(we2, dict) and we2.get("videoId"):
+                return we2["videoId"]
+        # lockupViewModel (newer YouTube layout): contentId holds the video id
+        cid = renderer.get("contentId")
+        if cid:
+            return cid
+        return ""
+
     def _walk(node, out):
         """Recursively find every video-bearing renderer in the response.
 
         YouTube's /next endpoint nests related/autoplay videos inside
         playlistPanelVideoRenderer nodes (not compactVideoRenderer, which
-        is used by /search).  The exact nesting path also varies by client
-        and layout version, so walking the whole tree is far more resilient
+        is used by /search).  Newer layouts also use lockupViewModel and
+        gridVideoRenderer.  The exact nesting path varies by client and
+        layout version, so walking the whole tree is far more resilient
         than one fixed path.
         """
         if isinstance(node, dict):
@@ -1571,9 +1596,14 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
                 node.get("playlistPanelVideoRenderer")
                 or node.get("compactVideoRenderer")
                 or node.get("videoRenderer")
+                or node.get("gridVideoRenderer")
             )
-            if renderer and renderer.get("videoId"):
+            if renderer and _extract_video_id(renderer):
                 out.append(renderer)
+            # lockupViewModel wraps the video inside a contentId field
+            lockup = node.get("lockupViewModel")
+            if lockup and _extract_video_id(lockup):
+                out.append(lockup)
             for v in node.values():
                 _walk(v, out)
         elif isinstance(node, list):
@@ -1590,13 +1620,14 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
     results = []
     seen = set()
     for r in renderers:
-        vid = r.get("videoId", "")
+        vid = _extract_video_id(r)
         if not vid or vid in exclude or vid in seen or vid == video_id:
             continue
         seen.add(vid)
         title = (
             r.get("title", {}).get("simpleText")
             or (r.get("title", {}).get("runs", [{}])[0].get("text"))
+            or r.get("metadata", {}).get("lockupMetadataRenderer", {}).get("title", {}).get("runs", [{}])[0].get("text")
             or "Unknown"
         )
         length_text = (
