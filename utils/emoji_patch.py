@@ -65,18 +65,20 @@ def _wrap(method_name: str, param_name: str) -> None:
 
     @functools.wraps(original)
     async def wrapper(self, *args, **kwargs):
-        try:
-            bound = sig.bind_partial(self, *args, **kwargs)
-            bound.apply_defaults()
-            value = bound.arguments.get(param_name)
-            if isinstance(value, str) and value:
+        bound = sig.bind_partial(self, *args, **kwargs)
+        bound.apply_defaults()
+        value = bound.arguments.get(param_name)
+        if isinstance(value, str) and value:
+            try:
                 bound.arguments[param_name] = await verify_custom_emojis(self, value)
-            return await original(*bound.args, **bound.kwargs)
-        except Exception:
-            # Never let emoji wrapping itself break a real send — fall back
-            # to the original, unwrapped call so the message still goes out.
-            log.exception("emoji_patch: falling back to plain %s()", method_name)
-            return await original(self, *args, **kwargs)
+            except Exception:
+                # Never let emoji wrapping itself break a real send — fall
+                # back to the original, unwrapped text so the message still
+                # goes out. Do NOT catch errors from original() itself; those
+                # are real API errors (e.g. CHANNEL_INVALID) that must
+                # propagate to the caller.
+                log.exception("emoji_patch: falling back to plain %s()", method_name)
+        return await original(*bound.args, **bound.kwargs)
 
     wrapper._emoji_patched = True
     setattr(Client, method_name, wrapper)
