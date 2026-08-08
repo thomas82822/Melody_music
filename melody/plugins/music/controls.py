@@ -8,7 +8,10 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import Message, CallbackQuery
 from melody import bot
 from melody.core.call import pause_stream, resume_stream, skip_stream, stop_stream
-from melody.core.queue import format_queue, get_current, is_autoplay_on, set_autoplay
+from melody.core.queue import (
+    format_queue, get_current, is_autoplay_on, set_autoplay,
+    add_to_queue, set_predownloaded,
+)
 from melody.core.autoplay import prefetch_next
 from melody.logging import log_activity
 from utils.decorators import admin_or_auth, channel_admin_or_auth, error_handler
@@ -174,7 +177,12 @@ async def autoplay_toggle_callback(client: Client, cb: CallbackQuery):
     await cb.answer(f"🤖 AutoPlay {'ON 🟢' if new_state else 'OFF 🔴'}")
 
     if new_state and get_current(chat_id):
-        asyncio.create_task(prefetch_next(chat_id))
+        async def _queue_next_autoplay_track():
+            track = await prefetch_next(chat_id)
+            if track:
+                add_to_queue(chat_id, track)
+                set_predownloaded(chat_id, None)
+        asyncio.create_task(_queue_next_autoplay_track())
 
     try:
         from melody.plugins.music.play import get_play_buttons
