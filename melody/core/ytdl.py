@@ -1260,6 +1260,18 @@ async def download_audio(video_id: str, audio_only: bool = True) -> str:
     call.py after each track finishes to avoid filling the 512 MB /tmp on
     Heroku.
     """
+    # Defensive guard: a valid YouTube video ID is exactly 11 chars of
+    # [A-Za-z0-9_-]. If a search query or full URL leaked in as video_id
+    # (the AutoPlay bug — see _pick_related_track), reject it here instead
+    # of constructing an invalid URL that crashes yt-dlp with
+    # "Unsupported URL" and kills playback silently.
+    import re
+    if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id or ""):
+        raise ValueError(
+            f"download_audio: invalid YouTube video_id {video_id!r} "
+            "(expected 11-char [A-Za-z0-9_-] ID)"
+        )
+
     tag = _cache_tag(audio_only)
     # Cache check — reuse if already downloaded IN THE SAME VARIANT (audio
     # vs video). Never reuse a file downloaded for the other variant.

@@ -10,7 +10,7 @@ nothing left to wait on — the file is already sitting on disk.
 """
 import html
 import asyncio
-from melody.logging import send_error_log, log_activity
+from melody.logging import LOGGER, send_error_log, log_activity
 from melody.core.ytdl import get_related_videos, get_video_info, download_audio
 from melody.core.queue import (
     Track, set_current, set_predownloaded, pop_predownloaded, peek_predownloaded,
@@ -19,7 +19,23 @@ from utils.database import get_history, add_history
 
 
 async def _pick_related_track(chat_id: int) -> "Track | None":
-    """Ask history + YouTube's related-videos graph for the next AutoPlay pick."""
+    """Ask history + YouTube's related-videos graph for the next AutoPlay pick.
+
+    BUG FIX ("autoplay button hota hai uske baad kuch nhi hota"):
+    This used to take the top related video's URL and feed it BACK through
+    get_video_info() — a redundant search round-trip. get_video_info() runs
+    the query through yt-dlp's ytsearch1: path, and when the InnerTube/
+    Invidious fallback kicks in, the returned ``id`` / ``webpage_url`` can
+    be the raw search query text (e.g. "afgan japbo") instead of a clean
+    11-char YouTube video ID. That garbage then became ``track.video_id``,
+    and download_audio() built the URL
+    ``https://www.youtube.com/watch?v=afgan%20japbo`` — an unsupported URL
+    that crashes yt-dlp every time, killing AutoPlay silently.
+
+    get_related_videos() already returns id, title, duration, url, thumbnail,
+    and uploader for each candidate, so there is no reason to re-fetch via
+    get_video_info() at all. Build the Track directly from that data.
+    """
     history = await get_history(chat_id)
     if not history:
         return None
@@ -32,17 +48,31 @@ async def _pick_related_track(chat_id: int) -> "Track | None":
         return None
 
     top = related[0]
-    info = await get_video_info(top["url"])
-    if not info:
-        return None
+    vid = top.get("id") or ""
+    # Defensive guard: a valid YouTube video ID is exactly 11 chars of
+    # [A-Za-z0-9_-]. If the related-videos source returned anything else
+    # (a search query leaking through, an empty string, etc.), skip it
+    # instead of letting a garbage ID reach download_audio().
+    import re
+    if not re.fullmatch(r"[A-Za-z0-9_-]{11}", vid):
+        LOGGER.warning("AutoPlay: skipping invalid related video_id %r", vid)
+        # Try the next candidate if the first was bad.
+        for cand in related[1:]:
+            cand_vid = cand.get("id") or ""
+            if re.fullmatch(r"[A-Za-z0-9_-]{11}", cand_vid):
+                top = cand
+                vid = cand_vid
+                break
+        else:
+            return None
 
     return Track(
-        video_id=info["id"],
-        title=info["title"],
-        duration=info["duration"],
-        stream_url=info["stream_url"],
-        thumbnail=info["thumbnail"],
-        uploader=info["uploader"],
+        video_id=vid,
+        title=top.get("title", "Unknown"),
+        duration=top.get("duration", 0),
+        stream_url="",
+        thumbnail=top.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+        uploader=top.get("uploader", "Unknown"),
         requester_id=0,
         requester_name="AutoPlay",
         requested_in=chat_id,
