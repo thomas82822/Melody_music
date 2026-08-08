@@ -597,7 +597,7 @@ def _innertube_search_sync(query: str) -> dict | None:
         "context": {
             "client": {
                 "clientName": "ANDROID",
-                "clientVersion": "19.09.37",
+                "clientVersion": "20.10.35",
                 "androidSdkVersion": 30,
                 "hl": "en",
                 "gl": "US",
@@ -605,7 +605,7 @@ def _innertube_search_sync(query: str) -> dict | None:
             }
         },
         "query": query,
-        "params": "EgIQAQ%3D%3D",   # filter: videos only
+        "params": "EgIQAQ==",   # filter: videos only (base64, NOT url-encoded)
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -613,9 +613,9 @@ def _innertube_search_sync(query: str) -> dict | None:
         data=payload,
         headers={
             "Content-Type": "application/json",
-            "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
+            "User-Agent": "com.google.android.youtube/20.10.35 (Linux; U; Android 11) gzip",
             "X-YouTube-Client-Name": "3",
-            "X-YouTube-Client-Version": "19.09.37",
+            "X-YouTube-Client-Version": "20.10.35",
             "Accept-Language": "en-US,en;q=0.9",
         },
         method="POST",
@@ -633,6 +633,41 @@ def _innertube_search_sync(query: str) -> dict | None:
         return None
 
     # Parse InnerTube response — walk the renderer tree
+    def _parse_video_renderer(vr: dict) -> "dict | None":
+        vid = vr.get("videoId", "")
+        if not vid:
+            return None
+        title = (vr.get("title", {})
+                   .get("runs", [{}])[0]
+                   .get("text", "") or query)
+        duration_text = (
+            vr.get("lengthText", {}).get("simpleText", "") or
+            vr.get("lengthText", {}).get("runs", [{}])[0].get("text", "")
+        )
+        duration = 0
+        if duration_text:
+            parts = [int(p) for p in duration_text.split(":") if p.isdigit()]
+            if len(parts) == 2:
+                duration = parts[0] * 60 + parts[1]
+            elif len(parts) == 3:
+                duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
+        thumbs = (vr.get("thumbnail", {}).get("thumbnails") or [])
+        thumbnail = thumbs[-1].get("url", "") if thumbs else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+        uploader = (
+            vr.get("ownerText", {}).get("runs", [{}])[0].get("text", "") or
+            vr.get("longBylineText", {}).get("runs", [{}])[0].get("text", "") or
+            "Unknown"
+        )
+        return {
+            "id": vid,
+            "webpage_url": f"https://www.youtube.com/watch?v={vid}",
+            "title": title,
+            "duration": duration,
+            "thumbnail": thumbnail,
+            "uploader": uploader,
+        }
+
+    # Primary path: structured sectionListRenderer walk
     try:
         contents = (
             data.get("contents", {})
@@ -648,50 +683,37 @@ def _innertube_search_sync(query: str) -> dict | None:
                 vr = item.get("videoRenderer")
                 if not vr:
                     continue
-                vid = vr.get("videoId", "")
-                if not vid:
-                    continue
-
-                # title
-                title = (vr.get("title", {})
-                           .get("runs", [{}])[0]
-                           .get("text", "") or query)
-
-                # duration — "3:45" or "1:02:33"
-                duration_text = (
-                    vr.get("lengthText", {}).get("simpleText", "") or
-                    vr.get("lengthText", {}).get("runs", [{}])[0].get("text", "")
-                )
-                duration = 0
-                if duration_text:
-                    parts = [int(p) for p in duration_text.split(":") if p.isdigit()]
-                    if len(parts) == 2:
-                        duration = parts[0] * 60 + parts[1]
-                    elif len(parts) == 3:
-                        duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
-
-                # thumbnail
-                thumbs = (vr.get("thumbnail", {}).get("thumbnails") or [])
-                thumbnail = thumbs[-1].get("url", "") if thumbs else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
-
-                # uploader
-                uploader = (
-                    vr.get("ownerText", {}).get("runs", [{}])[0].get("text", "") or
-                    vr.get("longBylineText", {}).get("runs", [{}])[0].get("text", "") or
-                    "Unknown"
-                )
-
-                LOGGER.info("✅ InnerTube search OK: %s", title[:50])
-                return {
-                    "id": vid,
-                    "webpage_url": f"https://www.youtube.com/watch?v={vid}",
-                    "title": title,
-                    "duration": duration,
-                    "thumbnail": thumbnail,
-                    "uploader": uploader,
-                }
+                result = _parse_video_renderer(vr)
+                if result:
+                    LOGGER.info("✅ InnerTube search OK: %s", result["title"][:50])
+                    return result
     except Exception as exc:
         LOGGER.warning("InnerTube response parse error: %s", exc)
+
+    # Fallback: recursive tree-walk for any videoRenderer anywhere in the
+    # response (YouTube frequently changes the nesting structure between
+    # client versions — a tree-walk finds the first video result regardless).
+    try:
+        def _walk(node, out):
+            if isinstance(node, dict):
+                vr = node.get("videoRenderer")
+                if vr and vr.get("videoId"):
+                    out.append(vr)
+                for v in node.values():
+                    _walk(v, out)
+            elif isinstance(node, list):
+                for item in node:
+                    _walk(item, out)
+
+        renderers: list = []
+        _walk(data, renderers)
+        for vr in renderers:
+            result = _parse_video_renderer(vr)
+            if result:
+                LOGGER.info("✅ InnerTube search OK (tree-walk): %s", result["title"][:50])
+                return result
+    except Exception as exc:
+        LOGGER.warning("InnerTube tree-walk parse error: %s", exc)
 
     LOGGER.warning("❌ InnerTube search: no video results for: %s", query[:50])
     return None
@@ -779,7 +801,7 @@ def _innertube_next_sync(video_id: str) -> "dict | None":
         "context": {
             "client": {
                 "clientName": "ANDROID",
-                "clientVersion": "19.09.37",
+                "clientVersion": "20.10.35",
                 "androidSdkVersion": 30,
                 "hl": "en",
                 "gl": "US",
@@ -793,9 +815,9 @@ def _innertube_next_sync(video_id: str) -> "dict | None":
         _NEXT_URL, data=payload,
         headers={
             "Content-Type": "application/json",
-            "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
+            "User-Agent": "com.google.android.youtube/20.10.35 (Linux; U; Android 11) gzip",
             "X-YouTube-Client-Name": "3",
-            "X-YouTube-Client-Version": "19.09.37",
+            "X-YouTube-Client-Version": "20.10.35",
         },
         method="POST",
     )
@@ -916,31 +938,48 @@ async def get_video_info(url_or_query: str) -> dict | None:
     ytdlp_task = loop.run_in_executor(None, _ytdlp_info)
     innertube_task = loop.run_in_executor(None, innertube_fn)
 
-    try:
-        done, pending = await asyncio.wait(
-            [asyncio.ensure_future(ytdlp_task), asyncio.ensure_future(innertube_task)],
-            return_when=asyncio.FIRST_COMPLETED,
-            timeout=8.0,
-        )
-    except Exception:
-        done, pending = set(), set()
+    ytdlp_future = asyncio.ensure_future(ytdlp_task)
+    innertube_future = asyncio.ensure_future(innertube_task)
 
-    # Cancel any still-running task — we only need one result
+    result = None
+    pending = {ytdlp_future, innertube_future}
+
+    # BUG FIX: previously this used FIRST_COMPLETED and then UNCONDITIONALLY
+    # cancelled every pending task. If the first task to finish returned None
+    # (a very common case — InnerTube fails fast on a flaky network, or
+    # yt-dlp hits the bot-detection wall), the still-running task that would
+    # have succeeded was killed before it could return, so BOTH sources were
+    # discarded and the bot reported "all sources exhausted" even though a
+    # valid result was seconds away. Now we keep waiting for the remaining
+    # task whenever the first one returned nothing, and only cancel once we
+    # actually have a usable result (or the overall timeout fires).
+    try:
+        while pending:
+            done, pending = await asyncio.wait(
+                pending,
+                return_when=asyncio.FIRST_COMPLETED,
+                timeout=8.0,
+            )
+            if not done:
+                break  # overall timeout — cancel whatever is still running
+
+            for task in done:
+                try:
+                    info = task.result()
+                    normalized = _normalize_info(info)
+                    if normalized:
+                        if result is None or (result.get("title") == "Unknown" and normalized.get("title") != "Unknown"):
+                            result = normalized
+                except Exception:
+                    pass
+
+            if result:
+                break
+    except Exception:
+        pass
+
     for p in pending:
         p.cancel()
-
-    # Check completed tasks — prefer yt-dlp (richer metadata) over InnerTube
-    result = None
-    for task in done:
-        try:
-            info = task.result()
-            normalized = _normalize_info(info)
-            if normalized:
-                # Prefer the result that has a real title (not "Unknown")
-                if result is None or (result.get("title") == "Unknown" and normalized.get("title") != "Unknown"):
-                    result = normalized
-        except Exception:
-            pass
 
     if result:
         return result
@@ -1467,7 +1506,7 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
         "context": {
             "client": {
                 "clientName": "ANDROID",
-                "clientVersion": "19.09.37",
+                "clientVersion": "20.10.35",
                 "androidSdkVersion": 30,
                 "hl": "en",
                 "gl": "US",
@@ -1482,9 +1521,9 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
         data=payload,
         headers={
             "Content-Type": "application/json",
-            "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
+            "User-Agent": "com.google.android.youtube/20.10.35 (Linux; U; Android 11) gzip",
             "X-YouTube-Client-Name": "3",
-            "X-YouTube-Client-Version": "19.09.37",
+            "X-YouTube-Client-Version": "20.10.35",
         },
         method="POST",
     )
