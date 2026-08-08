@@ -1543,12 +1543,20 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
         return []
 
     def _walk(node, out):
-        """Recursively find every compactVideoRenderer / videoRenderer in the
-        response — the exact nesting path varies by client/layout version,
-        so walking the whole tree is far more resilient than one fixed path.
+        """Recursively find every video-bearing renderer in the response.
+
+        YouTube's /next endpoint nests related/autoplay videos inside
+        playlistPanelVideoRenderer nodes (not compactVideoRenderer, which
+        is used by /search).  The exact nesting path also varies by client
+        and layout version, so walking the whole tree is far more resilient
+        than one fixed path.
         """
         if isinstance(node, dict):
-            renderer = node.get("compactVideoRenderer") or node.get("videoRenderer")
+            renderer = (
+                node.get("playlistPanelVideoRenderer")
+                or node.get("compactVideoRenderer")
+                or node.get("videoRenderer")
+            )
             if renderer and renderer.get("videoId"):
                 out.append(renderer)
             for v in node.values():
@@ -1589,13 +1597,20 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
                 duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
         thumbs = (r.get("thumbnail", {}).get("thumbnails") or [])
         thumbnail = thumbs[-1].get("url", "") if thumbs else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+        byline = (
+            r.get("longBylineText", {}).get("runs", [{}])[0].get("text")
+            or r.get("shortBylineText", {}).get("runs", [{}])[0].get("text")
+            or r.get("longBylineText", {}).get("simpleText")
+            or r.get("shortBylineText", {}).get("simpleText")
+            or "Unknown"
+        )
         results.append({
             "id": vid,
             "title": title,
             "duration": duration,
             "url": f"https://www.youtube.com/watch?v={vid}",
             "thumbnail": thumbnail,
-            "uploader": "Unknown",
+            "uploader": byline,
         })
         if len(results) >= 10:
             break
