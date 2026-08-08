@@ -210,19 +210,33 @@ async def start_call_py():
 
 # ─── Internal helpers ─────────────────────────────────────────────────────────
 
-def _cleanup_track_file(video_id: str):
-    """Delete /tmp/melody_<video_id>_<a|v>.* after playback.
-    Skips FIFO pipe paths (they clean themselves up in the writer thread).
+_CACHE_MAX_BYTES = 200 * 1024 * 1024  # 200 MB cap for /tmp melody cache
 
-    NOTE: matches both the "_a" (audio-only) and "_v" (video) cache variants
-    — see ytdl.download_audio()'s audio/video cache-key fix — so leftover
-    files from either variant are actually removed instead of silently
-    surviving because the old glob (`melody_<id>.*`, no variant suffix)
-    no longer matches the new filenames.
+
+def _cleanup_track_file(video_id: str):
+    """Keep played songs cached for instant replay, but enforce a total size
+    cap so /tmp doesn't fill up on Heroku (512 MB limit).
+
+    Instead of deleting the just-finished track immediately, this now:
+      1. Leaves the current track's file in place (so a replay is instant).
+      2. Walks all /tmp/melody_* cache files and evicts oldest by mtime until
+         total size is under _CACHE_MAX_BYTES.
     """
-    for f in glob.glob(f"/tmp/melody_{video_id}_*.*"):
+    cache_files = []
+    for f in glob.glob("/tmp/melody_*_?.*"):
+        try:
+            st = os.stat(f)
+            cache_files.append((f, st.st_mtime, st.st_size))
+        except Exception:
+            pass
+    cache_files.sort(key=lambda x: x[1])  # oldest first
+    total = sum(c[2] for c in cache_files)
+    for f, _, size in cache_files:
+        if total <= _CACHE_MAX_BYTES:
+            break
         try:
             os.unlink(f)
+            total -= size
         except Exception:
             pass
 

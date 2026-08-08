@@ -172,6 +172,14 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
         autoplay_on = await is_autoplay_on(chat.id)
         play_buttons = get_play_buttons(chat.title or "", autoplay_on, bot_username, bot_name)
 
+        safe_group = html.escape((chat.title or "Private")[:60])
+        caption = (
+            f"<blockquote>🎶 <b>{html.escape(status_label)}</b>\n\n"
+            f"<b>{safe_title}</b>\n"
+            f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
+            f"🏠 {safe_group}\n"
+            f"🙋 Requested by {requester_mention}</blockquote>"
+        )
         try:
             thumb_path = await make_thumbnail(
                 song_title=info["title"],
@@ -184,45 +192,49 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
                 requester_dp_path=user_dp_path,
                 bot_dp_path=bot_dp_path,
             )
-            safe_group = html.escape((chat.title or "Private")[:60])
-            caption = (
-                f"<blockquote>🎶 <b>{html.escape(status_label)}</b>\n\n"
-                f"<b>{safe_title}</b>\n"
-                f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
-                f"🏠 {safe_group}\n"
-                f"🙋 Requested by {requester_mention}</blockquote>"
-            )
             await anim.stop()
-            await processing.delete()
-            # NOTE: no has_spoiler — the new compact circular-thumbnail mini
-            # player card is meant to be seen immediately, like a real
-            # music-player widget, not blurred behind a spoiler.
+            # BUG FIX: previously processing.delete() ran BEFORE reply_photo,
+            # so when reply_photo failed (CHAT_SEND_PHOTOS_FORBIDDEN — the group
+            # doesn't allow photos), the fallback tried to .edit() the already-
+            # deleted message → MESSAGE_ID_INVALID crash. Now we send the photo
+            # FIRST and only delete the processing message on success.
             await message.reply_photo(
                 thumb_path,
                 caption=caption,
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=play_buttons,
             )
+            await processing.delete()
         except Exception as thumb_exc:
-            # BUG FIX: this fallback used to swallow the thumbnail failure
-            # completely silently — no log line, no error report — so a
-            # broken circular-thumbnail render always looked identical to
-            # "the feature was never built", with zero clue why. Now it's
-            # reported like every other failure path in this file.
             from melody.logging import send_error_log
-            await send_error_log(f"make_thumbnail failed in {chat.id}", thumb_exc)
+            await send_error_log(f"make_thumbnail / reply_photo failed in {chat.id}", thumb_exc)
             status = "Force Played ⚡" if force else ("Now Playing ▶️" if playing_now else "Added to Queue 📋")
             await anim.stop()
-            await processing.edit(
-                quote_html(
-                    f"🎵 <b>{html.escape(status)}</b>\n\n"
-                    f"<code>{safe_title}</code>\n"
-                    f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
-                    f"🏠 {html.escape((chat.title or 'Private')[:60])}"
-                ),
-                parse_mode=enums.ParseMode.HTML,
-                reply_markup=play_buttons,
-            )
+            # BUG FIX: the processing message may still exist (photo send
+            # failed before delete), so edit it. But if it was already deleted
+            # (partial success path), fall back to a new reply.
+            try:
+                await processing.edit(
+                    quote_html(
+                        f"🎵 <b>{html.escape(status)}</b>\n\n"
+                        f"<code>{safe_title}</code>\n"
+                        f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
+                        f"🏠 {html.escape((chat.title or 'Private')[:60])}"
+                    ),
+                    parse_mode=enums.ParseMode.HTML,
+                    reply_markup=play_buttons,
+                )
+            except Exception:
+                await message.reply(
+                    quote_html(
+                        f"🎵 <b>{html.escape(status)}</b>\n\n"
+                        f"<code>{safe_title}</code>\n"
+                        f"👤 <code>{safe_uploader}</code>  ⏱ <code>{safe_duration}</code>\n"
+                        f"🏠 {html.escape((chat.title or 'Private')[:60])}"
+                    ),
+                    parse_mode=enums.ParseMode.HTML,
+                    reply_markup=play_buttons,
+                )
     finally:
         await anim.stop()
 
