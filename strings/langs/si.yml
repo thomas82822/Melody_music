@@ -1,0 +1,429 @@
+name : 🇱🇰 Sinhala
+
+# General Strings
+general_1 : "<blockquote>පරිශීලක පණිවිඩයකට පිළිතුරු දෙන්න හෝ /user_id පරිශීලක නාමය  දෙන්න.</blockquote>"
+general_2 : "<blockquote>දෝෂයක්! විධානයේ වැරදි භාවිතයක් සිදුවිය</blockquote>"
+general_3 : "<blockquote>ඔබගේ විමසුම සකසන අතරතුර **වැරද්දක් විය.\n\nවැරදි වර්ගය:- {0}</blockquote>"
+general_4 : "<blockquote>ඔබ මෙම කණ්ඩායම සමූහයේ නිර්නාමික පරිපාලකයෙකි!\nපරිපාලක අයිතිවාසිකම් වෙතින් පරිශීලක ගිණුම වෙත ආපසු යන්න.</blockquote>"
+general_5 : "<blockquote>මෙම ක්‍රියාව සිදු කිරීමට ඔබ හඬ කණ්ඩායම කළමනා කිරීමේ හිමිකම් සහිත පරිපාලක විය යුතුය.</blockquote>"
+general_6 : "<blockquote>බොට් හඬ කණ්ඩායම මත ප්‍රවාහය නොවේ.</blockquote>"
+
+# Classes - Telegram.py
+tg_1 : "<blockquote>Bot දැන් බාගැනීම් සමඟ **ඕවර්ලෝඩ්**.\n\n** පසුව උත්සාහ කරන්න:** {0} (__අපේක්ෂිත කාලය__)</blockquote>"
+tg_2 : "<blockquote>ටෙලිග්‍රැම් වලින් මාධ්‍ය බාගැනීම අසාර්ථක විය.</blockquote>"
+
+# Core - Call.py
+call_1 : "<blockquote>Bot හට ඔබගේ නාලිකාවට සහකාර ගිණුමට ආරාධනා කිරීමට **පරිපාලක** අවසරය අවශ්‍යයි.\n\n: /playmode හරහා නාලිකා සංගිත ප්‍රකාරය අබල කරන්න</blockquote>"
+call_2 : "<blockquote>සහකරු ඔබේ සමූහයේ හෝ නාලිකාවේ තහනම් කර ඇත, කරුණාකර තහනම් නොකරන්න.\n\n**සහායක පරිශීලක නාමය:** @{0}\n**සහායක හැඳුනුම්පත:** {1}</blockquote>"
+call_3 : "<blockquote>ඔබගේ කණ්ඩායම වෙත සහකාර ගිණුමට ආරාධනා කිරීමේදී වැරදි සිදු විය.\n\n**හේතුව**: {0}</blockquote>"
+call_4 : "<blockquote>Bot හට **Link හරහා පරිශීලකයින්ට ආරාධනා කරන්න** ඔබගේ කණ්ඩායම කණ්ඩායමට සහකාර ගිණුමට ආරාධනා කිරීමට අවසරය අවශ්‍ය වේ.</blockquote>"
+call_5 : "<blockquote>සහකාර ගිණුම තත්පර 5 කින් සම්බන්ධ වනු ඇත..කරුණාකර රැඳී සිටින්න!</blockquote>"
+call_6 : "<blockquote>සහකාර ගිණුම[{0}] සාර්ථකව සම්බන්ධ විය.\n\nසංගීතය දැන් ආරම්භ කරමින්</blockquote>"
+call_7 : "<blockquote>**හානිකර පරිපාලක අයිතිය ලබා දී ඇත **\n\nකරුණාකර බොට් ගෙන් **BAN USERS** අයිතීන් ඉවත් කරන්න.</blockquote>"
+call_8 : "<blockquote>**හානිකර පරිපාලක අයිතිය ලබා දී ඇත **\n\nකරුණාකර බොට් ගෙන් **ADD NEW ADMINS** අයිතීන් ඉවත් කරන්න.</blockquote>"
+call_9 : "<blockquote>**සංගිතය්‍ මාරු කිරීමට අසමත් විය**\nකරුණාකර නැවත සංගිතය වෙනස් කිරීමට /skip භාවිතා කරන්න.</blockquote>"
+call_10 : "<blockquote>සංගිත ලැයිස්තුවෙන් මීළඟ ඛණ්ඩය බාගැනීම</blockquote>"
+call_11 : "<blockquote>Please add @{0} to your channel[ ID: {1}].\n\nBot is not able to get channel details.</blockquote>"
+
+
+# PLUGINS - Auth.py
+auth_1 : "<blockquote>ඔබට ඔබේ සමූහයේ බලයලත් පරිශීලක ලැයිස්තුවේ (AUL) සිටිය හැක්කේ පරිශීලකයින් 20ක් පමණි.</blockquote>"
+auth_2 : "<blockquote>ඔබගේ සමූහයේ බලයලත් පරිශීලක ලැයිස්තුවට එකතු කරන ලදී.</blockquote>"
+auth_3 : "<blockquote>දැනටමත් බලයලත් පරිශීලක ලැයිස්තුවේ ඇත.</blockquote>"
+auth_4 : "<blockquote>මෙම සමූහයේ බලයලත් පරිශීලක ලැයිස්තුවෙන් ඉවත් කරන ලදී.</blockquote>"
+auth_5 : "<blockquote>බලයලත් පරිශීලකයෙක් නොවේ.</blockquote>"
+auth_6 : "<blockquote>බලයලත් පරිශීලකයින් ලබා ගනිමින්... කරුණාකර රැඳී සිටින්න</blockquote>"
+auth_7 : "<blockquote>**බලයලත් පරිශීලක ලැයිස්තුව[AUL]:**\n\n</blockquote>"
+auth_8 : "<blockquote>┗ එකතු කරන ලද්දේ:-</blockquote>"
+
+# PLUGINS - Admins
+admin_1 : "<blockquote>සංගීතය දැනටමත් විරාම කර ඇත.</blockquote>"
+admin_2 : "<blockquote><emoji id=\"5542683891248610419\">🎧</emoji> සංගීතය විරාම කරන කරන ලද්දේ {}!</blockquote>"
+admin_3 : "<blockquote>සංගීතය දැනටමත් නැවත ආරම්භ කර ඇත.</blockquote>"
+admin_4 : "<blockquote><emoji id=\"5253840700704848108\">🎧</emoji> සංගීතය නැවත ආරම්භ කළේ {}!</blockquote>"
+admin_5 : "<blockquote>සංගීතය දැනටමත් නිහඬ කර ඇත.</blockquote>"
+admin_6 : "<blockquote><emoji id=\"0542697844738361581\">🎧</emoji>සංගීතය විසින් නිහඬ කිරීම ඉවත් කරන ලදී {}!</blockquote>"
+admin_7 : "<blockquote>සංගීතය දැනටමත් නිහඬ කර ඇත.</blockquote>"
+admin_8 : "<blockquote><emoji id=\"6127656684748806757\">🎧</emoji> සංගීතය නිහඬ කිරීම ඉවත් කරන ලදී {}!</blockquote>"
+admin_9 : "<blockquote><emoji id=\"5098108304698114895\">🎧</emoji> සංගීතය අවසන්/නවත්වා ඇත {}!</blockquote>"
+admin_10 : "<blockquote><emoji id=\"6273948292857045776\">🎧</emoji>සංගීතය මඟ හැරුණි {}!. පෝලිමේ තවත් සංගීතයක් නැත.</blockquote>"
+admin_11 : "<blockquote>ප්‍රවාහය වෙනස් කිරීමේදී දෝෂයකි**{0}**\n\nකරුණාකර නැවත භාවිතා කරන්න /skip.</blockquote>"
+admin_12 : "<blockquote>සබල කර ඇති ලූප් වාදනය නිසා නිශ්චිත සංගිත පථයකට යාමට නොහැකි විය. මෙම විශේෂාංගය භාවිතා කිරීමට කරුණාකර `/loop disable` හරහා ලූප් වාදනය අබල කරන්න.</blockquote>"
+admin_13 : "<blockquote>කරුණාකර 1, 2 හෝ 4 වැනි නිශ්චිත සංගිත පථ සඳහා සංඛ්‍යාත්මක අංක භාවිත කරන්න</blockquote>"
+admin_14 : "<blockquote>නිශ්චිත අංකයකට යාමට පෝලිමේ අවම වශයෙන් පීලි 2ක් අවශ්‍ය වේ. /queue පරීක්ෂා කරන්න</blockquote>"
+admin_15 : "<blockquote>ඔබ ලබා දුන් අගය සඳහා ප්‍රමාණවත් පීලි පෝලිමේ නොමැත. කරුණාකර 1 සහ {0} අතර අංක තෝරන්න </blockquote>"
+admin_16 : "<blockquote>නිශ්චිත සංගිත පථය වෙත යාමට අසමත් විය.\n\nවමේ පෝලිම පරීක්ෂා කරන්න /queue</blockquote>"
+admin_17 : "<blockquote>{0}.. කරුණාකර රැඳී සිටින්න</blockquote>"
+admin_18 : "<blockquote>පරිපාලක ලැයිස්තුව හමු නොවීය\n\nකරුණාකර පරිපාලක ලැයිස්තුව නැවත පූරණය කරන්න /admincache හෝ /reload</blockquote>"
+admin_19 : "<blockquote>මෙය සිදු කිරීම සඳහා ඔබ හඬ කණ්ඩායම හිමිකම් කළමනාකරණය සමඟ පරිපාලක විය යුතුය.\n ඔබ දැනටමත් පරිපාලක නම්, පරිපාලක හැඹිලිය හරහා නැවත පූරණය කරන්න /admincache </blockquote>"
+admin_20 : "<blockquote>පරිපාලක හැඹිලිය සාර්ථකව නැවත පූරණය කරන ලදී.</blockquote>"
+admin_21 : "<blockquote>කලවම් කිරීමට පෝලිමේ ඇතුළත කිසිවක් නැත</blockquote>"
+admin_22 : "<blockquote>කලවම් කිරීමට අපොහොසත් විය.\n\nපෝලිම පරීක්ෂා කරන්න:/queue</blockquote>"
+admin_23 : "<blockquote>**{0} විසින් පෝලිම කලවම් කරන ලදී **\n\nමාරු කළ පෝලිම පරීක්ෂා කරන්න:/queue</blockquote>"
+admin_24 : "<blockquote>**භාවිතය:**\n/loop [සක්‍රීය/අබල කරන්න] හෝ [1-10 අතර අංකය]\n\n**උදාහරණය:** /loop 5</blockquote>"
+admin_25 : "<blockquote>ලූපය සබල කර ඇත {0} සදහා**{1}** වාර. Bot දැන් හඬ කණ්ඩායම මත දැනට වාදනය වන සංගීතය නැවත නැවතත් කරනු ඇත **{1}** වාර</blockquote>"
+admin_26 : "<blockquote>ලූප් වාදනය සඳහා කරුණාකර 1-10 අතර අංක භාවිතා කරන්න</blockquote>"
+admin_27 : "<blockquote>Loop Play අබල කර ඇත</blockquote>"
+
+# Bot 
+# Start
+start_1 : "<blockquote>Thanks for having me in {0}.\n{1} is alive.\n\nFor any assistance or help, checkout our support group and channel.</blockquote>"
+start_2 : "<blockquote>Hello, My name is {0}.\n\nI'm a telegram streaming bot with some useful features. Supporting platforms like Youtube, Spotify, Resso, AppleMusic , Soundcloud etc.\n\nFeel free to add me to your groups.</blockquote>"
+start_3 : "<blockquote>Welcome To {0}\n\nI don't need any **admin permission** to work ( until asked for ).\n\nAssistant Username:- @{1}\nAssistant ID:- {2}</blockquote>"
+start_4 : "<blockquote>{0}'s Owner[{1}] has just joined your chat.</blockquote>"
+start_5 : "<blockquote>A member of {0}'s Sudo User[{1}] has just joined your chat.</blockquote>"
+start_6 : "<blockquote><emoji id=\"5337260982911655617\">❗</emoji>️ **Supergroup Needed** <emoji id=\"7535744928770794231\">❗</emoji>️\n\nPlease convert your **group** to **supergroup** and then add me back.\n\n**How to make supergroup?**\n<emoji id=\"8536402062632553351\">✅</emoji> Make your group's chat history **visible** once.</blockquote>"
+start_7 : "<blockquote>**Blacklisted Chat**\n\nYou're chat has been blacklisted by the Bot. Please ask any SudoUser to whitelist chat first. Check [Sudolist from here]({0})</blockquote>"
+
+# Help
+help_1 : "<blockquote>වැඩි විස්තර සඳහා පහත බොත්තම් ක්ලික් කරන්න.\n\nසියලු විධානයන් සමඟ භාවිතා කළ හැක: /</blockquote>"
+help_2 : "<blockquote>උදව් සඳහා PM වලින් මාව සම්බන්ධ කරගන්න.</blockquote>"
+
+# Settings
+setting_1 : "<blockquote><emoji id=\"5359622339296256165\">⚙️</emoji> **Music Bot Settings**\n\n<emoji id=\"5098445021544186803\">🖇</emoji>**Group:** {0}\n<emoji id=\"5224628072619216265\">🔖</emoji>**Group ID:** `{1}`\n\n<emoji id=\"0542697844738361581\">💡</emoji>**Choose the function buttons from below which you want to edit or change.**</blockquote>"
+setting_3 : "<blockquote><emoji id=\"5098108304698114895\">⁉️</emoji> What is This?\n\n1) Direct: Plays search queries directly. Use -v to play videos in direct mode.\n\n2) Inline: Returns Inline Markup Buttons for choosing between video & audio.</blockquote>"
+setting_4 : "<blockquote><emoji id=\"6127406790666623284\">⁉️</emoji> What is This?\n\n<emoji id=\"5224628072619216265\">👥</emoji> Everyone: Anyone can use admin commands(skip, pause, resume etc) present in this group.\n\n<emoji id=\"6127546175240280564\">🙍</emoji> Admin Only: Only admins and authorized users can use admin commands.</blockquote>"
+setting_5 : "<blockquote>No Authorized Users Found\n\nYou can allow any non-admin to use my admin commands by /auth and delete by using /unauth</blockquote>"
+setting_9 : "<blockquote><emoji id=\"5357570547519613136\">⁉️</emoji> What is This?\n\nWhen activated, Bot will delete its message after {0} to make your chat clean and clear.</blockquote>"
+setting_10 : "<blockquote><emoji id=\"9528085869928647161\">⁉️</emoji> What is This?\n\n1) Group: Plays music in the group where the command is given .\n\n2) Channel: Plays music in the channel you want. Set channel id via /channelplay</blockquote>"
+setting_11 : "<blockquote><emoji id=\"5393309541620291208\">⁉️</emoji> What is This?\n\n1) Everyone: Anyone present in this group can play music here.\n\n2) Admin Only: Only admins can play the music in this group.</blockquote>"
+setting_12 : "<blockquote><emoji id=\"85310241962127820707\">❌</emoji> You've no channel id defined for channel mode. Please define with /channelplay.</blockquote>"
+setting_13 : "<blockquote>Can't change play mode in active group call. Please stop the voice chat first with /stop.</blockquote>"
+setting_14 : "<blockquote><emoji id=\"5253840700704848108\">⁉️</emoji> What is This?\n\nWhen activated, Bot will delete its executed commands (/play, /pause, /shuffle, /stop etc) immediately.\n\nBot will be requiring delete messages admin right for this to work properly.</blockquote>"
+setting_15 : "<blockquote>Failed to resolve peer, Make sure you have added bot in your channel and promoted it as admin.\n\nTry setting /channelplay again..</blockquote>"
+
+set_cb_1 : "<blockquote>ශ්‍රව්‍ය තත්ත්ව පැනලය ලබා ගනිමින්...</blockquote>"
+set_cb_2 : "<blockquote>වීඩියෝ තත්ත්ව පැනලය ලබා ගනිමින්...</blockquote>"
+set_cb_3 : "<blockquote>සත්‍යාපන පරිශීලක පැනලය ලබා ගනිමින්...</blockquote>"
+set_cb_4 : "<blockquote>Play මාදිලි පැනලය ලබා ගනිමින්...</blockquote>"
+set_cb_5 : "<blockquote>පිරිසිදු මාදිලි පැනලය ලබා ගනිමින්...</blockquote>"
+set_cb_6 : "<blockquote>වෙනස්කම් සැකසීම.</blockquote>"
+set_cb_7 : "<blockquote>සත්‍යාපන පරිශීලක ලැයිස්තුව ලබා ගනිමින්.. කරුණාකර රැඳී සිටින්න.</blockquote>"
+set_cb_8 : "<blockquote>ආපසු ලබා ගැනීම..</blockquote>"
+
+# Misc
+ustats_1 : "<blockquote>No User Stats Found.</blockquote>"
+ustats_2 : "<blockquote>Grettings!, You have played **{0}** tracks till now with a whopping count of **{1}** times.\n\nTop {2} played by you:\n\n</blockquote>"
+
+gstats_1 : "<blockquote>Getting Global Stats, This could take some time...</blockquote>"
+gstats_2 : "<blockquote>No Stats Found.</blockquote>"
+gstats_3 : "<blockquote>Getting Global Top 10 {0} on the bot, This could take some time..</blockquote>"
+gstats_4 : "<blockquote>**Total Queries on Bot:** {0}\n\n{1} has played **{2}** tracks till now with a whopping count of **{3}** times.\n\n**Top {4} Tracks:**\n</blockquote>"
+gstats_5 : "<blockquote>**Top {0} Chats of {1}:**\n\n</blockquote>"
+gstats_6 : "<blockquote>**Top {0} Users of {1}:**\n\n</blockquote>"
+gstats_7 : "<blockquote>This chat group has played **{0}** tracks till now with a whopping count of **{1}** times.\n\nTop {2} played by this chat group:\n\n</blockquote>"
+gstats_8 : "<blockquote>Getting Bot's general stats and information.. This could take some time...</blockquote>"
+gstats_9 : "<blockquote>**GLOBAL TOP 10 STATS OF THE BOT**\n\nSelect the buttons from below for which you want to check global stats from bot's servers.</blockquote>"
+gstats_10 : "<blockquote>**Global Stats of {0}**\n\nSelect the buttons from below for which you want to check global stats from bot's servers.</blockquote>"
+gstats_11 : "<blockquote>**General Stats of {0}**\nSelect the buttons from below for which you want to check global stats from bot's servers.\n\nTo check top tracks, chats, users and other stuffs, please use /gstats</blockquote>"
+
+
+# Play 
+#Play Callback 
+playcb_1 : "<blockquote>මෙය ඔබ සඳහා නොවේ! ඔබේම ගීතය සොයන්න.</blockquote>"
+playcb_2 : "<blockquote>ඊළඟ ප්‍රතිඵලය ලබා ගනිමින්</blockquote>"
+
+# Channel Play
+cplay_1 : "<blockquote>ඔබට මෙම කතාබස්[{0}] සිට ඕනෑම නාලිකාවකට හෝ ඔබේ කතාබස් සම්බන්ධිත නාලිකාවකට නාලිකාවල සංගීතය වාදනය කළ හැක.\n\n**සම්බන්ධිත නාලිකාව සඳහා:**\n`/{1} සබැඳි`\n\n** වෙනත් ඕනෑම නාලිකාවක් සඳහා:**\n`/{1} [Channel ID]`</blockquote>"
+cplay_2 : "<blockquote>මෙම කතාබහට සම්බන්ධිත නාලිකාවක් නොමැත.</blockquote>"
+cplay_3 : "<blockquote>නාලිකාව {0}\n\n__Channel ID__: {1} වෙත අර්ථ දක්වා ඇත</blockquote>"
+cplay_4 : "<blockquote>නාලිකාව ලබා ගැනීමට අපොහොසත් විය.\n\nඔබ ඔබේ නාලිකාවට බොට් එක් කර එය පරිපාලක ලෙස උසස් කර ඇති බව සහතික කර ගන්න.\n/channelplay හරහා නාලිකාව වෙනස් කරන්න හෝ /playmode හරහා නාලිකා ධාවන ප්‍රකාරය අබල කරන්න</blockquote>"
+cplay_5 : "<blockquote>නාලිකා පමණක් සහය දක්වයි.</blockquote>"
+cplay_6 : "<blockquote>මෙම කණ්ඩායම සමඟ සම්බන්ධ වීමට ඔබ නාලිකාවේ [{0}] **හිමිකරු** විය යුතුය.\n**නාලිකාවේ හිමිකරු:** @{1}\n\nවිකල්පයක් ලෙස ඔබට ඔබේ කණ්ඩායම එම නාලිකාවට සම්බන්ධ කළ හැකිය ඉන්පසු `/channelplay linked` සමඟ සම්බන්ධ වීමට උත්සාහ කරන්න.</blockquote>"
+
+#Play
+play_1 : "<blockquote><emoji id=\"6298429115628259446\">🔄</emoji> විමසුම සකසමින්... කරුණාකර රැඳී සිටින්න!</blockquote>"
+play_2 : "<blockquote>**<emoji id=\"4528311749560187632\">🏷</emoji>නාලිකා ප්ලේ මාදිලිය**\n<emoji id=\"4528311749560187632\">🔄</emoji> විමසුම සකසමින්... කරුණාකර රැඳී සිටින්න!\n\n**සම්බන්ධිත නාලිකාව:** {0}</blockquote>"
+play_3 : "<blockquote>විමසුම සැකසීමට අසමත් විය!</blockquote>"
+play_4 : "<blockquote><emoji id=\"5451885057222403366\">🖇</emoji> **පරිපාලකයින්ට පමණක් වාදනය කරන්න**\nමෙම සමූහයේ සංගීතය වාදනය කළ හැක්කේ පරිපාලකයින්ට සහ සත්‍යාපන පරිශීලකයින්ට පමණි.\n\n/playmode හරහා මාදිලිය වෙනස් කරන්න සහ ඔබ දැනටමත් පරිපාලක නම්, /admincache හරහා admincache නැවත පූරණය කරන්න</blockquote>"
+play_5 : "<blockquote>ශ්‍රව්‍ය ගොනුව සැකසීමට අසමත් විය.\n\nශ්‍රව්‍ය ගොනු ප්‍රමාණය 100 mb ට වඩා අඩු විය යුතුය</blockquote>"
+play_6 : "<blockquote>**කාල සීමාව ඉක්මවන ලදී**\n\n**අවසර ලත් කාල සීමාව: **{0}මිනිත්තු(ය)\n**ලැබුණු කාල සීමාව:** {1}මිනි(ය)</blockquote>"
+play_7 : "<blockquote>සමාවන්න! CPU අධි බර ගැටළු හේතුවෙන් Bot ඉඩ දෙන්නේ සීමිත වීඩියෝ ඇමතුම් ගණනකට පමණි. වෙනත් බොහෝ කතාබස් දැන් වීඩියෝ ඇමතුම් භාවිතා කරයි. ශ්‍රව්‍ය වෙත මාරු වීමට උත්සාහ කරන්න හෝ පසුව නැවත උත්සාහ කරන්න</blockquote>"
+play_8 : "<blockquote>වලංගු වීඩියෝ ගොනු දිගුවක් නොවේ!\n\n**සහාය දක්වන ආකෘති:** {0}</blockquote>"
+play_9 : "<blockquote>වීඩියෝ ගොනු ප්‍රමාණය 1 GiB ට වඩා අඩු විය යුතුය</blockquote>"
+play_10 : "<blockquote>**Youtube Playlist විශේෂාංගය**\n\nඔබට සම්පූර්ණ Youtube Playlist වාදනය කිරීමට අවශ්‍ය මාදිලිය තෝරන්න</blockquote>"
+play_11 : "<blockquote><emoji id=\"5098567638565520047\">📎</emoji>ශීර්ෂය: **{0}\n\n<emoji id=\"6298650293559101195\">⏳</emoji>කාල සීමාව:** {1} Mins</blockquote>"
+play_12 : "<blockquote>**Spotify Playlists**\n\nඉල්ලන ලද්දේ:- {0}</blockquote>"
+play_13 : "<blockquote>**Apple Playlists**\n\nඉල්ලන ලද්දේ:- {0}</blockquote>"
+play_14 : "<blockquote>**URL එක සත්‍යාපනය කළ නොහැක.**\nමෙම url එක පහත සඳහන් ඕනෑම වේදිකාවකට අයත් වේද යන්න පුදුමයට කරුණකි: Youtube, AppleMusic, Spotify, Resso සහ Soundcloud.\n\nඔබට M3u8 හෝ දුරස්ථ සබැඳි සඳහා /stream භාවිතා කළ හැක.</blockquote>"
+play_15 : "<blockquote>**සජීවී ප්‍රවාහය අනාවරණය කර ඇත**\nපද්ධති මඟින් ඔබේ ධාවන සබැඳිය සජීවී ප්‍රවාහයක් ලෙස හඳුනාගෙන ඇත. සජීවී ප්‍රවාහය ක්‍රීඩා කිරීමට අවශ්‍යද?</blockquote>"
+play_16 : "<blockquote>ඛණ්ඩ විස්තර ලබා ගැනීමට අසමත් විය. වෙනත් ඕනෑම සෙල්ලම් කිරීමට උත්සාහ කරන්න.</blockquote>"
+play_17 : "<blockquote>Unable to play this type of spotify query!\n\nI can only play spotify tracks, albums, artists and playlists</blockquote>"
+play_18 : "<blockquote>**No Active Voice Chat Found**\n\nTo use force play, there must be an active voice chat going on in your group. **Force Play** stops the playing track on voice chat and starts playing the searched track instantly without disturbing/clearing queue.</blockquote>"
+
+
+
+#Playlist
+playlist_1 : "<blockquote>**භාවිතය:** /play [සංගීත නාමය හෝ Youtube සබැඳිය හෝ ශ්‍රව්‍ය වෙත පිළිතුරු දෙන්න]\nඔබට Bots Server Playlist වාදනය කිරීමට අවශ්‍ය නම්! පහත බොත්තම ඔබන්න.</blockquote>"
+playlist_2 : "<blockquote>ඔබගේ ධාවන ලැයිස්තුව ලබා ගනිමින්. කරුණාකර රැඳී සිටින්න</blockquote>"
+playlist_3 : "<blockquote>ඔබට Bot's Server හි ධාවන ලැයිස්තුවක් නොමැත.</blockquote>"
+playlist_4 : "<blockquote>ලබාගත් ධාවන ලැයිස්තුව:\n\n</blockquote>"
+playlist_5 :  "<blockquote>කාල සීමාව- {0} Mins</blockquote>"
+playlist_6 : "<blockquote>ධාවන ලැයිස්තු මකා දැමීම සඳහා PM හි මා අමතන්න.</blockquote>"
+playlist_7 : "<blockquote>ධාවන ලැයිස්තුවේ ඇතුළත ඛණ්ඩ: {0}\n\nඔබේ ධාවන ලැයිස්තුවේ ඇති විශේෂිත ධාවන පථයක් මැකීමට බොත්තම් ඔබන්න.\n\nසම්පූර්ණ ධාවන ලැයිස්තුව මකා දැමීමට: Del Whole Playlist බොත්තම ඔබන්න.</blockquote>"
+playlist_8 : "<blockquote>දැනටමත් පවතී\n\nමෙම ධාවන පථය ඔබගේ ධාවන ලැයිස්තුවේ පවතී.</blockquote>"
+playlist_9 : "<blockquote>සමාවන්න! ඔබට ධාවන ලැයිස්තුවක සංගීතය {0}ක් පමණක් තිබිය හැක.</blockquote>"
+playlist_10 : "<blockquote>ධාවන ලැයිස්තු එකතු කිරීම\n\n{0}\nඔබේ ධාවන ලැයිස්තුවට එකතු කරන ලදී.</blockquote>"
+playlist_11 : "<blockquote>ඔබගේ ධාවන පථය සාර්ථකව මකා ඇත.</blockquote>"
+playlist_12 : "<blockquote>ඔබගේ ධාවන පථය මැකීමට අසමත් විය.</blockquote>"
+playlist_13 : "<blockquote>සේවාදායකයෙන් ඔබගේ සම්පූර්ණ ධාවන ලැයිස්තු මකා ඇත.</blockquote>"
+playlist_14 : "<blockquote>**ඔබට ඔබගේ සම්පූර්ණ ධාවන ලැයිස්තුව මකා දැමීමට අවශ්‍ය බව ඔබට විශ්වාසද?**\n\nඔබගේ ධාවන ලැයිස්තුව ඔබට අහිමි වනු ඇති අතර මෙය පසුව ප්‍රතිසාධනය කළ නොහැක.</blockquote>"
+playlist_15 : "<blockquote>[සම්පූර්ණ ධාවන ලැයිස්තුව පරීක්ෂා කරන්න]({0})</blockquote>"
+playlist_16 : "<blockquote>පෝලිම් සහිත ධාවන ලැයිස්තුව:</blockquote>"
+playlist_17 : "<blockquote>පෝලිම් පිහිටීම -</blockquote>"
+playlist_18 : "<blockquote>[සම්පූර්ණ පෝලිම් සහිත ධාවන ලැයිස්තුව පරීක්ෂා කරන්න]({0})\n\bඅවසන් පෝලිම් ස්ථානය : **{1}**</blockquote>"
+
+
+#Playmode
+playmode_1 : "<blockquote>ඔබගේ කණ්ඩායම තුළ විමසුම් වාදනය කිරීමට ඔබට අවශ්‍ය මාදිලිය තෝරන්න[{0}].</blockquote>"
+playmode_2 : "<blockquote>{0} විසින් සැකසීම් වෙනස් කර සාර්ථකව සුරකින ලදී </blockquote>"
+
+#Stream 
+str_1 : "<blockquote>කරුණාකර M3u8 සබැඳි හෝ දර්ශක සබැඳි සපයන්න.</blockquote>"
+str_2 : "<blockquote><emoji id=\"5283069434917836059\">✅</emoji> වලංගු ප්‍රවාහය සත්‍යාපනය කර ඇත\n\nකරුණාකර සබැඳිය සැකසීමට රැඳී සිටින්න..</blockquote>"
+str_3 : "<blockquote>youtube සජීවී ප්‍රවාහ ප්‍රවාහ කිරීමට නොහැක. සජීවී ආකෘතියක් හමු නොවිණි</blockquote>"
+
+#TopPlay
+tracks_1 : "<blockquote>**Processing {0} Top 10 Playlist**\nThis could take some mins(around 3-4 mins).. Please Wait...\n\n**<emoji id=\"6208343392070409520\">👤</emoji>Requested By:** {1}\n\nCheck Top 10 tracks by /stats</blockquote>"
+tracks_2 : "<blockquote>**දෝෂය**\n\nඑහෙම නෑ**{0} ඉහළම ධාවන ලැයිස්තුව 10** bot ගේ සේවාදායකයන් මත. කරුණාකර වෙනත් ධාවන ලැයිස්තුවක් උත්සාහ කරන්න</blockquote>"
+
+
+# TOOLS
+
+#Lyrics
+lyrics_1 : "<blockquote>**භාවිතය:**\n\n/lyrics [ Music Name]</blockquote>"
+lyrics_2 : "<blockquote>ගී පද සොයමින්</blockquote>"
+lyrics_3 : "<blockquote><emoji id=\"6127546175240280564\">❌</emoji> පද රචනය ගෙන ඒමට අපොහොසත් විය<emoji id=\"5098567638565520047\">😭</emoji>.\n\n<emoji id=\"5197633391415029566\">💡</emoji>**සෙවීමට උත්සාහ කළේ:** {0}</blockquote>"
+lyrics_5 : 
+lyrics_4 : "<blockquote>පහත බොත්තම මත ක්ලික් කර දිගු අයාචිත තැපැල් වර්ග ගී සෙවුම් වළක්වා ගැනීමට සෙවූ පද ලබා ගන්න.</blockquote>"
+
+#Ping
+ping_1 : "<blockquote>පොං!!!!</blockquote>"
+
+# Song
+song_1 : "<blockquote>ඔබට යූ ටියුබ් වෙතින් සංගීතය හෝ වීඩියෝ බාගත කළ හැක්කේ පුද්ගලික කතාබස් වලදී පමණි. කරුණාකර මාව පුද්ගලික කතාබස් වලින් ආරම්භ කරන්න.</blockquote>"
+song_2 : "<blockquote>**භාවිතය:**\n\n/song [සංගීත නාමය] හෝ [Youtube Link]</blockquote>"
+song_3 : "<blockquote>සජීවී සබැඳිය අනාවරණය විය. මට සජීවී යූ ටියුබ් වීඩියෝ බාගත කළ නොහැක.</blockquote>"
+song_4 : "<blockquote>**<emoji id=\"6197426719075342898\">🔗</emoji>ශීර්ෂය:**- {0}\n\nඔබට බාගත කිරීමට අවශ්‍ය වර්ගය තෝරන්න.</blockquote>"
+song_5 : "<blockquote>වලංගු Youtube සබැඳියක් නොවේ</blockquote>"
+song_6 : "<blockquote>ආකෘති ලබා ගනිමින්.. \n\nකරුණාකර රැඳී සිටින්න..</blockquote>"
+song_7 : "<blockquote>වීඩියෝව සඳහා පවතින ආකෘති ලබා ගැනීමට අසමත් විය. කරුණාකර වෙනත් ඕනෑම ධාවන පථයක් උත්සාහ කරන්න.</blockquote>"
+song_8 : "<blockquote>බාගත කිරීම ආරම්භ විය\n\nබාගත කිරීමේ වේගය මන්දගාමී විය හැක. කරුණාකර ඉන්න..</blockquote>"
+song_9 : "<blockquote>Youtube-DL වෙතින් ගීතය බාගත කිරීම අසාර්ථක විය\n\n**හේතුව:** {0}</blockquote>"
+song_10 : "<blockquote>සේවාදායක වෙතින් ටෙලිග්‍රැම් උඩුගත කිරීම අසාර්ථක විය.</blockquote>"
+song_11 : "<blockquote>උඩුගත කිරීම ආරම්භ කර ඇත\n\nඋඩුගත කිරීමේ වේගය මන්දගාමී විය හැක. කරුණාකර ඉන්න..</blockquote>"
+
+# Tools - Queue
+queue_1 : "<blockquote>කරුණාකර රැඳී සිටින්න.. පෝලිම ලබා ගනිමින්..</blockquote>"
+queue_2 : "<blockquote>පෝලිමේ ඇතුළත පීලි නැත.</blockquote>"
+queue_3 : "<blockquote><u>**පෝලිම් පීලි:</u>**  [මෙතැනින් තවත් පෝලිම් සහිත පීලි පරීක්ෂා කරන්න]({0})</blockquote>"
+queue_4 : "<blockquote><emoji id=\"5363811508662855070\">⏳</emoji> පෝලිමට එකතු කරන ලදී **#{0}\n\n<emoji id=\"5429194014853199906\">💡</emoji>ශීර්ෂය:** {1}\n**<emoji id=\"5364026733769027361\">⏱</emoji>කාල සීමාව:** {2}\n<emoji id=\"5407132395646246517\">👤</emoji>**එකතු කරන ලද්දේ:** {3}</blockquote>"
+
+# All Streaming Lines
+stream_1 : "<blockquote><emoji id=\"6276044051024189481\">📡</emoji> **සංගිතය ආරම්භ විය** <emoji id=\"6201763545122609648\">💡</emoji>\n\n<emoji id=\"6197420598746945336\">👤</emoji>**ඉල්ලන ලද්දේ:** {0}\n<emoji id=\"5364096209160008881\">🔦</emoji>**විස්තර: **[Here]({1})</blockquote>"
+stream_2 : "<blockquote><emoji id=\"6298650293559101195\">📡</emoji> **සංගිතය ආරම්භ විය URL හරහා ** <emoji id=\"6176895538449880631\">💡</emoji>\n\n<emoji id=\"6298486951657867390\">👤</emoji>**ඉල්ලන ලද්දේ:** {0}</blockquote>"
+stream_3 : "<blockquote><emoji id=\"7535744928770794231\">📡</emoji> **සංගිතය ආරම්භ විය** <emoji id=\"5033052035633644551\">💡</emoji>\n\n**<emoji id=\"5337260982911655617\">🏷</emoji>ශීර්ෂය:** {0}\n<emoji id=\"6536418654091217400\">⌛</emoji>️**කාල සීමාව**: {1}\n<emoji id=\"5096306621752017867\">👤</emoji>**ඉල්ලන ලද්දේ:** {2}</blockquote>"
+stream_4 : "<blockquote><emoji id=\"0542697844738361581\">📡</emoji> **සංගිතය ආරම්භ විය** <emoji id=\"5364096209160008881\">💡</emoji>\n\n**<emoji id=\"6276044051024189481\">🏷</emoji>ශීර්ෂය:** [{0}]({1})\n<emoji id=\"6127406790666623284\">⌛</emoji>️**කාල සීමාව**: {2}\n<emoji id=\"6253379044746731429\">👤</emoji>**ඉල්ලන ලද්දේ:** {3}</blockquote>"
+
+# Inline Buttons
+
+#General Buttons
+CLOSE_BUTTON  : "🗑 වසන්න"
+CLOSEMENU_BUTTON  : "🗑 මෙනුව වසන්න"
+BACK_BUTTON : "⬅ ආපසු"
+UNBAN_BUTTON : "🗑 සහකරුගේ තහනම ඉවත් කරන්න"
+
+#Lyrics
+L_B_1 : "🚀 දැන් පද රචනය පරීක්ෂා කරන්න"
+
+# Start
+S_B_1 : "🗒 විධාන"
+S_B_2 : "🔧 සැකසුම්"
+S_B_3 : "📨 සහාය"
+S_B_4 : "📨 නාලිකාව"
+S_B_5 : "✚ මාව ඔයාගේ සමුහයට එකට එකතු කරන්න"
+S_B_6 : "💡 ගිට් රිපොව"
+S_B_7 : "👤 බොට් හිමිකරු"
+S_B_8 : "🔎විධාන මෙනුව "
+
+#Help 
+H_B_1 : "පරිපාලක විධාන"
+H_B_2 : "වාදන විධාන"
+H_B_3 : "බොට් විධාන"
+H_B_4 : "අමතර විධාන"
+H_B_5 : "මෙනුව වසන්න"
+H_B_6 : "SudoUser Commands"
+
+#PlayMode
+PM_B_1 : "සෘජුව වාදනය"
+PM_B_2 : "පහල පෙල ඔස්සේ"
+PM_B_3 : "නාලිකා වාදනය"
+
+#Play
+P_B_1 : "🎵 ශ්‍රව්‍ය වාදනය කරන්න"
+P_B_2 : "🎥 වීඩියෝ වාදනය කරන්න"
+P_B_3 : "🏮 සජීවී ප්‍රවාහය ආරම්භ කරන්න"
+P_B_4 : "🎵 සංගිත ලැයිස්තුව වාදනය කරන්න"
+
+#Playlist
+PL_B_1 : "🚀 සංගිත ලැයිස්තුව වාදනය කරන්න "
+PL_B_2 : "✚ සංගිත ලැයිස්තු"
+PL_B_3 : "✚ අමතර"
+PL_B_4 : "📡 වාදන ආකරය"
+PL_B_5 : "🔄 සම්පූර්ණ සංගිත ලැයිස්තුව මකන්න"
+PL_B_6 : "↗️ සංගිත ලැයිස්තුව මකන්න"
+PL_B_7 : "❗️ ඔව් මට විශ්වාසයි. එය මකන්න"
+PL_B_8 : "🔢 හොඳම ගීත 10 ක් වාදනය කරන්න"
+PL_B_9 : "🤖 ගොලිය හොඳම ගීත 10 ක් වාදනය කරන්න"
+PL_B_10 : "🏘 සමූහයේ හොඳම ගීත 10 ක් වාදනය කරන්න"
+PL_B_11 : "👤පුද්ගලික හොඳම ගීත 10 ක් වාදනය කරන්න"
+
+#Settings
+ST_B_1 : "🔊 Aud ගුණාත්මකභාවය"
+ST_B_2 : "🎥 Vid ගුණාත්මකභාවය"
+ST_B_3 : "🎩 Aut පරිශීලකයන්"
+ST_B_4 : "📱උපකරණ පුවරුව"
+ST_B_5 : "▶️ Play Mode"
+ST_B_6 : "🏳️‍🌈 භාෂාව"
+ST_B_7 : "🔄 පිරිසිදු මාදිලිය"
+ST_B_8 : "{0} අඩු ගුණාත්මක ශ්රව්ය උපකරණ"
+ST_B_9 : "{0} මධ්‍යම ගුණාත්මක ශ්‍රව්‍ය"
+ST_B_10 : "{0} උසස් තත්ත්වයේ ශ්රව්ය උපකරණ"
+ST_B_11 : "{0} අඩු ගුණාත්මක වීඩියෝවක්"
+ST_B_12 : "{0} මධ්‍යම ගුණාත්මක වීඩියෝව"
+ST_B_13 : "{0} උසස් තත්ත්වයේ වීඩියෝ"
+ST_B_14 : "✅ සබල කර ඇත"
+ST_B_15 : "❌ ආබාධිතයි"
+ST_B_16 : "👤 පරිපාලකවරු"
+ST_B_17 : "👥 හැමෝම"
+ST_B_18 : "📋 බලයලත් පරිශීලක ලැයිස්තු"
+ST_B_19 : "🔎 සෙවුම් මාදිලිය"
+ST_B_20 : "✅ සෘජු"
+ST_B_21 : "✅ පෙළට"
+ST_B_22 : "👨‍⚖️ Admin Commands"
+ST_B_23 : "🏘 සමූහය"
+ST_B_24 : "🏷 නාලිකාව"
+ST_B_25 : "🫂 Play වර්ගය"
+ST_B_26 : "🗑 විධාන මකන්න"
+
+#Song
+SG_B_1 : "↗️ පුද්ගලික කතාබස් විවෘත කරන්න"
+SG_B_2 : "🔊 ශ්රව්ය උපකරණ"
+SG_B_3 : "🎥 වීඩියෝ"
+
+#Stats
+SA_B_1 : "📢 Top 10 Chat"
+SA_B_2 : "🔢 Top 10 Tracks"
+SA_B_3 : "🧛 Top 10 Users"
+SA_B_4 : "🏷 Top 10 Here"
+SA_B_5 : "💡 Overall Stats"
+SA_B_6 : "👤 User Stats"
+SA_B_7 : "🔢 Global Top 10 Stats"
+SA_B_8 : "🤖 Bot Stats"
+
+
+
+# Sudo Users [ If you are translating this to some other language .. you can leave all these strings in english language]
+
+#Sudo
+sudo_1 : "<blockquote>{0} is already a sudo user.</blockquote>"
+sudo_2 : "<blockquote>Added **{0}** to Sudo Users.</blockquote>"
+sudo_3 : "<blockquote>Not a part of Bot's Sudo.</blockquote>"
+sudo_4 : "<blockquote>Removed from Bot's Sudo User</blockquote>"
+sudo_5 : "<blockquote><emoji id=\"6528049652616923527\">⭐</emoji>️<u> **Owners:**</u>\n</blockquote>"
+sudo_6 : "<blockquote>\n<emoji id=\"5364026733769027361\">⭐</emoji>️<u> **Sudo Users:**</u>\n</blockquote>"
+sudo_7 : "<blockquote>No Sudo Users</blockquote>"
+
+#Block
+block_1 : "<blockquote>{0} දැනටමත් බොට් එකෙන් අවහිර කර ඇත.</blockquote>"
+block_2 : "<blockquote>බොට් වල වාරණ ලැයිස්තුවට **{0}** එකතු කරන ලදී. පරිශීලකයාට දැන් කිසිදු කොන්දේසියක් යටතේ bot භාවිත කිරීමට නොහැකි වනු ඇත.\n\nඅවහිර කළ පරිශීලකයින් පරීක්ෂා කරන්න: /blockedusers</blockquote>"
+block_3 : "<blockquote>පරිශීලකයා දැනටමත් නොමිලේ සහ අවහිර කර නැත.</blockquote>"
+block_4 : "<blockquote>අවහිර ලැයිස්තුවෙන් පරිශීලක ඉවත් කරන ලදී. පරිශීලකයාට දැන් බොට් භාවිතා කිරීමට හැකි වනු ඇත.</blockquote>"
+block_5 : "<blockquote>අවහිර කළ පරිශීලකයන් හමු නොවීය</blockquote>"
+block_6 : "<blockquote>අවහිර කළ පරිශීලක ලැයිස්තුව ලබා ගැනීම.. කරුණාකර රැඳී සිටින්න</blockquote>"
+block_7 : "<blockquote>**අවහිර කළ පරිශීලකයින්:**\n\n</blockquote>"
+
+#Blacklist Chats
+black_1 : "<blockquote>**භාවිතය:**\n/blacklistchat [CHAT_ID]</blockquote>"
+black_2 : "<blockquote>කතාබස් දැනටමත් Blacklisted කර ඇත.</blockquote>"
+black_3 : "<blockquote>කතාබස් සාර්ථකව Blacklisted කර ඇත</blockquote>"
+black_4 : "<blockquote>**භාවිතය:**\n/whitelistchat [CHAT_ID]</blockquote>"
+black_5 : "<blockquote>කතාබස් දැනටමත් සුදු ලැයිස්තුගත කර ඇත.</blockquote>"
+black_6 : "<blockquote>කතාබස් සාර්ථකව සුදු ලැයිස්තුගත කර ඇත</blockquote>"
+black_7 : "<blockquote>**Blacklisted කතාබස්:**\n\n</blockquote>"
+black_8 : "<blockquote>Blacklisted කතාබස් නැත</blockquote>"
+
+#videolimit
+vid_1 : "<blockquote>**භාවිතය:**\n/set_video_limit [Number of chats allowed] or [Disable]</blockquote>"
+vid_2 : "<blockquote>සීමාව සැකසීම සඳහා කරුණාකර සංඛ්‍යාත්මක අංක භාවිතා කරන්න.</blockquote>"
+vid_3 : "<blockquote>වීඩියෝ ඇමතුම් උපරිම සීමාව කතාබස් {0} දක්වා අර්ථ දක්වා ඇත.</blockquote>"
+vid_4 : "<blockquote>වීඩියෝ ඇමතුම් අබල කර ඇත</blockquote>"
+
+#maintenance
+maint_1 : "<blockquote>**භාවිතය:**\n/maintenance [enable|disable]</blockquote>"
+maint_2 : "<blockquote>නඩත්තු මාදිලිය ස්ක්‍රීය කර ඇත</blockquote>"
+maint_3 : "<blockquote>නඩත්තු මාදිලිය අක්‍රීය කර ඇත</blockquote>"
+
+#log
+log_1 : "<blockquote>**භාවිතය:**\n/logger [enable|disable]</blockquote>"
+log_2 : "<blockquote>Logging සක්‍රීය කරන ලදි</blockquote>"
+log_3 : "<blockquote>Logging අක්‍රීය කරන ලදි</blockquote>"
+
+#videomode
+vidmode_1 : "<blockquote>**භාවිතය:**\n/videomode [download|m3u8]</blockquote>"
+vidmode_2 : "<blockquote>වීඩියෝ ප්ලේ ප්‍රකාරය බාගැනීම් ලෙස සකසා ඇත. බොට් දැන් ධාවන පථ බාගත කරනු ඇත.</blockquote>"
+vidmode_3 : "<blockquote>වීඩියෝ ප්ලේ මාදිලිය m3u8 ලෙස සකසා ඇත. Bot දැන් සජීවී ධාවන පථ වනු ඇත.</blockquote>"
+
+#broadcast
+broad_1 : "<blockquote>**Bot වෙතින් පින් {1}ක් සමඟ {0} කතාබස් තුළ විකාශනය කළ පණිවිඩය.**</blockquote>"
+broad_2 : "<blockquote>Assistent Broadcast ආරම්භ කරන ලදී...</blockquote>"
+broad_3 : "<blockquote>**Assistant Broadcast:**\n\n</blockquote>"
+broad_4 : "<blockquote>Assistant {0} Broadcasted in {1} chats\n</blockquote>"
+broad_5 : "<blockquote>**Usage**:\n/broadcast [MESSAGE] or [Reply to a Message]</blockquote>"
+broad_6 : "<blockquote>Please provide some text to broadcast.</blockquote>"
+broad_7 : "<blockquote>**Broadcasted Message to {0} Users.**</blockquote>"
+
+#Heroku
+heroku_1 : "<blockquote>කරුණාකර ඔබගේ Heroku API key, ඔබගේ යෙදුමේ නම heroku හි නිවැරදිව වින්‍යාස කර ඇති බවට වග බලා ගන්න</blockquote>"
+heroku_2 : "<blockquote>ඔබට ලබා ගත හැක්කේ Heroku යෙදුම් වල ලොග් පමණි</blockquote>"
+heroku_3 : "<blockquote>**භාවිතය:**\n/get_var [Var Name]</blockquote>"
+heroku_4 : "<blockquote>එවැනි var එකක් සොයා ගැනීමට නොහැකි විය.</blockquote>"
+heroku_5 : "<blockquote>.env ගොනුව හමු නොවීය.</blockquote>"
+heroku_6 : "<blockquote>**භාවිතය:**\n/del_var [Var Name]</blockquote>"
+heroku_7 : "<blockquote>{0} මකා දමන ලදී.</blockquote>"
+heroku_8 : "<blockquote>**භාවිතය:**\n/set_var [Var Name] [Var Value]</blockquote>"
+heroku_9 : "<blockquote>{0} සාර්ථකව යාවත්කාලීන කර ඇත</blockquote>"
+heroku_10 : "<blockquote>{0} සාර්ථකව එකතු කර ඇත</blockquote>"
+heroku_11 : "<blockquote>Heroku යෙදුම් සඳහා පමණි</blockquote>"
+heroku_12 : "<blockquote>Heroku භාවිතය පරීක්ෂා කිරීම. කරුණාකර රැඳී සිටින්න</blockquote>"
+heroku_13 : "<blockquote>පවතින යාවත්කාලීන සඳහා පරීක්ෂා කරමින්...</blockquote>"
+heroku_14 : "<blockquote>Git විධාන දෝෂයකි</blockquote>"
+heroku_15 : "<blockquote>වලංගු නොවන Git රිපෝවකි.</blockquote>"
+
+#Private bot mode
+pbot_1 : "<blockquote>**භාවිතය:**\n/authorize [CHAT_ID]</blockquote>"
+pbot_2 :  "<blockquote>**භාවිතය:**\n/unauthorize [CHAT_ID]</blockquote>"
+pbot_3 : "<blockquote>අවසර ලත් ලැයිස්තුවට ලබා දුන් කතාබස් එක් කරන ලදී</blockquote>"
+pbot_4 : "<blockquote>අවසර ලත් ලැයිස්තුවෙන් ලබා දුන් කතාබස් ඉවත් කරන ලදී</blockquote>"
+pbot_5 : "<blockquote>කතාබස් දැනටමත් බලයලත් ලැයිස්තුවේ ඇත</blockquote>"
+pbot_6 : "<blockquote>බලයලත් ලැයිස්තුවේ එවැනි කතාබහක් නොමැත</blockquote>"
+pbot_7 : "<blockquote>chat_id සත්‍යාපනය කිරීමට අපොහොසත් විය.\n\nඑහි සංඛ්‍යාත්මක සහ නිවැරදි ආකෘතිය සහතික කර ගන්න. කතාබස් පරිශීලක නාමය හෝ සබැඳි භාවිතා නොකරන්න.</blockquote>"
+pbot_8 : "<blockquote>කරුණාකර රැඳී සිටින්න.... බලයලත් කතාබස් ලබා ගනිමින්.</blockquote>"
+pbot_9 : "<blockquote>**<b>ලබා ගත් කතාබස්:</b>**\n\n</blockquote>"
+pbot_10 : "<blockquote>පුද්ගලික කතාබස්</blockquote>"
+pbot_11 : "<blockquote>අවසර ලත් කතාබස් හමු නොවීය</blockquote>"
+pbot_12 : "<blockquote>පුද්ගලික බොට් ප්‍රකාරය අබල කර ඇත.\ සහ\nඔබේ බොට් පුද්ගලික බොට් ලෙස භාවිතා නොකරන්න **PRIVATE_BOT_MODE** = **True** සැකසීමට වග බලා ගන්න</blockquote>"
+pbot_13 : "<blockquote>\n**<b>ලබා නොගත් කතාබස්:</b>**\n\n</blockquote>"
+
+#Gbanned
+gban_1 : "<blockquote>You want to gban yourself? How Fool!</blockquote>"
+gban_2 : "<blockquote>Should i block myself? Lol</blockquote>"
+gban_3 : "<blockquote>You want to block a sudo user?</blockquote>"
+gban_4 : "<blockquote>{0} is already **gbanned** from the bot.</blockquote>"
+gban_5 : "<blockquote>**Initializing Gobal Ban on {0}**\n\nExpected Time : {1}.</blockquote>"
+gban_6 : "<blockquote>**Gbanned Successfully**\n\nBanned **{0}** from **{1}** chats.</blockquote>"
+gban_7 : "<blockquote>{0} is not **gbanned **yet from the bot.</blockquote>"
+gban_8 : "<blockquote>**Ungbanning {0}**\n\nExpected Time : {1}.</blockquote>"
+gban_9 : "<blockquote>**UnGbanned Successfully**\n\nUnbanned **{0}** in **{1}** chats.</blockquote>"
+gban_10 : "<blockquote>No Gbanned Users Found.</blockquote>"
+gban_11 : "<blockquote>Please wait a while.. Fetching Gbanned users list</blockquote>"

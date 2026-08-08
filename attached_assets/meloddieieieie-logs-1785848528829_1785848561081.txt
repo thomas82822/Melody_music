@@ -1,0 +1,97 @@
+2026-08-04T13:01:13.269419+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connecting...[0m
+2026-08-04T13:01:13.493188+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connected! Production DC5 - IPv4[0m
+2026-08-04T13:01:13.493443+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: NetworkTask started[0m
+2026-08-04T13:01:14.193088+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session initialized: Layer 158[0m
+2026-08-04T13:01:14.193130+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Device: CPython 3.11.15 - Pyrogram 2.0.106[0m
+2026-08-04T13:01:14.193168+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: System: Linux 6.17.0-1019-aws (en)[0m
+2026-08-04T13:01:14.193212+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session started[0m
+2026-08-04T13:01:14.208522+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: PingTask started[0m
+2026-08-04T13:01:14.690449+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.dispatcher[0m: Started 12 HandlerTasks[0m
+2026-08-04T13:01:14.690487+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Assistant client started.[0m
+2026-08-04T13:01:22.419373+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: assistant: warmed peer cache for 154 chats[0m
+2026-08-04T13:01:24.270829+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: bot: warmed peer cache for 0/0 known chats[0m
+2026-08-04T13:01:24.512811+00:00 app[worker.1]: PyTgCalls v2.1.1 powered by NTgCalls v1.3.4, Copyright (C) 2021-2026 Laky-64 <https://github.com/Laky-64>
+2026-08-04T13:01:24.512813+00:00 app[worker.1]: Licensed under the terms of the GNU Lesser General Public License v3 or later (LGPLv3+)
+2026-08-04T13:01:24.512813+00:00 app[worker.1]: 
+2026-08-04T13:01:24.621081+00:00 heroku[worker.1]: Restarting
+2026-08-04T13:01:24.674340+00:00 heroku[worker.1]: State changed from up to starting
+2026-08-04T13:01:24.535691+00:00 app[worker.1]: [93mUpdate Available!
+2026-08-04T13:01:24.535714+00:00 app[worker.1]: New PyTgCalls v2.3.3 is now available!
+2026-08-04T13:01:24.535714+00:00 app[worker.1]: [0m
+2026-08-04T13:01:24.535843+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: PyTgCalls (py-tgcalls 2.x) started.[0m
+2026-08-04T13:01:24.535926+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: PyTgCalls started.[0m
+2026-08-04T13:01:24.615424+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Slash commands registered: 30 group, 5 private[0m
+2026-08-04T13:01:24.615752+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: bot: synced LOG_GROUP_ID peer (access_hash injected) from assistant cache[0m
+2026-08-04T13:01:25.166913+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Startup log sent via assistant → LOG_GROUP_ID[0m
+2026-08-04T13:01:25.166966+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: 🎶 Melody is live![0m
+2026-08-04T13:01:25.692567+00:00 heroku[worker.1]: Stopping all processes with SIGTERM
+2026-08-04T13:01:25.879864+00:00 heroku[worker.1]: Process exited with status 143
+2026-08-04T13:01:28.411495+00:00 heroku[worker.1]: Starting process with command `python -m melody`
+2026-08-04T13:01:29.041019+00:00 heroku[worker.1]: State changed from starting to up
+2026-08-04T13:01:29.696624+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Pyrogram clients created.[0m
+2026-08-04T13:01:29.911741+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: ☁️  Cloud host detected — YouTube CDN streaming skipped; using local download[0m
+2026-08-04T13:01:29.911850+00:00 app[worker.1]: [33mWARNING [0m [34mMelody[0m: YT_COOKIES base64 decodes to binary data (not a text cookie file). Provide a Netscape-formatted cookies.txt exported from your browser. Skipping cookies — yt-dlp will run without authentication.[0m
+2026-08-04T13:01:29.934661+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Plugins loaded: 28 OK, 0 failed[0m
+2026-08-04T13:01:29.934707+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: All plugins loaded.[0m
+2026-08-04T13:01:29.934758+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Starting Melody Music Bot...[0m
+2026-08-04T13:01:30.177717+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.auth[0m: Start creating a new auth key on DC2[0m
+2026-08-04T13:01:30.177838+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connecting...[0m
+2026-08-04T13:01:30.258177+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connected! Production DC2 - IPv4[0m
+2026-08-04T13:01:31.545569+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.auth[0m: Done auth key exchange: DhGenOk[0m
+2026-08-04T13:01:31.545784+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Disconnected[0m
+2026-08-04T13:01:31.588955+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connecting...[0m
+2026-08-04T13:01:31.668885+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connected! Production DC2 - IPv4[0m
+2026-08-04T13:01:31.669499+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: NetworkTask started[0m
+2026-08-04T13:01:31.928848+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session initialized: Layer 158[0m
+2026-08-04T13:01:31.928895+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Device: CPython 3.11.15 - Pyrogram 2.0.106[0m
+2026-08-04T13:01:31.928935+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: System: Linux 6.17.0-1019-aws (en)[0m
+2026-08-04T13:01:31.928983+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session started[0m
+2026-08-04T13:01:31.936700+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: PingTask started[0m
+2026-08-04T13:01:32.028175+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: PingTask stopped[0m
+2026-08-04T13:01:32.028351+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Disconnected[0m
+2026-08-04T13:01:32.028403+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: NetworkTask stopped[0m
+2026-08-04T13:01:32.028449+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session stopped[0m
+2026-08-04T13:01:32.052318+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.auth[0m: Start creating a new auth key on DC1[0m
+2026-08-04T13:01:32.052392+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connecting...[0m
+2026-08-04T13:01:32.076425+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connected! Production DC1 - IPv4[0m
+2026-08-04T13:01:33.599238+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.auth[0m: Done auth key exchange: DhGenOk[0m
+2026-08-04T13:01:33.599428+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Disconnected[0m
+2026-08-04T13:01:33.629357+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connecting...[0m
+2026-08-04T13:01:33.654054+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connected! Production DC1 - IPv4[0m
+2026-08-04T13:01:33.654249+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: NetworkTask started[0m
+2026-08-04T13:01:33.747673+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session initialized: Layer 158[0m
+2026-08-04T13:01:33.747709+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Device: CPython 3.11.15 - Pyrogram 2.0.106[0m
+2026-08-04T13:01:33.747753+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: System: Linux 6.17.0-1019-aws (en)[0m
+2026-08-04T13:01:33.747798+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session started[0m
+2026-08-04T13:01:33.747908+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: PingTask started[0m
+2026-08-04T13:01:33.880778+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.dispatcher[0m: Started 12 HandlerTasks[0m
+2026-08-04T13:01:33.880830+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Bot client started.[0m
+2026-08-04T13:01:33.975824+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connecting...[0m
+2026-08-04T13:01:34.207796+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.connection.connection[0m: Connected! Production DC5 - IPv4[0m
+2026-08-04T13:01:34.208026+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: NetworkTask started[0m
+2026-08-04T13:01:34.926833+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session initialized: Layer 158[0m
+2026-08-04T13:01:34.926874+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Device: CPython 3.11.15 - Pyrogram 2.0.106[0m
+2026-08-04T13:01:34.926905+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: System: Linux 6.17.0-1019-aws (en)[0m
+2026-08-04T13:01:34.926951+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: Session started[0m
+2026-08-04T13:01:34.941171+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.session.session[0m: PingTask started[0m
+2026-08-04T13:01:35.482631+00:00 app[worker.1]: [32mINFO    [0m [34mpyrogram.dispatcher[0m: Started 12 HandlerTasks[0m
+2026-08-04T13:01:35.482677+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Assistant client started.[0m
+2026-08-04T13:01:43.471812+00:00 app[worker.1]: [31mERROR   [0m [34mMelody[0m: Failed to send log to group: get_video_info failed[0m
+2026-08-04T13:01:43.496156+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: assistant: warmed peer cache for 154 chats[0m
+2026-08-04T13:01:45.317038+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: bot: warmed peer cache for 0/0 known chats[0m
+2026-08-04T13:01:45.587622+00:00 app[worker.1]: PyTgCalls v2.1.1 powered by NTgCalls v1.3.4, Copyright (C) 2021-2026 Laky-64 <https://github.com/Laky-64>
+2026-08-04T13:01:45.587632+00:00 app[worker.1]: Licensed under the terms of the GNU Lesser General Public License v3 or later (LGPLv3+)
+2026-08-04T13:01:45.587632+00:00 app[worker.1]: 
+2026-08-04T13:01:45.614156+00:00 app[worker.1]: [93mUpdate Available!
+2026-08-04T13:01:45.614158+00:00 app[worker.1]: New PyTgCalls v2.3.3 is now available!
+2026-08-04T13:01:45.614158+00:00 app[worker.1]: [0m
+2026-08-04T13:01:45.614255+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: PyTgCalls (py-tgcalls 2.x) started.[0m
+2026-08-04T13:01:45.614322+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: PyTgCalls started.[0m
+2026-08-04T13:01:45.692527+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Slash commands registered: 30 group, 5 private[0m
+2026-08-04T13:01:45.692797+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: bot: synced LOG_GROUP_ID peer (access_hash injected) from assistant cache[0m
+2026-08-04T13:01:46.417029+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: Startup log sent via assistant → LOG_GROUP_ID[0m
+2026-08-04T13:01:46.417074+00:00 app[worker.1]: [32mINFO    [0m [34mMelody[0m: 🎶 Melody is live![0m
+2026-08-04T13:01:52.276505+00:00 app[worker.1]: [31mERROR   [0m [34mMelody[0m: Failed to send log to group: get_video_info failed[0m
+2026-08-04T13:02:03.763773+00:00 app[worker.1]: [31mERROR   [0m [34mMelody[0m: Failed to send log to group: get_video_info failed[0m
+2026-08-04T13:01:03.518120+00:00 app[api]: Release v37 created by user thomaschodu@gmail.com
+2026-08-04T13:01:03.518120+00:00 app[api]: Deploy 5633b28d by user thomaschodu@gmail.com

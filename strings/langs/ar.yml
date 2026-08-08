@@ -1,0 +1,473 @@
+name : 🇦🇪  Arabic
+
+# General Strings
+general_1 : "<blockquote>يرجى الرد على المستخدم أو كتابه اليوزر .</blockquote>"
+general_2 : "<blockquote>حجي الامر مكتوب غلط.</blockquote>"
+general_3 : "<blockquote>بعض ** حدث خطأ ** أثناء معالجة طلبك .\n\nنوع الخطأ:- {0}</blockquote>"
+general_4 : "<blockquote>حب انت ادمن مجهول بهذه الاكروب !\n ارجع للحساب من حقوق االادمن.</blockquote>"
+general_5 : "<blockquote>اغاتي لازم تكون ادمن بصلاحية المكالمات يلا تتشتغل .</blockquote>"
+general_6 : "<blockquote>لا يوجد اتصال جاري ...</blockquote>"
+
+# Classes - Telegram.py
+tg_1 : "<blockquote>** تم تحميل البوت ** الكثير ** من التنزيلات في الوقت الحالي.\n\n** حاول بعد ذلك: ** {0} (__expected time__)</blockquote>"
+tg_2 : "<blockquote>فشل التنزيل اغاتي </blockquote>"
+
+# Core - Call.py
+call_1 : "<blockquote>البوت يطلب أذن من **الادمن**حتى يضيف المساعد   .</blockquote>"
+call_2 : "<blockquote>المساعد محظور لازم تلغي الحظر .\n\n **اسم المساعد:** @{0}\n **معرف المساعد:** {1}</blockquote>"
+call_3 : "<blockquote>حدث خطأ أثناء دعوة حساب المساعد إلى الدردشة.\n\n**سبب**: {0}</blockquote>"
+call_4 : "<blockquote>يتطلب البوت ** دعوة المستخدمين عبر الرابط ** إذن لدعوة حساب المساعد إلى مجموعة  الخاصة بك.</blockquote>"
+call_5 : "<blockquote>المساعد حيجي بعد خمس ثواني انتضره ورده !</blockquote>"
+call_6 : "<blockquote>حساب المساعد [{0}] تم الانضمام بنجاح.\n\nبدء تشغيل الموسيقى الآن</blockquote>"
+call_7 : "<blockquote>**حق إداري ضار مُعطى **\n\n الرجاء مسح صلاحية **حظر المستخدمين** من البوت.</blockquote>"
+call_8 : "<blockquote>**حق إداري ضار مُعطى **\n\n الرجاء مسح صلاحية **اضافه مشرفين جدد ** من البوت.</blockquote>"
+call_9 : "<blockquote>**فشل تبديل الاغنية ** \n الرجاء استخدام /skip لتغيير المسار مرة أخرى. </blockquote>"
+call_10 : "<blockquote>تنزيل المسار التالي من قائمة التشغيل</blockquote>"
+call_11 : "<blockquote>الرجاء إضافة @ {0} إلى قناتك [المعرف: {1}].\n\n يتعذر على البوت الحصول على تفاصيل القناة.</blockquote>"
+
+# PLUGINS - Auth.py
+auth_1 : "<blockquote>يمكن أن يكون لديك 20 مستخدمًا فقط في قائمة المستخدمين المعتمدين (AUL) لمجموعتك</blockquote>"
+auth_2 : "<blockquote>تمت الإضافة إلى قائمة المستخدمين المعتمدين لمجموعتك.</blockquote>"
+auth_3 : "<blockquote>بالفعل في قائمة المستخدمين المعتمدين.</blockquote>"
+auth_4 : "<blockquote>تمت إزالته من قائمة المستخدمين المعتمدين لهذه المجموعة.</blockquote>"
+auth_5 : "<blockquote>المستخدم المستهدف ليس مستخدمًا مصرحًا له.</blockquote>"
+auth_6 : "<blockquote>إحضار المستخدمين المصرح لهم ... الرجاء الانتظار</blockquote>"
+auth_7 : "<blockquote>**قائمة المستخدمين المعتمدين [AUL]:**\n\n</blockquote>"
+auth_8 : "<blockquote>┗ أضيفت من قبل:-</blockquote>"
+
+# PLUGINS - Admins
+admin_1 : "<blockquote>الموسيقى موقفة بالفعل.</blockquote>"
+admin_2 : "<blockquote><emoji id=\"6271317151252133080\">🎧</emoji>تم ايقاف تشغيل الموسيقى من قِبل {}!</blockquote>"
+admin_3 : "<blockquote>لتصير لوتي لعد اني شمسوي غير مستئنف.</blockquote>"
+admin_4 : "<blockquote><emoji id=\"6201763545122609648\">🎧</emoji> تم اسئناف الموسيقى بواسطة {}!</blockquote>"
+admin_5 : "<blockquote>لكك أرنب هي اصلا مكتومه <emoji id=\"6125239923831217642\">🤐</emoji>.</blockquote>"
+admin_6 : "<blockquote><emoji id=\"5364096209160008881\">🎧</emoji> تم كتم الصوت بواسطة {}!</blockquote>"
+admin_7 : "<blockquote>تمت إعادة صوت الموسيقى بالفعل.</blockquote>"
+admin_8 : "<blockquote><emoji id=\"5364026733769027361\">🎧</emoji> يلا عاد اذا جنت مدوخكم شعدكم مشغليني<emoji id=\"6287305455274301148\">🤨</emoji> \n\n تم ارجاع الصوت بواسطة {}!</blockquote>"
+admin_9 : "<blockquote><emoji id=\"6253379044746731429\">🎧</emoji> المحادثة الصوتية انتهت بواسطة {}!</blockquote>"
+admin_10 : "<blockquote><emoji id=\"5098292962522039165\">🎧</emoji> تخطيت الاغنية بواسطة {}!. لا توجد اغاني اخرى في الانتظار.</blockquote>"
+admin_11 : "<blockquote>حدث خطأ في تغيير الاغنية الى  **{0}**\n\nالرجاء استخدام /skip مجددًا.</blockquote>"
+admin_12 : "<blockquote>تعذر التخطي إلى مسار معين بسبب تشغيل الحلقة . الرجاء تعطيل حلقة اللعب عبر `/loop تعطيل` لاستخدام هذه الميزة.</blockquote>"
+admin_13 : "<blockquote>الرجاء استخدام أرقام رقمية لمسارات محددة ، مثل 1 أو 2 أو 4 وما إلى ذلك</blockquote>"
+admin_14 : "<blockquote>يجب توفر اغنيتين على الاقل في قائمه التشغيل للتخطي المحدد ، تحقق من القائمه /queue</blockquote>"
+admin_15 : "<blockquote>لا توجد مسارات كافية في قائمة الانتظار للقيمة التي قدمتها. الرجاء اختيار الأرقام بين 1 و {0}</blockquote>"
+admin_16 : "<blockquote>فشل التخطي إلى مسار معين.\n\n تحقق من قائمة الانتظار اليسرى بحلول /queue</blockquote>"
+admin_17 : "<blockquote>{0}.. انتظر قليلًا</blockquote>"
+admin_18 : "<blockquote>لم أجد قائمه الادمنية\n\n يرجى استخدام الامر  /admincache أو /reload</blockquote>"
+admin_19 : "<blockquote>يجب ان تكون مشرف مع صلاحية المكالمات لتقوم بهذه المهمة .\nاذا  انت مشرف بالفعل, ترسيت قائمه الادمنية /admincache </blockquote>"
+admin_20 : "<blockquote>تم ترسيت قائمة الادمنية.</blockquote>"
+admin_21 : "<blockquote>لا يوجد شيء في قائمه الانتظار </blockquote>"
+admin_22 : "<blockquote>فشل التبديل العشوائي. \n\n تحقق من قائمة الانتظار: /queue</blockquote>"
+admin_23 : "<blockquote>** تم ترتيب قائمة الانتظار عشوائيًا حسب {0} ** \n\n تحقق من ترتيب قائمة الانتظار : /queue</blockquote>"
+admin_24 : "<blockquote>**إستعمال:**\n/loop [تمكين / تعطيل] أو [رقم بين 1-10] \n\n** مثال: ** /loop 5</blockquote>"
+admin_25 : "<blockquote>العجلة فُعلت من {0} الى **{1}** مرات . البوت سيقوم باعادة تشغيل الموسيقى المختارة  **{1}** مرة </blockquote>"
+admin_26 : "<blockquote>الرجاء اختيار رقم بين 1-10 لتفعيل مود الحلقة </blockquote>"
+admin_27 : "<blockquote>تم تعطيل مود الحلقة</blockquote>"
+admin_28 : "<blockquote>**إستعمال:**\n/seek or /seekback [المدة بالثواني]</blockquote>"
+admin_29 : "<blockquote>الرجاء استخدام عدد الثواني المدة مثل 10-20-30 ثانية للتلاعب</blockquote>"
+admin_30 : "<blockquote>آسف ولكن لا يمكنك البحث عن البث الجاري تشغيله. يمكن فقط تخطيها أو إيقافها.</blockquote>"
+admin_31 : "<blockquote>البوت غير قادر على التغيير بسبب المدة الطويلة المعطاة. تحتاج إلى التغيير عن مدة أقل وتذكر أنه يتبقى وقت قدره 10 ثوانٍ بعد التلاعب .\n\n يتم التشغيل حاليًا ** {0} ** دقيقة من ** {1} ** دقيقة</blockquote>"
+admin_32 : "<blockquote>الرجاء الانتظار ... يتم الامر .</blockquote>"
+admin_33 : "<blockquote>تم التلاعب في البث و وصل إلى {0} دقيقة</blockquote>"
+admin_34 : "<blockquote>فشل الامر !.</blockquote>"
+
+# Bot 
+
+# Start
+start_1 : "<blockquote>ها يـ؏ـُمريـہ هياتني يم الفخمين <emoji id=\"6197426719075342898\">😔</emoji><emoji id=\"5397971251873873206\">🖤</emoji>{0}.\n\n {1} يعمل الان <emoji id=\"6528049652616923527\">✨</emoji> .\n\n تعرف على ما يمكنني فعله من خلال الضغط على زر **الاوامر** في الاسفل أو إضبط اعدادات البوت في مجموعتك من خلال زر **الاعدادات** <emoji id=\"6172610144635983353\">🫂</emoji><emoji id=\"6201763545122609648\">♥️</emoji>.</blockquote>"
+start_2 : "<blockquote>** أهلا عزيزي انا بوت اسمي {0}**.\n\nوظيفتي هي تشغيل الاغاني ومقاطع الفيديو في المكالمات بصلاحيات متطورة ويمكنك التحكم بشكل كامل على البوت من خلال الاوامر والشرح المبسط <emoji id=\"6197426719075342898\">🫂</emoji><emoji id=\"5451885057222403366\">🌚</emoji>.</blockquote>"
+start_3 : "<blockquote>مرحبا بـ {0}\n\n لا احتاج أي  **اذونات مشرفين ** للعمل ( حتى أطلب منك ذلك ).\n\n يوزر المساعد :- @{1}\nايدي المساعد:- {2}</blockquote>"
+start_4 : "<blockquote>انضم مالك {0} [{1}] للتو إلى محادثتك.</blockquote>"
+start_5 : "<blockquote>انضم عضو من {0} المطورين [{1}] للتو إلى محادثتك.</blockquote>"
+start_6 : "<blockquote><emoji id=\"5357317569650911348\">❗</emoji>️ **احتاج ان تكون المجموعة خارقة** <emoji id=\"5098308531778486912\">❗</emoji>️\n\nالرجاء تحويل  **مجموعتك** الى **مجموعة خارقة** ثم أضفني مجددا هنا .\n\n **كيف أحول المجموعة خارقة ؟ ?**\n<emoji id=\"85310241962127820707\">✅</emoji> اجعل سجل المحادثات  **ظاهر ** اولا.</blockquote>"
+start_7 : "<blockquote>**مجموعة محظورة **\n\n مجموعتك محظورة من قبل المطورين . الرجاء مراسلة احد المطورين لفك الحظر عنك . تحقق من  [Sudolist من هنا]({0})</blockquote>"
+
+# Help
+help_1 : "<blockquote>**انقر على الأزرار أدناه لمزيد من المعلومات.**\n\nإذا كنت تواجه أي مشكلة في الأمر ، يمكنك الاتصال بمالك البوت أو طلب الدعم من المطورين .\n\nكل الاوامر تستخدم مع الامر : /</blockquote>"
+help_2 : "<blockquote>تواصل معي مساءا للمساعدة .</blockquote>"
+
+# Settings
+setting_1 : "<blockquote><emoji id=\"6201763545122609648\">⚙️</emoji> **اعدادات بوت الميوزك **\n\n<emoji id=\"5098255325723625291\">🖇</emoji>**المجموعة:** {0}\n<emoji id=\"5407132395646246517\">🔖</emoji>**ايدي المجموعة:** `{1}`\n\n<emoji id=\"5098292962522039165\">💡</emoji>**تحكم بالازرار أدناه للتحكم باعدادات البوت .**</blockquote>"
+setting_3 : "<blockquote><emoji id=\"7535744928770794231\">⁉️</emoji> ما هذا \n\n1) مباشر: عند تفعيلها سيتم الشغيل مباشرة بأحد الاوامر فيديو او صوت .\n\n2) ازرار: عند تشغيلها سيتم ظهور الازرار عن اعطاء أمر التشغيل إن كنت تريد فيديو أم صوت .</blockquote>"
+setting_4 : "<blockquote><emoji id=\"5364026733769027361\">⁉️</emoji> ما هذا \n\n<emoji id=\"95282968352862527007\">👥</emoji> الجميع: جميع الاعضاء يستطيعون استخدام اوامر الادمن (skip, pause, resume etc) في هذه المجموعة.\n\n<emoji id=\"5397971251873873206\">🙍</emoji> الادمنية فقط: الادمنية فقط و الحسابات الموثوق بها يستطيعون استخدام اوامر الادمن .</blockquote>"
+setting_5 : "<blockquote>لم أجد حسابات موثوقه\n\nيمكنك رفع اي عضو ليستطيع استخدام اوامر الادمن من خلال  /auth وازالته باستخدام /unauth</blockquote>"
+setting_9 : "<blockquote><emoji id=\"6125239923831217642\">⁉️</emoji>ما هذا ?\n\nعند تفعيله سيقوم البوت بحذف الرسائل اللتي رسلها بعد  {0} للتأكد من بقاء مجموعتك نظيفة .</blockquote>"
+setting_10 : "<blockquote><emoji id=\"6127406790666623284\">⁉️</emoji> ما هذا ?\n\n1) المجموعة: تقوم بتشغيل الموسيقى في المجموعة حيث يتم إعطاء الأمر. \n\n2) القناة: تقوم بتشغيل الموسيقى في القناة التي تريدها. تعيين معرف القناة عبر /channelplay</blockquote>"
+setting_11 : "<blockquote><emoji id=\"5283147556077982460\">⁉️</emoji> ما هذا؟ \n\n1) الجميع: يمكن لأي شخص موجود في هذه المجموعة تشغيل الموسيقى هنا. \n\n2) المسؤول فقط: يمكن للمسؤولين فقط تشغيل الموسيقى في هذه المجموعة.</blockquote>"
+setting_12 : "<blockquote><emoji id=\"6528049652616923527\">❌</emoji> ليس لديك معرف قناة محدد لوضع القناة. يرجى تحديد مع /channelplay.</blockquote>"
+setting_13 : "<blockquote>لا استطيع تغيير وضع التشغيل والمكالمه مُشغلة ، الرجاء الايقاف من خلال  /stop.</blockquote>"
+setting_14 : "<blockquote><emoji id=\"5321114637477903967\">⁉️</emoji> ما هذا ?\n\nعند تفعيله سيقوم البوت بحذف الاوامر  (/play, /pause, /shuffle, /stop الخ..) مباشرة .\n\nالبوت سيحذف رسالة الادمن عند تنفيذ الامر مباشرة .</blockquote>"
+setting_15 : "<blockquote>فشل في حل النظير, فشل في المهمة  ، تأكد من أنك أضفت البوت في قناتك وقمت بترقيته كمسؤول.\n\nحاول اضبط /channelplay مجددا..</blockquote>"
+setting_16 : "<blockquote><emoji id=\"6125239923831217642\">⁉️</emoji> ما هذا ?\n\n عند تفعيلها سيقوم البوت بارسال كل  1-2 ساعة الاوامر للتعليم  (كيفية استخدامها, وأي الخيارات افضل والكثير من الامور ) عشوائيا.</blockquote>"
+
+
+set_cb_1 : "<blockquote>دقيقة ؏ُـمريـہ ...</blockquote>"
+set_cb_2 : "<blockquote>ثواني گلبـي هسة ادز...</blockquote>"
+set_cb_3 : "<blockquote>خادمك يروحي هسة ...</blockquote>"
+set_cb_4 : "<blockquote>تدلل פـياتيـہ دقيقة ...</blockquote>"
+set_cb_5 : "<blockquote>وتأمرني أمر آغاتي لحظة بس ...</blockquote>"
+set_cb_6 : "<blockquote>يتم الأمر.</blockquote>"
+set_cb_7 : "<blockquote>هسة اجيبلك راسهم حياتي خادمك اني .</blockquote>"
+set_cb_8 : "<blockquote>تتم الاعادة..</blockquote>"
+
+# Misc
+ustats_1 : "<blockquote>لم أجد أي مستخدم .</blockquote>"
+ustats_2 : "<blockquote>تهانينا !, لقد شغلّت **{0}** اغنية من أصل  **{1}** مرة.\n\nتوب {2} حتى الآن :\n\n</blockquote>"
+
+gstats_1 : "<blockquote>تحميل الاحصائيات العالمية ... ربما سيأخذ وقتًا ...</blockquote>"
+gstats_2 : "<blockquote>لم أجد شيء .</blockquote>"
+gstats_3 : "<blockquote>جلب احصائيات التوب  10 {0} للبوت, ربما سيأخذ وقتًا..</blockquote>"
+gstats_4 : "<blockquote>** إجمالي الطلبات للبوت: ** {0} \n\n {1} تم تشغيل ** {2} ** مقاطع صوتية حتى الآن بعدد هائل من ** {3} ** مرة. \n\n * * أهم {4} المسارات: ** \n</blockquote>"
+gstats_5 : "<blockquote>**توب {0} مجموعات من {1}:**\n\n</blockquote>"
+gstats_6 : "<blockquote>**توب {0} مستخدمين من {1}:**\n\n</blockquote>"
+gstats_7 : "<blockquote>هذه المجموعة قد شغلّت **{0}** اغنية حتى الان من أصل  **{1}** مرة . \n\n توب {2} من قام بالتشغيل في هذه المجموعة:\n\n</blockquote>"
+gstats_8 : "<blockquote>يتم جلب معلومات البوت ...</blockquote>"
+gstats_9 : "<blockquote>**توب 10 للسيرفر ** \n\n اختر من الاسفل لمعرفة التوب 10 للسيرفر كامل .</blockquote>"
+gstats_10 : "<blockquote>***توب 10 للسيرفر of {0}**\n\nاختر من الاسفل لمعرفة التوب 10 للسيرفر كامل.</blockquote>"
+gstats_11 : "<blockquote>**التوب العالمي من  {0}** \n اختر من الاسفل لمعرفة التوب 10 للسيرفر كامل. \n\n لـ  تفحص أفضل الاغاني, المجموعات, المستخدمين وبعض الاغراض الاخرى, استخدم /gstats</blockquote>"
+
+
+# Play 
+
+#Play Callback 
+playcb_1 : "<blockquote>امشي لكك هاي مو الك! ابحث عن اغنيتك الخاصه.</blockquote>"
+playcb_2 : "<blockquote>جلب المسار التالي</blockquote>"
+
+# Channel Play
+cplay_1 : "<blockquote>يمكنك تشغيل الموسيقى في قناتك من خلال هذه المحادثة [{0}] لأي قناة . \n\n**لربط قناتك :**\n`/{1} [ايدي القناة]`</blockquote>"
+cplay_2 : "<blockquote>هذه المحادثة غير مربوطة بأي قناة.</blockquote>"
+cplay_3 : "<blockquote>القناة غيرت إلى {0}\n\n__معرف القناة__: {1}</blockquote>"
+cplay_4 : "<blockquote>فشل في الوصول للقناة.\n\nتاكد من اضافه البوت للقناة ورفعه مشرف بها .\nثم ارسل  /channelplay</blockquote>"
+cplay_5 : "<blockquote>يتم دعم القنوات فقط.</blockquote>"
+cplay_6 : "<blockquote>يجب ان تكون أنت  **المالك** للقناة [{0}] لربط هذا الكروب .\n**مالك القناة:** @{1}\n\nبدلاً من ذلك ، يمكنك ربط مجموعتك بتلك القناة ثم محاولة الاتصال بها `/channelplay مرتبط`</blockquote>"
+
+#Play
+play_1 : "<blockquote><emoji id=\"5280603307646149925\">🔄</emoji> يتم التقدم... الرجاء الانتظار !</blockquote>"
+play_2 : "<blockquote>**<emoji id=\"5451885057222403366\">🏷</emoji>وضع التشغيل في القناة**\n\n<emoji id=\"5321114637477903967\">🔄</emoji> يتم الآن ... الرجاء الانتظار !\n**قناة مرتبطة:** {0}</blockquote>"
+play_3 : "<blockquote>فشلت في الوصول!</blockquote>"
+play_4 : "<blockquote><emoji id=\"6253379044746731429\">🖇</emoji> **أرنب انت مو أدمن **\nبس الادمنية والحسابات الموثوقه يكدرون يشغلون الاغاني هنا  .\n\nتكدر تخلي الكل يشغل من خلال  /playmode واذا جنت انت اصلا ادمن ارجع دز  /admincache</blockquote>"
+play_5 : "<blockquote>فشلت في الوصول للاغنية .\n\nلتفحطني لازم حجم الاغنية اقل من  100 mb</blockquote>"
+play_6 : "<blockquote>**تم تجاوز حد المدة**\n\n**المدة المسموح بها: **{0} minute(s)\n**المدة المستلمة:** {1} hour(s)</blockquote>"
+play_7 : "<blockquote> عذرا لقد وصلت للحد الاقصى في التشغيل . الكثير من المكالمات مفعلة الان. جرب تشغيل الصوتيات أو عد لاحقاً <emoji id=\"6197426719075342898\">🥲</emoji></blockquote>"
+play_8 : "<blockquote>الفديو غير مدعوم !\n\n**غير مدعوم :** {0}</blockquote>"
+play_9 : "<blockquote>بوية فحطتني سيد هواي تنزل .. الحد الاقصى للفيديو هو 1 GiB</blockquote>"
+play_10 : "<blockquote>**ميزة قائمة تشغيل يوتيوب**\n\nحدد الوضع الذي تريد تشغيل قائمة تشغيل Youtube بالكامل فيه</blockquote>"
+play_11 : "<blockquote><emoji id=\"8536402062632553351\">📎</emoji>العنوان: **{0}\n\n<emoji id=\"6210578145158895902\">⏳</emoji>المدة:** {1} Mins</blockquote>"
+play_12 : "<blockquote>**وضع Spotify Play ** \n\n تم طلبه بواسطة:- {0}</blockquote>"
+play_13 : "<blockquote>**قوائم تشغيل Apple ** \n\n تم طلبه بواسطة:- {0}</blockquote>"
+play_14 : "<blockquote>**تعذر التحقق من عنوان URL. ** \n لا تتساءل عما إذا كان عنوان url هذا ينتمي إلى أي من الأنظمة الأساسية التالية: Youtube و AppleMusic و Spotify و Resso و Soundcloud. \n\n يمكنك استخدام /stream لـ M3u8 أو الروابط البعيدة.</blockquote>"
+play_15 : "<blockquote>**تم اكتشاف البث المباشر ** \n\n اكتشفت الأنظمة ارتباط المسار الخاص بك على أنه بث مباشر. تريد أن تلعب البث المباشر ?</blockquote>"
+play_16 : "<blockquote>فشلت بإحضار معلومات الفيديو. جرب تشغيل أي اغنية اخرى.</blockquote>"
+play_17 : "<blockquote>غير قادر على تشغيل هذا النوع من استعلام سبوتيفي!\n\nيمكنني فقط تشغيل مسارات Spotify والألبومات والفنانين وقوائم التشغيل </blockquote>"
+play_18 : "<blockquote>**لا توجد مكالمه في المجموعة**\n\nلاستخدام اللعب بالقوة ، يجب أن تكون هناك محادثة صوتية نشطة جارية في مجموعتك. ** Force Play ** يوقف مسار التشغيل في الدردشة الصوتية ويبدأ تشغيل المسار الذي تم البحث عنه على الفور دون إزعاج/clearing طابور.</blockquote>"
+
+
+#Playlist
+playlist_1 : "<blockquote>**الاستخدام:** /play [اسم الموسيقى أو رابط يوتيوب أو الرد على الصوت]\n\nإذا كنت تريد تشغيل قائمة تشغيلك في السيرفر ! اضغط على الزر أدناه.</blockquote>"
+playlist_2 : "<blockquote>الحصول على قائمة التشغيل الخاصة بك. أرجو الإنتظار</blockquote>"
+playlist_3 : "<blockquote>ليس لديك قائمة تشغيل على خادم البوت.</blockquote>"
+playlist_4 : "<blockquote>قائمة التشغيل التي تم جلبها: \n\n</blockquote>"
+playlist_5 :  "<blockquote>المدة- {0} دقيقة</blockquote>"
+playlist_6 : "<blockquote>تواصل معي في محادثة خاصة لحذف قوائم التشغيل.</blockquote>"
+playlist_7 : "<blockquote>المسارات داخل قائمة التشغيل: {0}\n\nاضغط على الأزرار لحذف مسار معين في قائمة التشغيل الخاصة بك.\n\nلحذف قائمة التشغيل بأكملها: اضغط على زر **مسح كل قائمة التشغيل **.</blockquote>"
+playlist_8 : "<blockquote>موجود بالفعل\n\nهذا المسار موجود في قائمة التشغيل الخاصة بك.</blockquote>"
+playlist_9 : "<blockquote>آسف! يمكن أن يكون لديك {0} موسيقى فقط في قائمة التشغيل.</blockquote>"
+playlist_10 : "<blockquote>إضافة قائمة التشغيل\n\n {0} \n مضافة إلى قائمة التشغيل الخاصة بك.</blockquote>"
+playlist_11 : "<blockquote>تم حذف مسارك بنجاح.</blockquote>"
+playlist_12 : "<blockquote>فشل حذف المسار الخاص بك.</blockquote>"
+playlist_13 : "<blockquote>حذف كل قوائم التشغيل الخاصة بك من الخادم. </blockquote>"
+playlist_14 : "<blockquote>**هل تريد بالتأكيد حذف قائمة التشغيل بأكملها؟ **\n\nستفقد قائمة التشغيل الخاصة بك ولا يمكن استردادها لاحقًا.</blockquote>"
+playlist_15 : "<blockquote>[مشاهدة قائمة التشغيل بأكملها]({0})</blockquote>"
+playlist_16 : "<blockquote>قائمة التشغيل في قائمة الانتظار:</blockquote>"
+playlist_17 : "<blockquote>موقف في قائمة الانتظار-</blockquote>"
+playlist_18 : "<blockquote>[مشاهدة قائمة تشغيلك بأكملها]({0}) \n\n آخر موضع في قائمة التشغيل : **{1}**</blockquote>"
+
+#Playmode
+playmode_1 : "<blockquote>حدد الوضع الذي تريد تشغيل الطلبات فيه داخل مجموعتك [{0}].</blockquote>"
+playmode_2 : "<blockquote>تم تغيير الإعدادات وحفظها بنجاح بواسطة {0}</blockquote>"
+
+#Stream 
+str_1 : "<blockquote>يرجى توفير روابط M3u8 أو روابط الفهرس</blockquote>"
+str_2 : "<blockquote><emoji id=\"5356431235768414534\">✅</emoji>تم التحقق من دفق صالح \n\n الرجاء انتظار ارتباط المعالجة..</blockquote>"
+str_3 : "<blockquote>غير قادر على دفق يوتيوب البث المباشر. لم يتم العثور على تنسيق مباشر</blockquote>"
+
+#TopPlay
+tracks_1 : "<blockquote>** جارٍ معالجة {0} أفضل 10 قوائم تشغيل **\n قد يستغرق ذلك بعض الدقائق (حوالي 3-4 دقائق) .. يُرجى الانتظار ... \n\n ** <emoji id=\"5364118624594326109\">👤</emoji> تم طلبه بواسطة: ** {1} \n\n تحقق أفضل 10 مسارات/gstats</blockquote>"
+tracks_2 : "<blockquote>** خطأ ** \n\nلا توجد ** {0} أفضل 10 قائمة تشغيل ** على خوادم الروبوت. يرجى محاولة أي قائمة تشغيل أخرى</blockquote>"
+
+# TOOLS
+
+#Lyrics
+lyrics_1 : "<blockquote>**الاستخدام:**\n\n/lyrics [ اسم الاغنية ]</blockquote>"
+lyrics_2 : "<blockquote>يتم البحث ...</blockquote>"
+lyrics_3 : "<blockquote><emoji id=\"85310241962127820707\">❌</emoji> فشلت في الحصول على الكلمات<emoji id=\"6127636064610818291\">😭</emoji>.\n\n<emoji id=\"6197420598746945336\">💡</emoji>**جرب البحث عن :** {0}</blockquote>"
+lyrics_4 : "<blockquote>اضغط على الزر ادناه للبخث عن الكلمات لتجنب السبام في مجموعتك .</blockquote>"
+
+#Ping
+ping_1 : "<blockquote>يتم الحساب!!!!</blockquote>"
+ping_2 : "<blockquote>{0} \n يعمل بشكل جيد مع الاتصال من \n `{1}` في الثانية.\n\nالجهوزية بوت هو {2} \n واستخدم ما مجموعه {3} تخزين الخادم.\n تحميل وحدة المعالجة المركزية حوالي {4} \n مع استهلاك  {5} \n الرام العميل لديه أيضًا اختبار اتصال جيد لـ `{6}` في الثانية.</blockquote>"
+
+
+# Song
+song_1 : "<blockquote>يمكنك التنزيل من يوتيوب فقط في محادثة خاصة. الرجاء ارسال الامر في خاص البوت.</blockquote>"
+song_2 : "<blockquote>**مثال:**\n\n/song [الاسم] or [الرابط من يوتيوب]</blockquote>"
+song_3 : "<blockquote>تم كشف الرابط. انا غير قادر على تنزيل البث المباشر. </blockquote>"
+song_4 : "<blockquote>**<emoji id=\"6298486951657867390\">🔗</emoji>العنوان:**- {0}\n\nاختر ما تريد تنزيله .</blockquote>"
+song_5 : "<blockquote>رابط غير صالح</blockquote>"
+song_6 : يتم الجلب..\n\nيرجى الانتظار .."
+song_7 : "<blockquote>لقد فشلت .. جرب مقطع اخر.</blockquote>"
+song_8 : "<blockquote>يتم التنزيل\n\nربما يكون التنزيل بطيئا نوعا ما. الرجاء الانتظار ..</blockquote>"
+song_9 : "<blockquote>فشلت في تنزيل الاغنية -DL\n\n**Reason:** {0}</blockquote>"
+song_10 : "<blockquote>فشلت في رفع الملف الى تليغرام .. اعد المحاولة.</blockquote>"
+song_11 : "<blockquote>يتم الرفع\n\n ربما يكون الرفع بطيئا . الرجاء الانتظار ..</blockquote>"
+
+# Tools - Queue
+queue_1 : "<blockquote>يرجى الانتظار ...</blockquote>"
+queue_2 : "<blockquote>قائمه الانتظار فارغة <emoji id=\"5098601044821148525\">🤐</emoji></blockquote>"
+queue_3 : "<blockquote><u>**رقم.:</u>**  [تفحص المزيد من المسارات من هنا ({0})</blockquote>"
+queue_4 : "<blockquote><emoji id=\"6294202146254493635\">⏳</emoji> اضيفت للقائمه كـ **#{0}\n\n<emoji id=\"8536402062632553351\">💡</emoji>العنوان:** {1}\n**<emoji id=\"6208343392070409520\">⏱</emoji>المدة:** {2}\n<emoji id=\"5098108304698114895\">👤</emoji>**طلب من :** {3}</blockquote>"
+queue_5 : "<blockquote>لا توجد سوى اغنية واحدة في في القائمه ، الرجاء تشغيل المزيد أولا </blockquote>"
+
+# All Streaming Lines
+stream_1 : "<blockquote><emoji id=\"6127656684748806757\">📡</emoji> **بدأ البث** <emoji id=\"3536432725263072908\">💡</emoji>\n\n<emoji id=\"5033052035633644551\">👤</emoji>**طلبت من :** {0}\n<emoji id=\"5337260982911655617\">🔦</emoji>**معلومات اكثر: **[اضغط هنا]({1})</blockquote>"
+stream_2 : "<blockquote><emoji id=\"6199293238847740460\">📡</emoji> **بدأ البث من الرابط ** <emoji id=\"6197420598746945336\">💡</emoji>\n\n<emoji id=\"5357317569650911348\">👤</emoji>**طلبت بواسطة:** {0}</blockquote>"
+stream_3 : "<blockquote><emoji id=\"6127656684748806757\">📡</emoji> **بدا البث** <emoji id=\"6208343392070409520\">💡</emoji>\n\n**<emoji id=\"5357317569650911348\">🏷</emoji>العنوان:** {0}\n<emoji id=\"6210578145158895902\">⌛</emoji>️**المدة**: {1}\n<emoji id=\"8536402062632553351\">👤</emoji>**طلبت من :** {2}</blockquote>"
+stream_4 : "<blockquote><emoji id=\"6125239923831217642\">📡</emoji> **بدأ البث** <emoji id=\"6298486951657867390\">💡</emoji>\n\n**<emoji id=\"3536432725263072908\">🏷</emoji>العنوان:** [{0}]({1})\n<emoji id=\"5283147556077982460\">⌛</emoji>️**المدة**: {2}\n<emoji id=\"8536390535369827560\">👤</emoji>**بطلب من:** {3}</blockquote>"
+
+# Inline Buttons
+
+#General Buttons
+CLOSE_BUTTON  : "🗑 اغلاق "
+CLOSEMENU_BUTTON  : "🗑 اغلاق القائمة"
+BACK_BUTTON : "⬅ عودة"
+UNBAN_BUTTON : "🗑 الغاء الحظر "
+
+#Lyrics
+L_B_1 : "🚀 الذهاب للخاص"
+
+# Start
+S_B_1 : "🗒 الاوامر"
+S_B_2 : "⚙️ الاعدادات"
+S_B_3 : "📨 اصنع بوتك"
+S_B_4 : "💻 سوࢪس ماغي"
+S_B_5 : "✚ اضفني لمجموعتك"
+S_B_6 : "اصنع بوتك الخاص 🌟"
+S_B_7 : "👤 المطور"
+S_B_8 : "⚙️ قائمة الاوامر."
+
+#Help 
+H_B_1 : "اوامر الادمن"
+H_B_2 : "اوامر التشغيل"
+H_B_3 : "اوامر البوت"
+H_B_4 : "اوامر اضافية"
+H_B_5 : "اغلاق القائمه"
+H_B_6 : "اوامر المطورين"
+
+#PlayMode
+PM_B_1 : "تشغيل مباشر"
+PM_B_2 : "ازرار انلاين"
+PM_B_3 : "تشغيل في القناة"
+
+#Play
+P_B_1 : "🎵 تشغيل صوت"
+P_B_2 : "🎥 تشغيل فيديو"
+P_B_3 : "🏮 بدأ بث مباشر"
+P_B_4 : "🎵 قائمة تشغيلي"
+
+#Playlist
+PL_B_1 : "🚀 قائمة التشغيل"
+PL_B_2 : "✚ اضف لقائمه التشغيل"
+PL_B_3 : "✚ اوامر اضافية"
+PL_B_4 : "📡 وضع التشغيل"
+PL_B_5 : "🔄 مسح كل قائمة التشغيل"
+PL_B_6 : "↗️ مسح قائمه التشغيل"
+PL_B_7 : "❗️ نعم انا متاكد ، احذفها "
+PL_B_8 : "🔢  التوب 10"
+PL_B_9 : "🤖 تشغيل التوب 10 اغاني"
+PL_B_10 : "🏘 تشغيل توب 10 لهذا الكروب "
+PL_B_11 : "👤 تشغيل توب 10 الخاصة بي "
+
+#Settings
+ST_B_1 : "🔊 جودة الصوت"
+ST_B_2 : "🎥 جودة الفيديو"
+ST_B_3 : "🎩 المعتمدين"
+ST_B_4 : "📱 لوحة التحكم"
+ST_B_5 : "▶️ وضع التشغيل"
+ST_B_6 : "🇮🇶 اللغة "
+ST_B_7 : "🔄 الوضع النظيف"
+ST_B_8 : "{0} جودة ضعيفة "
+ST_B_9 : "{0} جودة متوسطة "
+ST_B_10 : "{0} جودة عالية "
+ST_B_11 : "{0} جودة ضعيفة "
+ST_B_12 : "{0} جودة متوسطة "
+ST_B_13 : "{0} جودة عالية "
+ST_B_14 : "✅ تفعيل"
+ST_B_15 : "❌ تعطيل "
+ST_B_16 : "👤 المشرفين"
+ST_B_17 : "👥 للجميع "
+ST_B_18 : "📋 قائمة المعتمدين"
+ST_B_19 : "🔎 وضع البحث"
+ST_B_20 : "✅ مباشر"
+ST_B_21 : "✅ زر انلاين"
+ST_B_22 : "👨‍⚖️ اوامر الادمن"
+ST_B_23 : "🏘 المجموعة "
+ST_B_24 : "🏷 القناة "
+ST_B_25 : "🫂 اوامر التشغيل"
+ST_B_26 : "🗑 مسح الاوامر"
+ST_B_27 : "🧑‍🚀 وضع الاقتراحات"
+
+#Song
+SG_B_1 : "↗️ فتح في محادثة خاصة"
+SG_B_2 : "🔊 صوت"
+SG_B_3 : "🎥 فيديو"
+
+#Stats
+SA_B_1 : "📢 توب 10 مجموعات"
+SA_B_2 : "🔢 توب 10 اغاني"
+SA_B_3 : "🧛 توب 10 مستخدمين"
+SA_B_4 : "🏷 توب 10 هنا"
+SA_B_5 : "💡 المعلومات العامة"
+SA_B_6 : "👤 حالة المستخدم"
+SA_B_7 : "🔢 توب 10 عالميا"
+SA_B_8 : "🤖 معلومات البوت"
+
+#Queue
+QU_B_1 : "📑 قائمة الانتظار"
+QU_B_2 : "شُغلت {0} من اصل {1} دقيقة"
+
+# Sudo Users [ If you are translating this to some other language .. you can leave all these strings in english language]
+
+#Sudo
+sudo_1 : "<blockquote>{0} المستخدم مطور مسبقًا.</blockquote>"
+sudo_2 : "<blockquote>أضيف **{0}** الى مطورين البوت.</blockquote>"
+sudo_3 : "<blockquote>لست جزء من مطورين البوت.</blockquote>"
+sudo_4 : "<blockquote>تم حذفه من المطورين</blockquote>"
+sudo_5 : "<blockquote><emoji id=\"5356431235768414534\">⭐</emoji>️<u> **المالكين:**</u>\n</blockquote>"
+sudo_6 : "<blockquote>\n<emoji id=\"5357570547519613136\">⭐</emoji>️<u> **المطورين:**</u>\n</blockquote>"
+sudo_7 : "<blockquote>لا يوجد مطورين</blockquote>"
+
+#Block
+block_1 : "<blockquote>{0} المستخدم محظور مسبقا.</blockquote>"
+block_2 : "<blockquote>أضيف **{0}** للمحظورين من البوت.المستخدم الان ممنوع من استخدام اي امر في البوت تحت أي ظروف .\n\nCتفحص المستخدمين المحظورون: /blockedusers</blockquote>"
+block_3 : "<blockquote>المستخدم ليست عليه أي قيود مسبقا.</blockquote>"
+block_4 : "<blockquote>تم حذف المستخدم من قائمه المحظورين. المستخدم الان حُر.</blockquote>"
+block_5 : "<blockquote>لا يوجد مستخدمين محظورون</blockquote>"
+block_6 : "<blockquote>جلب المستخدمين المحظورين ... الرجاء الانتظار </blockquote>"
+block_7 : "<blockquote>**المستخدمين المحظورون:**\n\n</blockquote>"
+
+#Blacklist Chats
+black_1 : "<blockquote>**مثال:**\n/blacklistchat [ايدي المجموعة]</blockquote>"
+black_2 : "<blockquote>المجموعة بالفعل محظورة.</blockquote>"
+black_3 : "<blockquote>تم حظر المجموعة <emoji id=\"6125150373763094821\">✅</emoji></blockquote>"
+black_4 : "<blockquote>**مثال:**\n/whitelistchat [ايدي المجموعة]</blockquote>"
+black_5 : "<blockquote>المجموعة ليست بالقائمه اساسا.</blockquote>"
+black_6 : "<blockquote>تم ازالة المجموعة من القائمه المحظورة</blockquote>"
+black_7 : "<blockquote>**المجموعات المحظورة:**\n\n</blockquote>"
+black_8 : "<blockquote>لا توجد مجموعات محظورة</blockquote>"
+
+#videolimit
+vid_1 : "<blockquote>**مثال:**\n/set_video_limit [رقم الحد الاقصى المجموعات اللي تشغل فيديو نفس الوقت ] أو [disable]</blockquote>"
+vid_2 : "<blockquote>يرجى استخدام الأرقام الرقمية لتحديد الحد.</blockquote>"
+vid_3 : "<blockquote>تم تغيير الحد الاقصى لبث الفيديو الى {0} مجموعة.</blockquote>"
+vid_4 : "<blockquote>تم تعطيل الحد الاقصى ، اصبحت عامة</blockquote>"
+
+#maintenance
+maint_1 : "<blockquote>**إستعمال:**\n/maintenance [disable | enable]</blockquote>"
+maint_2 : "<blockquote>ممكن للصيانة</blockquote>"
+maint_3 : "<blockquote>وضع الصيانة معطل</blockquote>"
+
+#log
+log_1 : "<blockquote>**إستعمال:**\n/logger [enable | disable]</blockquote>"
+log_2 : "<blockquote>تمكين التسجيل</blockquote>"
+log_3 : "<blockquote>تسجيل تعطيل</blockquote>"
+
+#videomode
+vidmode_1 : "<blockquote>**الاستعمال:**\n/videomode [download|m3u8]</blockquote>"
+vidmode_2 : "<blockquote>تم تعيين وضع تشغيل الفيديو على أنه برنامج تنزيل. سيقوم البوت بتنزيل المسارات الآن.</blockquote>"
+vidmode_3 : "<blockquote>تم تعيين وضع تشغيل الفيديو على m3u8. الروبوت سيتم تشغيل المسارات مباشرة الآن.</blockquote>"
+
+#broadcast
+broad_1 : "<blockquote>**تتم الاذاعه في {0}  مجموعة مع  {1} التثبيت من قبل البوت .**</blockquote>"
+broad_2 : "<blockquote>يتم اذاعه الحساب المساعد...</blockquote>"
+broad_3 : "<blockquote>**بث المساعد:**\n\n</blockquote>"
+broad_4 : "<blockquote>الحساب المساعد  {0} اذاع في {1} مجموعة\n</blockquote>"
+broad_5 : "<blockquote>**مثال**:\n/broadcast [الاذاعة] او [بالرد على الرسالة]</blockquote>"
+broad_6 : "<blockquote>الرجاء كتابة الاذاعه مع الامر.</blockquote>"
+broad_7 : "<blockquote>**اذيعت الرسالة الى {0} مشترك.**</blockquote>"
+
+#Heroku
+heroku_1 : "<blockquote>Please make sure your Heroku API Key, Your App name are configured correctly in the heroku</blockquote>"
+heroku_2 : "<blockquote>You can only get logs of Heroku Apps</blockquote>"
+heroku_3 : "<blockquote>**Usage:**\n/get_var [Var Name]</blockquote>"
+heroku_4 : "<blockquote>Unable to find any such var.</blockquote>"
+heroku_5 : "<blockquote>.env file not found.</blockquote>"
+heroku_6 : "<blockquote>**Usage:**\n/del_var [Var Name]</blockquote>"
+heroku_7 : "<blockquote>{0} Deleted.</blockquote>"
+heroku_8 : "<blockquote>**Usage:**\n/set_var [Var Name] [Var Value]</blockquote>"
+heroku_9 : "<blockquote>{0} has been updated successfully</blockquote>"
+heroku_10 : "<blockquote>{0} has been added successfully</blockquote>"
+heroku_11 : "<blockquote>Only for Heroku Apps</blockquote>"
+heroku_12 : "<blockquote>Checking Heroku Usage. Please Wait</blockquote>"
+heroku_13 : "<blockquote>Checking for available updates...</blockquote>"
+heroku_14 : "<blockquote>Git Command Error</blockquote>"
+heroku_15 : "<blockquote>Invalid Git Repsitory</blockquote>"
+
+#Private bot mode
+pbot_1 : "<blockquote>**إستعمال:**\n/authorize [معرف الدردشة]</blockquote>"
+pbot_2 :  "<blockquote>**إستعمال:**\n/unauthorize [معرف الدردشة]</blockquote>"
+pbot_3 : "<blockquote>تمت إضافة الدردشة المعينة إلى القائمة المصرح بها</blockquote>"
+pbot_4 : "<blockquote>تمت إزالة الدردشة المعطاة من القائمة المصرح بها</blockquote>"
+pbot_5 : "<blockquote>الدردشة موجودة بالفعل في القائمة المصرح بها</blockquote>"
+pbot_6 : "<blockquote>لا توجد مثل هذه الدردشة في القائمة المصرح بها</blockquote>"
+pbot_7 : "<blockquote>فشل التحقق من معرف الدردشة.\n\nتأكد من أنه رقمي وصحيح. لا تستخدم اسم مستخدم الدردشة أو الروابط.</blockquote>"
+pbot_8 : "<blockquote>الرجاء الانتظار .... إحضار الدردشات المصرح بها.</blockquote>"
+pbot_9 : "<blockquote>**<b>الدردشات التي تم جلبها:</b>**\n\n</blockquote>"
+pbot_10 : "<blockquote>دردشة خاصة</blockquote>"
+pbot_11 : "<blockquote>لم يتم العثور على محادثات مصرح بها</blockquote>"
+pbot_12 : "<blockquote>وضع الروبوت الخاص معطل.\n\nلاستخدام الروبوت الخاص بك كبوت خاص ، تأكد من التعيين **PRIVATE_BOT_MODE** = **True**</blockquote>"
+pbot_13 : "<blockquote>\n**<b>الدردشات التي لم يتم إحضارها:</b>**\n\n</blockquote>"
+
+
+#Gbanned
+gban_1 : تريد تحظر روحك ؟ الحمد لله والشكر !"
+gban_2 : "<blockquote>يعني هسة لازم احظر نفسي ؟ ضحكك</blockquote>"
+gban_3 : "<blockquote>كل عقلك تريد تحظرة وهو مطور ?</blockquote>"
+gban_4 : "<blockquote>{0} هو بالفعل **محظور** من البوت.</blockquote>"
+gban_5 : "<blockquote>**جاري اعادة ضبط المحظورين {0}**\n\nالوقت المتوقع : {1}.</blockquote>"
+gban_6 : "<blockquote>**تم حظره**\n\nمحظور  **{0}** من **{1}** مجموعة .</blockquote>"
+gban_7 : "<blockquote>{0} غير محظور من البوت حتى الان .</blockquote>"
+gban_8 : "<blockquote>**يتم الان {0}**\n\nالوقت المتوقع : {1}.</blockquote>"
+gban_9 : "<blockquote>**تم الغاء حظره **\n\nغير محظور **{0}** في **{1}** مجموعه.</blockquote>"
+gban_10 : "<blockquote>الله وكيلك فارغه .</blockquote>"
+gban_11 : "<blockquote>يرجى الانتظار قليلا.. يتم جلب القائمه</blockquote>"
+
+#Suggestions
+sug_0 : "<blockquote><emoji id=\"6176895538449880631\">❓</emoji>**هل تعلم ?**\n\n<emoji id=\"85310241962127820707\">✅</emoji> </blockquote>"
+sug_1 : "<blockquote>يمكنك تشغيل الاغاني بوضعين مختلفين  **وضع البحث** i.e. الوضع المباشر وازرار الانلاين .\n\nغير في الاوامر من  /playmode</blockquote>"
+sug_2 : "<blockquote>يمكنك تشغيل الموسيقى بوضعين  **اوامر التشغيل** i.e. التحكم للادمنية فقط والتحكم لجميع الاعضاء .\n\nغير الضوع من خلال  /playmode</blockquote>"
+sug_3 : "<blockquote>يمكنك تشغيل الموسيقى في **القنوات**.\n\nضع ايدي القناة /channelplay وشغل من أمر /cplay </blockquote>"
+sug_4 : "<blockquote>لا أحد يستطيع ان يتحكم في الاوامر حتى يضاف الى** قائمه المعتمدين**. \nاضف اي شخص للقائمه من خلال /auth , امسحه بـ /unauth وتفقد القائمه من خلال /authusers</blockquote>"
+sug_5 : "<blockquote>اذا تم تفعيل  **وضع التنظيف**.\nسيحذف البوت رسائله بعد 5 دقائق للتاكد من بقاء محادثتك نظيفة n.\n\nتمكين أو تعطيل الوضع النظيف من/settings [__Enabled by default__]</blockquote>"
+sug_6 : "<blockquote>يمكنك أيضًا تشغيل مسارات وقوائم تشغيل ** Spotify **. \n\n ابدأ اللعب الآن /play [Spotify Link]</blockquote>"
+sug_7 : "<blockquote>يمكنك أيضًا تشغيل مسارات وقوائم تشغيل ** Apple Music **. \n\n ابدأ اللعب الآن باستخدام /play [Apple Link]</blockquote>"
+sug_8 : "<blockquote>يمكنك أيضًا تشغيل مسارات وقوائم تشغيل ** Resso Music **. \n\n ابدأ اللعب الآن باستخدام /play [Resso Link]</blockquote>"
+sug_9 : "<blockquote>يمكنك أيضًا تشغيل مسارات وقوائم تشغيل ** Sound Cloud **. \n\n ابدأ اللعب الآن /play [SoundCloud Link]</blockquote>"
+sug_10 : "<blockquote>يمكنك تشغيل ** مقاطع فيديو ** في الدردشة الصوتية عبر /vplay [Video Name] or /play -v [Video Name]</blockquote>"
+sug_11 : "<blockquote>يمكنك ضبط ** جودة الصوت ** للدردشة الصوتية على منخفضة أو متوسطة أو عالية. \n\n اضبط الجودة عبر/settings</blockquote>"
+sug_12 : "<blockquote>يمكنك ضبط ** جودة الفيديو ** للدردشة الصوتية على منخفضة أو متوسطة أو عالية. \n\n اضبط الجودة عبر /settings</blockquote>"
+sug_13 : "<blockquote>يمكنك التحقق من ** الإحصائيات ** الخاصة بك على الروبوت مثل أفضل 10 مسارات تم تشغيلها. \n\n احصل على الإحصائيات: /gstats </blockquote>"
+sug_14 : "<blockquote>يمكنك التحقق من ** إحصائيات المجموعة ** على الروبوت مثل أفضل 10 مسارات تم تشغيلها. \n\n احصل على الإحصائيات: /gstats </blockquote>"
+sug_15 : "<blockquote>يمكنك التحقق من ** الإحصائيات العالمية ** الخاصة بالبوت مثل أفضل 10 مستخدمين وأهم 10 محادثات وأهم 10 مسارات وما إلى ذلك. \ n \ n تحقق من الإحصائيات: /gstats </blockquote>"
+sug_16 : "<blockquote>يمكنك الآن كتم صوت الموسيقى قيد التشغيل في الدردشة الصوتية. \n\n أمر: /mute</blockquote>"
+sug_17 : "<blockquote>يمكنك الآن إلغاء كتم صوت وكتم صوت الموسيقى التي يتم تشغيلها في الدردشة الصوتية. \n\n الأمر: /mute and /unmute</blockquote>"
+sug_18 : "<blockquote>يمكنك البحث معنا أيضًا في كلمات الموسيقى .. \n\n الأمر: /lyrics [Music Name]</blockquote>"
+sug_19 : "<blockquote>يمكنك تنزيل الموسيقى أو الفيديو من الروبوت من خلال Youtube. \n\n الأمر: /song [اسم الموسيقى]</blockquote>"
+sug_20 : "<blockquote>يمكنك الحصول على قائمة كاملة بالأوامر التي أقبلها. \n\n الأمر: /help</blockquote>"
+sug_21 : "<blockquote>يحتوي الروبوت على خيار قائمة تشغيل على جانب الخادم. \n\n يمكنك إضافة موسيقى في قائمة التشغيل وتشغيلها جميعًا معًا عبر /play</blockquote>"
+sug_22 : "<blockquote>يمكنك الآن تبديل الموسيقى في قائمة الانتظار على الروبوت عشوائيًا.\n\n الأمر: /shuffle</blockquote>"
+sug_23 : "<blockquote>يمكنك التحقق من قائمة انتظار الموسيقى.\n\nالأمر: /queue</blockquote>"
+sug_24 : "<blockquote>يمكنك التحقق من المالك ومستخدمي sudo الذين يديرونني. \n\n الأمر: /sudolist</blockquote>"
+sug_25 : "<blockquote>يحتوي البوت على ميزة تسمى ** وضع حذف الأوامر **. يقوم بحذف الأوامر المنفذة الخاصة به تلقائيًا. \ n \ n تمكين أو تعطيل الحذف من /settings [__Enabled by default__]</blockquote>"
+sug_26 : "<blockquote>يمكنك تغيير لغة الروبوت إلى اللغات المتاحة لفهمها بسهولة.\n\nأمر: /language</blockquote>"
+sug_27 : "<blockquote>يحتوي الروبوت على ميزة تسمى ** قوة اللعب **.\n\n** قوة اللعب ** يوقف مسار التشغيل في الدردشة الصوتية ويبدأ في تشغيل المسار الذي تم البحث عنه على الفور دون إزعاج / مسح قائمة الانتظار. \ n \ n الأمر: /playforce</blockquote>"
+

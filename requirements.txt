@@ -1,0 +1,26 @@
+# pyrofork is a maintained drop-in fork of pyrogram (same `pyrogram` import
+# namespace/API). Switched from pyrogram==2.0.106 (TL layer 158, from before
+# Telegram's native "Quote" feature existed) because that old layer's
+# MessageEntityBlockquote has no `collapsed` flag and modern Telegram clients
+# silently don't render it as the Quote UI -- messages still send fine (which
+# is why premium custom emoji, an older feature, worked while the quote
+# strip never appeared). pyrofork tracks current TL layers (220+) with full
+# blockquote/expandable-quote support.
+pyrofork>=2.3.0
+tgcrypto
+py-tgcalls==2.1.1
+yt-dlp>=2024.11.1
+curl_cffi>=0.7.0
+Pillow>=10.0.0
+aiohttp
+aiofiles
+motor
+pymongo
+python-dotenv
+httpx
+lyricsgenius
+mutagen
+psutil
+colorlog
+uvloop
+PyYAML

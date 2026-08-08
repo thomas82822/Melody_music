@@ -1,0 +1,320 @@
+name : 🐶 Cheems
+
+# General Strings
+general_1 : "<blockquote>Remply to a usemr's messamge or gimve usemrname/user_id.</blockquote>"
+general_2 : "<blockquote>Erromr! Wromng Usamge of command.</blockquote>"
+general_3 : "<blockquote>Some **emxception occumred** whimle promcessing youmr quemry.\n\nException typem:- {0}</blockquote>"
+general_4 : "<blockquote>Youm're an anomnymous admin in thims chamt groump!\nRevert bamck to usemr accoumnt from admin rimghts.</blockquote>"
+general_5 : "<blockquote>Youm neemd to be admin wimth manamge voimce chamt rimghts to perfomrm thims actiomn.</blockquote>"
+general_6 : "<blockquote>Bomt isn't streaming on voimce chamt.</blockquote>"
+
+# Classes - Telegram.py
+tg_1 : "<blockquote>Bomt is **omverloaded** wimth downloamds rimght nomw.\n\n**Try aftemr:** {0} (__emxpected time__)</blockquote>"
+tg_2 : "<blockquote>Faimled to downloamd the mediam from Telemgram.</blockquote>"
+
+# Core - Call.py
+call_1 : "<blockquote>Bomt requimres **Amdmin** permissiomn to invimte assimstant accoumnt to youmr chamnnel.</blockquote>"
+call_2 : "<blockquote>Assimstant is bannemd in youmr groump or chamnnel, pleamse unbamn.\n\n**Assistant usemrname:** @{0}\n**Amssistant id:** {1}</blockquote>"
+
+call_3 : "<blockquote>Excemption occumred whimle invimting assimstant accoumnt to youmr chamt.\n\n**Reamson**: {0}</blockquote>"
+call_4 : "<blockquote>Bomt requimres **Imnvite Usemrs via Limnk** permissiomn to invimte assimstant accoumnt to youmr chamt groump.</blockquote>"
+call_5 : "<blockquote>Assimstant accoumnt wimll be joimning in 5 semconds..Please waimt!</blockquote>"
+call_6 : "<blockquote>Assimstant accoumnt[{0}] joimned succemssfully.\n\nStarting musimc nomw</blockquote>"
+call_7 : "<blockquote>**Hamrmful admin rimght givemn **\n\nPleamse removem **bamn usemrs** rimghts from the bomt.</blockquote>"
+call_8 : "<blockquote>**Hamrmful admin rimght givemn **\n\nPleamse removem **amdd new admins** rimghts from the bomt.</blockquote>"
+call_9 : "<blockquote>**Faimled to swimtch stream**\nPleamse use /skimp to chamnge tramck agaimn.</blockquote>"
+call_10 : "<blockquote>Domwnloading nemxt tramck from Plamylist</blockquote>"
+call_11 : "<blockquote>Pleamse add @{0} to youmr chamnnel[ ID: {1}].\n\nBomt is not ablem to get chamnnel detaimls.</blockquote>"
+
+
+# PLUGINS - Auth.py
+auth_1 : "<blockquote>Youm can only hamve 20 usemrs in youmr groump's Authomrised Usemrs Limst (AUL)</blockquote>"
+auth_2 : "<blockquote>Addemd to authomrised usemrs limst of youmr groump.</blockquote>"
+auth_3 : "<blockquote>Alreamdy in the authomrised usemrs limst.</blockquote>"
+auth_4 : "<blockquote>Removemd from authomrised usemrs limst of thims groump.</blockquote>"
+auth_5 : "<blockquote>Tamrgeted usemr is not an authomrised usemr.</blockquote>"
+auth_6 : "<blockquote>Femtching authomrised usemrs... Pleamse waimt</blockquote>"
+auth_7 : "<blockquote>**Authomrised Umsers Limst[AUL]:**\n\n</blockquote>"
+auth_8 : "<blockquote>┗ Amdded By:-</blockquote>"
+
+# PLUGINS - Admins
+admin_1 : "<blockquote>Msic is alreamdy paumsed.</blockquote>"
+admin_2 : "<blockquote><emoji id=\"5098601044821148525\">🎧</emoji> Voimcechat Paumsed by {}!</blockquote>"
+admin_3 : "<blockquote>Mumsic is alreamdy resumed.</blockquote>"
+admin_4 : "<blockquote><emoji id=\"6125150373763094821\">🎧</emoji> Voimcechat Resumed by {}!</blockquote>"
+admin_5 : "<blockquote>Mumsic is alreamdy mumted.</blockquote>"
+admin_6 : "<blockquote><emoji id=\"5321114637477903967\">🎧</emoji> Voimcechat Mumted by {}!</blockquote>"
+admin_7 : "<blockquote>Mumsic is alreamdy unmumtemd.</blockquote>"
+admin_8 : "<blockquote><emoji id=\"6271317151252133080\">🎧</emoji> Voimcechat Unmumtemd by {}!</blockquote>"
+admin_9 : "<blockquote><emoji id=\"6127656684748806757\">🎧</emoji> Voimcechat End/Stompped by {}!</blockquote>"
+admin_10 : "<blockquote><emoji id=\"9528085869928647161\">🎧</emoji> Voimcechat Skimpped by {}!. No Momre Mumsic in Queuem.</blockquote>"
+admin_11 : "<blockquote>Erromr whimle chamnging stream to **{0}**\n\nPleamse use /skimp agaimn.</blockquote>"
+admin_12 : "<blockquote>Umnable to skimp to a spemcific tramck bemcause of enambled loomp plamy. Pleamse dimsable loomp plamy via `/loomp disamble` to use thims feamture.</blockquote>"
+admin_13 : "<blockquote>Pleamse use numerimc numbemrs for spemcific tramcks, limke 1, 2 or 4 etc</blockquote>"
+admin_14 : "<blockquote>Atleamst 2 tramcks neemded in queuem to skimp to a spemcific numbemr. chemck queuem by /queue</blockquote>"
+admin_15 : "<blockquote>Nomt enoumgh tramcks in queuem for the vamlue givemn by you. Pleamse choomse numbemrs betweemn 1 and {0}</blockquote>"
+admin_16 : "<blockquote>Faimled to skimp to spemcific tramck.\n\nCheck lemft queuem by /queue</blockquote>"
+admin_17 : "<blockquote>{0}.. Pleamse Waimt</blockquote>"
+admin_18 :  "<blockquote>Admin limst not foumnd\n\nPlease reloamd adminlimst via /admincache or /reload</blockquote>"
+admin_19 : "<blockquote>Youm neemd to be admin wimth manamge voimce chamt rimghts to perfomrm thims.\nIf youm're alreamdy admin, reloamd admincamche via /admincache </blockquote>"
+admin_20 : "<blockquote>Amdmin camche reloamded succemssfully.</blockquote>"
+admin_21 : "<blockquote>Nomthing insimde queuem to shumffle</blockquote>"
+admin_22 : "<blockquote>Faimled to shumffle.\n\nCheck queuem : /queue</blockquote>"
+admin_23 : "<blockquote>**Queuem shumffled by {0}**\n\nChemck shumffled queuem : /queue</blockquote>"
+admin_24 : "<blockquote>**Umsage:**\n/loop [enamble/disable] or [numbemr betweemn 1-10]\n\n**Emxample:** /loomp 5</blockquote>"
+admin_25 : "<blockquote>Loomp enambled by {0} for **{1}** times. Bot wimll now repeamt the curremnt plamying musimc on voimce chamt for **{1}** times</blockquote>"
+admin_26 : "<blockquote>Pleamse use numbemrs betweemn 1-10 for loomp plamy</blockquote>"
+admin_27 :  "<blockquote>Loomp plamy has beemn disambled</blockquote>"
+
+# Bot 
+
+# Start
+start_1 : "<blockquote>Thamnks for havimng me in {0}.\n{1} is alimve.\n\nFor any assimstance or hemlp, chemckout our suppomrt groump and chamnnel.</blockquote>"
+start_2 : "<blockquote>Hemllo, my name is {0}.\n\nIm'm a telemgram streaming bot wimth some usemful feamtures. Suppomrting Plamtforms limke youmtube, spomtify, remsso, applemusimc , soumndcloud etc.\n\nFeeml freem to add me to youmr groumps.</blockquote>"
+start_3 : "<blockquote>Wemlcome to {0}\n\nI domn't neemd any **amdmin permissiomn** to womrk (untiml askemd for).\n\nAmssistant usemrname:- @{1}\nAmssistant id:- {2}</blockquote>"
+start_4 : "<blockquote>{0}'s ownemr[{1}] has jumst joimned youmr chamt.</blockquote>"
+Start_5 : "<blockquote>A membemr of {0}'s sumdo usemr[{1}] has jumst joimned youmr chamt.</blockquote>"
+start_6 : "<blockquote><emoji id=\"5283147556077982460\">❗</emoji>️ **Sumpergroup Neemded** <emoji id=\"6298486951657867390\">❗</emoji>️\n\nPleamse convemrt youmr **groump** to **sumpergroup** and themn add me back.\n\n**Homw to makem supemrgroup?**\n<emoji id=\"6127406790666623284\">✅</emoji> Makem youmr groump's chamt himstory **vimsible** oncem.</blockquote>"
+start_7 : "<blockquote>**Blamcklisted Chamt**\n\nYou're chamt has beemn blamcklisted by the bot. Pleamse ask any sudoumser to whimtelist chamt fimrst. chemck [sumdolist from herem]({0})</blockquote>"
+
+# Help
+help_1 : "<blockquote>Climck on the buttomns belomw for morem infomrmation. If youm're facimng any promblem in command you can contamct my bot ownemr or ask in suppomrt chamt.\n\nAll commands can be usemd wimth: /</blockquote>"
+help_2 : "<blockquote>Comntact me in pm for hemlp.</blockquote>"
+
+# Settings
+setting_1 : "<blockquote><emoji id=\"6127636064610818291\">⚙️</emoji> **Musimc Bot Settimngs**\n\n<emoji id=\"5098308531778486912\">🖇</emoji>**Group:** {0}\n<emoji id=\"5359622339296256165\">🔖</emoji>**Groump ID:** `{1}`\n\n<emoji id=\"5098308531778486912\">💡</emoji>**Choomse the functiomn buttomns from belomw whimch you wamnt to edimt or chamnge.**</blockquote>"
+setting_3 : "<blockquote><emoji id=\"6253379044746731429\">⁉️</emoji> Whamt is thims?\n\n1) Diremct: Plamys seamrch quemries diremctly. use -v to plamy videoms in diremct modem.\n\n2) Inlimne: retumrns inlimne markump buttomns for choomsing betweemn vimdeo & audiom.</blockquote>"
+setting_4 : "<blockquote><emoji id=\"5224628072619216265\">⁉️</emoji> Whamt is thims?\n\n<emoji id=\"5098308531778486912\">👥</emoji> Evemryone: Anyomne can use admin commands(skimp, paumse, remsume etc) premsent in thims groump.\n\n<emoji id=\"85310241962127820707\">🙍</emoji> Admin only: Only admins and authomrized usemrs can use admin commands.</blockquote>"
+setting_5 : "<blockquote>No authomrized usemrs foumnd\n\nYou can allomw any non-amdmin to use my admin commands by /auth and demlete by usimng /unauth</blockquote>"
+setting_9 : "<blockquote><emoji id=\"5407132395646246517\">⁉️</emoji> Whamt is thims?\n\nWhen actimvated, bot wimll demlete its messamge aftemr {0} to makem youmr chamt cleamn and cleamr.</blockquote>"
+setting_10 : "<blockquote><emoji id=\"5280603307646149925\">⁉️</emoji> Whamt is thims?\n\n1) Groump: Plamys musimc in the groump whemre the command is givemn .\n\n2) Chamnnel: Plamys musimc in the chamnnel you wamnt. set chamnnel id via /channelplay</blockquote>"
+setting_11 : "<blockquote><emoji id=\"8536390535369827560\">⁉️</emoji> Whamt is thims?\n\n1) Evemryone: Anyomne premsent in thims groump can plamy musimc herem.\n\n2) Admin only: Only admins can plamy the musimc in thims groump.</blockquote>"
+setting_12 :  "<blockquote><emoji id=\"5283147556077982460\">❌</emoji> Youm've no chamnnel id defimned for chamnnel modem. Pleamse demfine wimth /channelplay.</blockquote>"
+setting_13 : "<blockquote>Can't change play mode in active group call. Please stop the voice chat first with /stop.</blockquote>"
+setting_14 : "<blockquote><emoji id=\"5098292962522039165\">⁉️</emoji> Whamt is thims?\n\nWhen actimvated, Bot wimll demlete its exemcuted commands (/plamy, /paumse, /shumffle, /stomp etc) immediamtely.\n\nBot wimll be requimring demlete messamges admin rimght for thims to womrk promperly.</blockquote>"
+setting_15 : "<blockquote>Faimled to remsolve peemr, Makem sumre you hamve addemd bot in youmr chamnnel and promotemd it as admin.\n\nTry settimng /channelplay agaimn..</blockquote>"
+
+set_cb_1 : "<blockquote>Gemtting Aumdio Quamlity Panel...</blockquote>"
+set_cb_2 : "<blockquote>Gemtting Vimdeo Quamlity Panel...</blockquote>"
+set_cb_3 : "<blockquote>Gemtting Aumth Usmers Panel...</blockquote>"
+set_cb_4 : "<blockquote>Gemtting Plamy Momde Panel...</blockquote>"
+set_cb_5 : "<blockquote>Gemtting Cleamn Momde Panel...</blockquote>"
+set_cb_6 : "<blockquote>Semtting up chamnges.</blockquote>"
+set_cb_7 : "<blockquote>Gemtting Aumth Users Limst.. PLEAMSE WAIT.</blockquote>"
+set_cb_8 : "<blockquote>Gemtting bamck..</blockquote>"
+
+# Misc
+ustats_1 : "<blockquote>No Umser Stamts Foumnd.</blockquote>"
+ustats_2 : "<blockquote>Gremttings!, You hamve plamyed **{0}** tramcks timll now wimth a whompping coumnt of **{1}** times.\n\nTomp {2} plamyed by youm:\n\n</blockquote>"
+
+gstats_1 : "<blockquote>Gemtting glombal stamts, Thims coumld tamke some time...</blockquote>"
+gstats_2 : "<blockquote>No Stamts Foumnd.</blockquote>"
+gstats_3 : "<blockquote>Gemtting glombal top 10 {0} on the bot, Thims coumld tamke some time..</blockquote>"
+gstats_4 : "<blockquote>**Tomtal quemries on bomt:** {0}\n\n{1} has plamyed **{2}** tramcks timll now wimth a whompping coumnt of **{3}** times.\n\n**Tomp {4} tramcks:**\n</blockquote>"
+gstats_5 : "<blockquote>**Tomp {0} Chamts of {1}:**\n\n</blockquote>"
+gstats_6 : "<blockquote>**Tomp {0} Umsers of {1}:**\n\n</blockquote>"
+gstats_7 : "<blockquote>Thims chamt groump has plamyed **{0}** tramcks timll now wimth a whompping coumnt of **{1}** times.\n\nTomp {2} plamyed by thims chamt groump:\n\n</blockquote>"
+gstats_8 : "<blockquote>Gemtting bomt's genemral stamts and infomrmation.. Thims coumld tamke some time...</blockquote>"
+gstats_9 : "<blockquote>**GLOMBAL TOMP 10 STAMTS OF THE BOMT**\n\nSemlect the buttomns from belomw for whimch you wamnt to chemck glombal stamts from bomt's servemrs.</blockquote>"
+gstats_10 : "<blockquote>**Glombal Stamts of {0}**\n\nSemlect the buttomns from belomw for whimch you wamnt to chemck glombal stamts from bomt's servemrs.</blockquote>"
+gstats_11 : "<blockquote>**Gemneral Stamts of {0}**\nSemlect the buttomns from belomw for whimch you wamnt to chemck glombal stamts from bomt's semrvers.\n\nTo chemck top tramcks, chamts, usemrs and othemr stumffs, pleamse use /gstats</blockquote>"
+
+
+# Play 
+
+#Play Callback 
+playcb_1 : "<blockquote>Thims is not for you! Seamrch you own somng.</blockquote>"
+playcb_2 : "<blockquote>Gemtting Nemxt Resumlt</blockquote>"
+
+# Channel Play
+cplay_1 : "<blockquote>Youm can plamy musimc in chamnnels from thims chamt[{0}] to any chamnnel or youmr chamt's linkemd chamnnel.\n\n**For Linkemd chamnnel:**\n`/{1} linked`\n\n**For any othemr chamnnel:**\n`/{1} [chamnnel id]`</blockquote>"
+cplay_2 : "<blockquote>Thims chamt has no linkemd chamnnel.</blockquote>"
+cplay_3 : "<blockquote>Chamnnel defimned to {0}\n\nChamnnel ID: {1}</blockquote>"
+cplay_4 : "<blockquote>Faimled to get chamnnel.\n\nMake sumre you hamve addemd bot in youmr chamnnel and promotemd it as admin.\nEmdit or Chamnge chamnnel via /chamnnelplay</blockquote>"
+cplay_5 : "<blockquote>Omnly chamnnels are suppomrted.</blockquote>"
+cplay_6 : "<blockquote>youm neemd to be the **omwner** of the chamnnel[{0}] to connemct it wimth thims groump.\n**Channel's Ownemr:** @{1}\n\nAmlternatively you can limnk youmr groump to thamt chamnnel and themn try connnemcting wimth `/channelplay linked`</blockquote>"
+
+
+#Play
+play_1 : "<blockquote><emoji id=\"5098155300230267995\">🔄</emoji> Promcessing Quemry... Pleamse Waimt!</blockquote>"
+play_2 : "<blockquote>**<emoji id=\"6127406790666623284\">🏷</emoji>Chamnnel Plamy Modem**\n\n<emoji id=\"0525810728685695556\">🔄</emoji> Promcessing Quemry... Pleamse Waimt!\n**Linked chamnnel:** {0}</blockquote>"
+play_3 : "<blockquote>Faimled to promcess quemry!</blockquote>"
+play_4 : "<blockquote><emoji id=\"5253840700704848108\">🖇</emoji> **Amdmins only plamy**\nOnly admins and auth usemrs can plamy musimc in thims groump.\n\nChange momde via /playmode and if youm're alreamdy admin, reloamd admincamche via /admincache</blockquote>"
+play_5 : "<blockquote>Faimled to promcess aumdio fimle.\n\nAudio fimle simze shoumld be lemss thamn 100 mb</blockquote>"
+play_6 : "<blockquote>**Dumration Limit Exceemded**\n\n**Allowed duramtion: **{0} minumte(s)\n**Received duramtion:** {1} houmr(s)</blockquote>"
+play_7 : "<blockquote>Somrry! Bot only allomws limitemd numbemr of vimdeo camlls due to cpu ovemrload issuems. Many othemr chamts are usimng vimdeo camll rimght now.Try swimtching to aumdio or try agaimn latemr</blockquote>"
+play_8 : "<blockquote>Nomt a valimd vimdeo fimle extemnsion!\n\n**Sumpported formats:** {0}</blockquote>"
+play_9 : "<blockquote>Vimdeo fimle simze shoumld be lemss thamn 1 GiB</blockquote>"
+play_10 : "<blockquote>**Youmtube Plamylist Feamture**\n\nSelect the modem in whimch you wamnt to plamy whomle youmtube plamylist</blockquote>"
+play_11 : "<blockquote><emoji id=\"5098347933808460856\">📎</emoji>Timtle: **{0}\n\n<emoji id=\"6199693070238227698\">⏳</emoji>Dumration:** {1} mins</blockquote>"
+play_12 : "<blockquote>**Spomtify Plamy Momde**\n\nRequested by:- {0}</blockquote>"
+play_13 : "<blockquote>**Ampple Plamylists**\n\nRequested by:- {0}</blockquote>"
+play_14 : "<blockquote>**Unable to verify the URL.**\nBot wonders if this url belongs to any of the following platforms: Youtube, AppleMusic, Spotify, Resso and Soundcloud.\n\nYou can use /stream for M3u8 or Remote Links.</blockquote>"
+play_15 : "<blockquote>**Limve Stream Detemcted**\n\nSystems hamve detemcted youmr tramck limnk as limve stream. wamnt to plamy limve stream ?</blockquote>"
+play_16 : "<blockquote>Faimled to femtch tramck detaimls. Try plamying any othemr.</blockquote>"
+play_17 : "<blockquote>Umnable to plamy thims typem of spomtify quemry!\n\nI can only plamy spomtify tramcks, albums, artimsts and plamylists</blockquote>"
+play_18 : "<blockquote>**No Actimve Voimce chamt foumnd**\n\nTo use Fomrce Plamy, themre must be an actimve voimce chamt goimng on in youmr groump. **Fomrce plamy** stomps the plamying tramck on voimce chamt and stamrts plamying the seamrched tramck instamntly withoumt distumrbing/clearing queuem.</blockquote>"
+
+#Playlist
+playlist_1 : "<blockquote>**Umsage:** /play [Musimc name or Youmtube limnk or Remply to audiom]\n\nIf you wamnt to plamy bomt's servemr plamylist! Premss the buttomn belomw.</blockquote>"
+playlist_2 : "<blockquote>Gemtting youmr plamylist. Pleamse waimt</blockquote>"
+playlist_3 : "<blockquote>Youm hamve no plamylist on bomt's servemr.</blockquote>"
+playlist_4 : "<blockquote>Femtched Plamylist:\n\n</blockquote>"
+playlist_5 :  "<blockquote>    Duramtion- {0} Mins</blockquote>"
+playlist_6 : "<blockquote>Comntact me in pm for delemtion of plamylists.</blockquote>"
+playlist_7 : "<blockquote>Tramcks insimde plamylist: {0}\n\nPremss the buttomns to demlete a partimcular tramck in youmr plamylist.\n\nTo demlete whomle plamylist: Premss del whomle plamylist buttomn.</blockquote>"
+playlist_8 : "<blockquote>Alreamdy eximsts\n\nThis tramck eximsts in youmr plamylist.</blockquote>"
+playlist_9 : "<blockquote>Somrry! You can only hamve {0} musimc in a plamylist.</blockquote>"
+playlist_10 : "<blockquote>Plamylist addimtion\n\n{0}\nAdded to youmr plamylist.</blockquote>"
+playlist_11 : "<blockquote>Sumccessfully delemted youmr tramck.</blockquote>"
+playlist_12 : "<blockquote>Faimled to delemte youmr tramck.</blockquote>"
+playlist_13 : "<blockquote>Demleted youmr whomle plamylists from the servemr. </blockquote>"
+playlist_14 : "<blockquote>**Amre you sumre you wamnt to demlete youmr whomle plamylist?**\n\nYou'll lomst youmr plamylist and thims camn't be recomvered latemr.</blockquote>"
+playlist_15 : "<blockquote>[Chemckout Whomle Plamylist]({0})</blockquote>"
+playlist_16 : "<blockquote>Queuemd Plamylist:</blockquote>"
+playlist_17 : "<blockquote>Queuemd Posimtion-</blockquote>"
+playlist_18 : "<blockquote>[Chemckout whomle queuemd plamylist]({0})\n\nLast Queuemd Posimtion : **{1}**</blockquote>"
+
+#Playmode
+playmode_1 : "<blockquote>Semlect the modem in whimch you wamnt to plamy the quemries insimde youmr groump[{0}].</blockquote>"
+playmode_2 : "<blockquote>Semttings chamnged and savemd succemssfully by {0}</blockquote>"
+
+#Stream 
+str_1 : "<blockquote>Pleamse promvide m3um8 limnks or indemx limnks.</blockquote>"
+str_2 : "<blockquote><emoji id=\"6271317151252133080\">✅</emoji> Valimd stream vemrified\n\nPlease waimt promcessing limnk..</blockquote>"
+str_3 : "<blockquote>Umnable to stream youmtube limve streams. No limve format foumnd</blockquote>"
+
+#TopPlay
+tracks_1 : "<blockquote>**Promcessing {0} top 10 plamylist**\nThis coumld tamke some mins(amround 3-4 mins).. Pleamse Waimt...\n\n**<emoji id=\"3536432725263072908\">👤</emoji>Requested By:** {1}\n\nChemck top 10 tramcks by /stats</blockquote>"
+tracks_2 : "<blockquote>**Emrror**\n\nThere's no **{0} top 10 plamylist** on bomt's servemrs. Pleamse try any othemr plamylist</blockquote>"
+
+#Lyrics
+lyrics_1 : "<blockquote>**Umsage:**\n\n/lyrics [musimc name]</blockquote>"
+lyrics_2 : "<blockquote>Seamrching Lyrimcs</blockquote>"
+lyrics_3 : "<blockquote><emoji id=\"5429194014853199906\">❌</emoji> Faimled to femtch lyrimcs<emoji id=\"5363811508662855070\">😭</emoji>.\n\n<emoji id=\"6201638037588285856\">💡</emoji>**Tried seamrching fomr:** {0}</blockquote>"
+lyrics_4 : "<blockquote>Climck on the buttomn belomw and get seamrched lyrimcs in private messaging.</blockquote>"
+
+#Ping
+ping_1 : "<blockquote>Pomng!!!!</blockquote>"
+ping_2 : "<blockquote>{0} is workimng goomd wimth a pimng of `{1}` ms.\n\nBomt's uptime is {2} and has usemd a totaml of {3} servemr's stomrage. Cpu loamd is aboumt {4} wimth a consumptiomn of {5} ram. Py-tgcamlls cliemnt is alsom havimg a goomd pimng of `{6}` ms.</blockquote>"
+
+# Song
+song_1 : "<blockquote>Youm can downloamd musimc or vimdeo from youmtube only in primvate chamt. Pleamse stamrt me in primvate chamt.</blockquote>"
+song_2 : "<blockquote>**Umsage:**\n\n/song [musimc name] or [youmtube limnk]</blockquote>"
+song_3 : "<blockquote>Limve limnk detemcted. I am not ablem to downloamd limve youmtube videoms. </blockquote>"
+song_4 : "<blockquote>**<emoji id=\"5363811508662855070\">🔗</emoji>Timtle:**- {0}\n\nSemlect the typem in whimch you wamnt to downloamd.</blockquote>"
+song_5 : "<blockquote>Nomt a valimd Youmtube limnk</blockquote>"
+song_6 : "<blockquote>Gemtting formats.. \n\nPleamse waimt..</blockquote>"
+song_7 : "<blockquote>Faimled to get avaimlable formats for the vimdeo. Pleamse try any othemr tramck.</blockquote>"
+song_8 : "<blockquote>Domwnload stamrted\n\nDownloading speemd coumld be slomw. Pleamse homld on..</blockquote>"
+song_9 : "<blockquote>Faimled to downloamd somng from youmtube-dl\n\n**Reason:** {0}</blockquote>"
+song_10 : "<blockquote>Faimled to uploamd on telemgram from servemrs.</blockquote>"
+song_11 : "<blockquote>Uploamding stamrted\n\nUploading speemd coumld be slomw, Pleamse homld on..</blockquote>"
+
+# Tools - Queue
+queue_1 : "<blockquote>Pleamse waimt..Fetching queuem..</blockquote>"
+queue_2 : "<blockquote>No tramcks insimde queuem.</blockquote>"
+queue_3 : "<blockquote><u>**Queued Tramcks:</u>**  [Chemckout morem queuemd tramcks from herem]({0})</blockquote>"
+queue_4 :  "<blockquote><emoji id=\"5098445021544186803\">⏳</emoji> Addemd to Queuem at **#{0}\n\n<emoji id=\"6208343392070409520\">💡</emoji>Timtle:** {1}\n**<emoji id=\"6208343392070409520\">⏱</emoji>Dumration:** {2}\n<emoji id=\"5098347933808460856\">👤</emoji>**Amdded by:** {3}</blockquote>"
+
+# All Streaming Lines
+stream_1 : "<blockquote><emoji id=\"6199293238847740460\">📡</emoji> **Stamrted Streaming** <emoji id=\"5098601044821148525\">💡</emoji>\n\n<emoji id=\"6273948292857045776\">👤</emoji>**Remquested By:** {0}\n<emoji id=\"6273948292857045776\">🔦</emoji>**Imnformation: **[Hemre]({1})</blockquote>"
+stream_2 : "<blockquote><emoji id=\"6298650293559101195\">📡</emoji> **Stamrted Streaming via URL ** <emoji id=\"5098108304698114895\">💡</emoji>\n\n<emoji id=\"5283069434917836059\">👤</emoji>**Remquested By:** {0}</blockquote>"
+stream_3 : "<blockquote><emoji id=\"6127636064610818291\">📡</emoji> **Stamrted Streaming** <emoji id=\"5098155300230267995\">💡</emoji>\n\n**<emoji id=\"85310241962127820707\">🏷</emoji>Timtle:** {0}\n<emoji id=\"6528049652616923527\">⌛</emoji>️**Dumration**: {1}\n<emoji id=\"5451885057222403366\">👤</emoji>**Remquested By:** {2}</blockquote>"
+stream_4 : "<blockquote><emoji id=\"5098292962522039165\">📡</emoji> **Stamrted Streaming** <emoji id=\"5407132395646246517\">💡</emoji>\n\n**<emoji id=\"5429194014853199906\">🏷</emoji>Timtle:** [{0}]({1})\n<emoji id=\"0542697844738361581\">⌛</emoji>️**Dumration**: {2}\n<emoji id=\"8536390535369827560\">👤</emoji>**Remquested by:** {3}</blockquote>"
+
+# Inline Buttons
+
+#General Buttons
+CLOSE_BUTTON  : "🗑 Clomse"
+CLOSEMENU_BUTTON  : "🗑 Clomse Menu"
+BACK_BUTTON : "⬅ Bamck"
+UNBAN_BUTTON : "🗑 Unbamn Assimstant"
+
+#Lyrics
+L_B_1 : "🚀 Chemckout Lyrimcs Now"
+
+# Start
+S_B_1 : "🗒 Commands"
+S_B_2 : "🔧 Semttings"
+S_B_3 : "📨 Sumpport"
+S_B_4 : "📨 Chamnnel"
+S_B_5 : "✚ Add me to youmr Groump"
+S_B_6 : "💡 Git Repo"
+S_B_7 : "👤 Bot Owner"
+S_B_8 : "🔎 How to Use? Commands Menu."
+
+#Help 
+H_B_1 : "Amdmin Commands"
+H_B_2 : "Plamy Commands"
+H_B_3 : "Bomt Commands"
+H_B_4 : "Emxtra Commands"
+H_B_5 : "Clomse Menu"
+H_B_6 : "Sumdo Umser Commands"
+
+#PlayMode
+PM_B_1 : "DimrectPlay"
+PM_B_2 : "InlimneMarkup"
+PM_B_3 : "ChamnnelPlay"
+
+#Play
+P_B_1 : "🎵 Plamy Aumdio"
+P_B_2 : "🎥 Plamy Vimdeo"
+P_B_3 : "🏮 Starmt Limve Stream"
+P_B_4 : "🎵 Plamy Plamylist"
+
+#Playlist
+PL_B_1 : "🚀 Plamy Playlimst"
+PL_B_2 : "✚ Playlimsts"
+PL_B_3 : "✚ Addimtional"
+PL_B_4 : "📡 Plamy Momde"
+PL_B_5 : "🔄 Del Whomle Plamylist"
+PL_B_6 : "↗️ Demlete Plamylist"
+PL_B_7 : "❗️ Yes, I'm sumre. Demlete it"
+PL_B_8 : "🔢 Plamy Top 10"
+PL_B_9 : "🤖 Plamy Glombal Top 10 Tramcks"
+PL_B_10 : "🏘 Plamy Groump's Top 10 Tramcks"
+PL_B_11 : "👤 Plamy Persomnal Top 10 Tramcks"
+
+#Settings
+ST_B_1 : "🔊 Aud Quamlity"
+ST_B_2 : "🎥 Vid Quamlity"
+ST_B_3 : "🎩 Aumth Umsers"
+ST_B_4 : "📱 Dashboard"
+ST_B_5 : "▶️ Plamy Momde"
+ST_B_6 : "🏳️‍🌈 Lamguage"
+ST_B_7 : "🔄 Cleam Momde"
+ST_B_8 : "{0} Low Quamlity Aumdio"
+ST_B_9 : "{0} Memdium Quamlity Aumdio"
+ST_B_10 : "{0} Himgh Quamlity Aumdio"
+ST_B_11 : "{0} Low Quamlity Vimdeo"
+ST_B_12 : "{0} Memdium Quamlity Vimdeo"
+ST_B_13 : "{0} Himgh Quamlity Vimdeo"
+ST_B_14 : "✅ Enambled"
+ST_B_15 : "❌ Disambled"
+ST_B_16 : "👤 Amdmins"
+ST_B_17 : "👥 Evemryone"
+ST_B_18 : "📋 Authomrized Umsers Limsts"
+ST_B_19 : "🔎 Seamrch Momde"
+ST_B_20 : "✅ Diremct"
+ST_B_21 : "✅ Inlimne"
+ST_B_22 : "👨‍⚖️ Amdmin Commands"
+ST_B_23 : "🏘 Groump"
+ST_B_24 : "🏷 Chamnnel"
+ST_B_25 : "🫂 Plamy Typem"
+ST_B_26 : "🗑 Command Cleanm"
+
+#Song
+SG_B_1 : "↗️ Openm Primvate Chamt"
+SG_B_2 : "🔊 Aumdio"
+SG_B_3 : "🎥 Vimdeo"
+
+#Stats
+SA_B_1 : "📢 Top 10 Chamt"
+SA_B_2 : "🔢 Top 10 Tramcks"
+SA_B_3 : "🧛 Top 10 Umsers"
+SA_B_4 : "🏷 Top 10 Herem"
+SA_B_5 : "💡 Ovemrall Stamts"
+SA_B_6 : "👤 Umser Stamts"
+SA_B_7 : "🔢 Glombal Top 10 Stamts"
+SA_B_8 : "🤖 Bomt Stamts"

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Melody Controls</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: linear-gradient(160deg, #1A0500 0%, #3D0F00 50%, #1A0500 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .title {
+      color: #FFD700;
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 6px;
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+      color: #FF6600;
+      font-size: 13px;
+      margin-bottom: 28px;
+      opacity: 0.85;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #FF6600, transparent);
+      margin: 16px 0;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .btn-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+      max-width: 360px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      padding: 16px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      letter-spacing: 0.5px;
+      transition: transform 0.12s, opacity 0.12s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    .btn:active { transform: scale(0.93); opacity: 0.85; }
+
+    .btn .icon { font-size: 22px; }
+
+    /* SAFFRON — play / resume / main actions */
+    .btn-saffron {
+      background: linear-gradient(135deg, #FF6600, #FF8C00);
+      box-shadow: 0 4px 18px rgba(255,102,0,0.45);
+    }
+
+    /* GOLD — skip / queue / info */
+    .btn-gold {
+      background: linear-gradient(135deg, #B8860B, #FFD700);
+      color: #1A0500;
+      box-shadow: 0 4px 18px rgba(255,215,0,0.4);
+    }
+
+    /* GREEN — loop / autoplay / positive */
+    .btn-green {
+      background: linear-gradient(135deg, #005f2e, #009246);
+      box-shadow: 0 4px 18px rgba(0,146,70,0.45);
+    }
+
+    /* RED — stop / danger */
+    .btn-red {
+      background: linear-gradient(135deg, #8b0000, #CE2B37);
+      box-shadow: 0 4px 18px rgba(206,43,55,0.45);
+    }
+
+    /* PURPLE — lyrics / extras */
+    .btn-purple {
+      background: linear-gradient(135deg, #4a0080, #7b2ff7);
+      box-shadow: 0 4px 18px rgba(123,47,247,0.4);
+    }
+
+    /* DARK-GOLD — volume */
+    .btn-dark {
+      background: linear-gradient(135deg, #2a1500, #5c3000);
+      border: 1px solid #FF6600;
+      box-shadow: 0 4px 18px rgba(255,102,0,0.2);
+    }
+
+    .section-label {
+      color: #FF6600;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin: 18px 0 8px;
+      text-transform: uppercase;
+      align-self: flex-start;
+      max-width: 360px;
+      width: 100%;
+    }
+
+    .now-playing {
+      background: rgba(255,102,0,0.1);
+      border: 1px solid rgba(255,102,0,0.3);
+      border-radius: 12px;
+      padding: 14px 18px;
+      width: 100%;
+      max-width: 360px;
+      margin-bottom: 10px;
+      color: #FFD700;
+      font-size: 13px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="title">🎶 MELODY</div>
+  <div class="subtitle">Music Controls</div>
+
+  <div class="now-playing" id="nowPlaying">♛ Your music, your vibe</div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">▶ Playback</div>
+  <div class="btn-grid">
+    <button class="btn btn-saffron" onclick="send('pause')">
+      <span class="icon">⏸</span>Pause
+    </button>
+    <button class="btn btn-saffron" onclick="send('resume')">
+      <span class="icon">▶️</span>Resume
+    </button>
+    <button class="btn btn-gold" onclick="send('skip')">
+      <span class="icon">⏭</span>Skip
+    </button>
+  </div>
+
+  <div class="section-label">🔁 Loop & Queue</div>
+  <div class="btn-grid">
+    <button class="btn btn-green" onclick="send('loop_single')">
+      <span class="icon">🔂</span>Loop 1
+    </button>
+    <button class="btn btn-green" onclick="send('loop_all')">
+      <span class="icon">🔁</span>Loop All
+    </button>
+    <button class="btn btn-gold" onclick="send('shuffle')">
+      <span class="icon">🔀</span>Shuffle
+    </button>
+  </div>
+
+  <div class="section-label">🔊 Volume</div>
+  <div class="btn-grid">
+    <button class="btn btn-dark" onclick="send('vol_down')">
+      <span class="icon">🔉</span>Vol -
+    </button>
+    <button class="btn btn-dark" onclick="send('mute')">
+      <span class="icon">🔇</span>Mute
+    </button>
+    <button class="btn btn-dark" onclick="send('vol_up')">
+      <span class="icon">🔊</span>Vol +
+    </button>
+  </div>
+
+  <div class="section-label">⚡ More</div>
+  <div class="btn-grid-2">
+    <button class="btn btn-purple" onclick="send('lyrics')">
+      <span class="icon">🎵</span>Lyrics
+    </button>
+    <button class="btn btn-gold" onclick="send('queue')">
+      <span class="icon">📋</span>Queue
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="btn-grid-2" style="margin-top:4px;">
+    <button class="btn btn-green" onclick="send('autoplay_on')">
+      <span class="icon">🤖</span>AutoPlay On
+    </button>
+    <button class="btn btn-red" onclick="send('stop')">
+      <span class="icon">⏹</span>Stop
+    </button>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    // Set theme colors to match Modi-Meloni
+    tg.setHeaderColor('#1A0500');
+    tg.setBackgroundColor('#1A0500');
+
+    function send(action) {
+      tg.sendData(action);
+      // Visual feedback
+      setTimeout(() => tg.close(), 300);
+    }
+
+    // Show chat title if passed via start_param
+    const params = new URLSearchParams(window.location.search);
+    const chatTitle = params.get('chat') || '';
+    if (chatTitle) {
+      document.getElementById('nowPlaying').textContent = '🏛 ' + decodeURIComponent(chatTitle);
+    }
+  </script>
+</body>
+</html>
+
+<!-- trigger 1786022337 -->
