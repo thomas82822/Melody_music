@@ -242,14 +242,12 @@ async def _play_core(client: Client, message: Message, video: bool = False, forc
 # BUG FIX: @error_handler is OUTER decorator — catches errors from admin_or_auth too
 @bot.on_message(filters.command("play") & filters.group)
 @error_handler
-@admin_or_auth
 async def play_cmd(client: Client, message: Message):
     await _play_core(client, message, video=False)
 
 
 @bot.on_message(filters.command("vplay") & filters.group)
 @error_handler
-@admin_or_auth
 async def vplay_cmd(client: Client, message: Message):
     await _play_core(client, message, video=True)
 
@@ -258,14 +256,12 @@ async def vplay_cmd(client: Client, message: Message):
 
 @bot.on_message(filters.command("playforce") & filters.group)
 @error_handler
-@admin_or_auth
 async def playforce_cmd(client: Client, message: Message):
     await _play_core(client, message, video=False, force=True)
 
 
 @bot.on_message(filters.command("vplayforce") & filters.group)
 @error_handler
-@admin_or_auth
 async def vplayforce_cmd(client: Client, message: Message):
     await _play_core(client, message, video=True, force=True)
 
