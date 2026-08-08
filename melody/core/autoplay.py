@@ -10,6 +10,7 @@ nothing left to wait on — the file is already sitting on disk.
 """
 import html
 import asyncio
+from pyrogram import enums
 from melody.logging import LOGGER, send_error_log, log_activity
 from melody.core.ytdl import get_related_videos, get_video_info, download_audio
 from melody.core.queue import (
@@ -179,7 +180,7 @@ async def try_autoplay(chat_id: int) -> bool:
             f"<blockquote>🎶 <b>AutoPlay ▶️</b> <code>{safe_title}</code>\n"
             f"<i>Melody ne sunwaya!</i>\n"
             f"🙋 Requested by: <i>AutoPlay</i></blockquote>",
-            parse_mode="html",
+            parse_mode=enums.ParseMode.HTML,
         )
         asyncio.create_task(log_activity(
             f"🤖 <b>AutoPlay Triggered</b>\n"
