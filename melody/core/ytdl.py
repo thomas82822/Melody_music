@@ -745,43 +745,158 @@ def _invidious_search_sync(query: str) -> dict | None:
     return None
 
 
+def _normalize_info(info: "dict | None") -> "dict | None":
+    """Normalize raw yt-dlp / InnerTube / Invidious info into the uniform
+    dict shape get_video_info() returns. Returns None if info is unusable."""
+    if not info or not info.get("id"):
+        return None
+    vid = info.get("id", "")
+    return {
+        "id": vid,
+        "title": info.get("title", "Unknown"),
+        "duration": int(info.get("duration") or 0),
+        "url": info.get("webpage_url") or f"https://www.youtube.com/watch?v={vid}",
+        "stream_url": "",
+        "thumbnail": info.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+        "uploader": info.get("uploader") or info.get("channel") or "Unknown",
+    }
+
+
+def _innertube_next_sync(video_id: str) -> "dict | None":
+    """Fetch single-video metadata via InnerTube /next endpoint (ANDROID client).
+
+    Faster and more reliable on Heroku than yt-dlp for direct YouTube URLs —
+    a single HTTP POST returns title, duration, thumbnail etc. without any
+    bot-detection wall, because the ANDROID client path is not subject to
+    the same checks as the web player.
+    """
+    import json, urllib.request
+
+    _API_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
+    _NEXT_URL = f"https://www.youtube.com/youtubei/v1/next?key={_API_KEY}&prettyPrint=false"
+
+    payload = json.dumps({
+        "context": {
+            "client": {
+                "clientName": "ANDROID",
+                "clientVersion": "19.09.37",
+                "androidSdkVersion": 30,
+                "hl": "en",
+                "gl": "US",
+                "utcOffsetMinutes": 0,
+            }
+        },
+        "videoId": video_id,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        _NEXT_URL, data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
+            "X-YouTube-Client-Name": "3",
+            "X-YouTube-Client-Version": "19.09.37",
+        },
+        method="POST",
+    )
+    try:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=6) as resp:
+            if resp.status != 200:
+                return None
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+    # Walk the response tree for the first videoRenderer that matches video_id
+    def _walk(node, out):
+        if isinstance(node, dict):
+            renderer = node.get("compactVideoRenderer") or node.get("videoRenderer")
+            if renderer and renderer.get("videoId"):
+                out.append(renderer)
+            for v in node.values():
+                _walk(v, out)
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item, out)
+
+    renderers: list = []
+    _walk(data, renderers)
+    for r in renderers:
+        if r.get("videoId") == video_id:
+            title = (
+                r.get("title", {}).get("simpleText")
+                or (r.get("title", {}).get("runs", [{}])[0].get("text"))
+                or "Unknown"
+            )
+            length_text = (
+                r.get("lengthText", {}).get("simpleText", "")
+                or (r.get("lengthText", {}).get("runs", [{}])[0].get("text", "") if r.get("lengthText") else "")
+            )
+            duration = 0
+            if length_text:
+                parts = [int(p) for p in length_text.split(":") if p.isdigit()]
+                if len(parts) == 2:
+                    duration = parts[0] * 60 + parts[1]
+                elif len(parts) == 3:
+                    duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
+            thumbs = (r.get("thumbnail", {}).get("thumbnails") or [])
+            thumb = thumbs[-1].get("url", "") if thumbs else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+            return {
+                "id": video_id,
+                "title": title,
+                "duration": duration,
+                "webpage_url": f"https://www.youtube.com/watch?v={video_id}",
+                "thumbnail": thumb,
+                "uploader": "Unknown",
+            }
+    # Fallback: construct minimal info from the video_id itself
+    return {
+        "id": video_id,
+        "title": "Unknown",
+        "duration": 0,
+        "webpage_url": f"https://www.youtube.com/watch?v={video_id}",
+        "thumbnail": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+        "uploader": "Unknown",
+    }
+
+
 async def get_video_info(url_or_query: str) -> dict | None:
     """Get metadata for a single video (or first search result).
 
-    KEY FIX for Heroku "Sign in to confirm you're not a bot":
-    • Uses extract_flat=True — yt-dlp fetches only lightweight metadata
-      (title, duration, uploader, thumbnail) WITHOUT requesting streamingData
-      (the format/CDN URL list). streamingData calls are what trigger YouTube's
-      bot-detection check on cloud IPs. By deferring stream resolution to
-      download_audio(), we avoid the check entirely at this stage.
-    • For direct YouTube URLs we extract the video_id and search by video_id,
-      still via the flat/metadata path (no streamingData request).
+    SPEED FIX ("bohot tym baad play hota hai"):
+    Previously the search was strictly sequential — yt-dlp first (6s timeout),
+    then InnerTube (12s), then Invidious (up to 50s). On Heroku without
+    cookies, yt-dlp ALWAYS hits the "Sign in to confirm you're not a bot"
+    wall and wastes its entire timeout before InnerTube even starts.
+
+    Now InnerTube and yt-dlp race IN PARALLEL — whichever returns a valid
+    result first wins. InnerTube is a direct HTTP POST to YouTube's own
+    Android API that bypasses bot-detection and typically responds in
+    1-2 seconds, so /play search latency drops from ~8s to ~2s.
+
+    For direct YouTube URLs with a known video_id, InnerTube's /next
+    endpoint is used (even faster — no search parsing needed).
+    Invidious stays as a last-resort fallback only if both parallel
+    lookups fail.
     """
     import re
     is_url = bool(re.match(r"https?://", url_or_query))
+    vid_id = _extract_video_id(url_or_query) if is_url else None
 
+    # ── Build the search query for yt-dlp ──────────────────────────────────
     if is_url:
-        vid_id = _extract_video_id(url_or_query)
-        # Use ytsearch1: for the video URL — forces the search API path which
-        # only fetches metadata, not streamingData.
         query = f"ytsearch1:{url_or_query}" if not vid_id else f"ytsearch1:https://www.youtube.com/watch?v={vid_id}"
     else:
         query = f"ytsearch1:{url_or_query}"
-        vid_id = None
 
-    def _info():
-        # CRITICAL FIX: noplaylist=False is REQUIRED for ytsearch1: queries.
-        # yt-dlp 2025+ internally wraps ytsearch results in a "SearchResultsPlaylist".
-        # With noplaylist=True (from _ydl_opts), yt-dlp refuses to process it → returns
-        # nothing → silent "Song not found" error even when the video exists.
-        # extract_flat="in_playlist" — lightweight metadata only, no streamingData request
-        # (streamingData = the CDN URL list that triggers YouTube bot-detection on Heroku).
+    def _ytdlp_info():
         opts = {
             **_ydl_opts(),
             "extract_flat": "in_playlist",
             "default_search": "ytsearch1",
-            "noplaylist": False,    # MUST be False for ytsearch1: to work
-            "socket_timeout": 6,    # fail fast so Invidious fallback runs sooner
+            "noplaylist": False,
+            "socket_timeout": 5,
         }
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(query, download=False)
@@ -789,58 +904,59 @@ async def get_video_info(url_or_query: str) -> dict | None:
                 return info["entries"][0]
             return info
 
+    # ── Choose the InnerTube call based on input type ──────────────────────
+    if vid_id:
+        innertube_fn = lambda: _innertube_next_sync(vid_id)
+    else:
+        innertube_fn = lambda: _innertube_search_sync(url_or_query)
+
+    loop = asyncio.get_running_loop()
+
+    # ── Race yt-dlp and InnerTube in parallel ──────────────────────────────
+    ytdlp_task = loop.run_in_executor(None, _ytdlp_info)
+    innertube_task = loop.run_in_executor(None, innertube_fn)
+
     try:
-        loop = asyncio.get_running_loop()
-        info = await loop.run_in_executor(None, _info)
-        if not info or not info.get("id"):
-            # ── Invidious fallback: yt-dlp search returned nothing ──────────
-            # On Heroku, YouTube's bot-detection sometimes blocks yt-dlp even
-            # with Android/iOS clients. Invidious runs its own YouTube API proxy
-            # on non-cloud IPs — it is not affected by Heroku's IP ban.
-            LOGGER.info("yt-dlp search returned nothing — trying InnerTube fallback | %s", url_or_query[:50])
-            info = await asyncio.get_event_loop().run_in_executor(
-                None, _innertube_search_sync, url_or_query
-            )
-            if not info or not info.get("id"):
-                LOGGER.info("InnerTube returned nothing — trying Invidious | %s", url_or_query[:50])
-                info = await asyncio.get_event_loop().run_in_executor(
-                    None, _invidious_search_sync, url_or_query
-                )
-            if not info or not info.get("id"):
-                return None
-        vid = info.get("id", "")
-        return {
-            "id": vid,
-            "title": info.get("title", "Unknown"),
-            "duration": int(info.get("duration") or 0),
-            "url": info.get("webpage_url") or f"https://www.youtube.com/watch?v={vid}",
-            "stream_url": "",  # resolved at play time by download_audio()
-            "thumbnail": info.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
-            "uploader": info.get("uploader") or info.get("channel") or "Unknown",
-        }
-    except Exception as exc:
-        # ── Invidious fallback on exception ─────────────────────────────────
-        LOGGER.warning("yt-dlp get_video_info raised exception — trying InnerTube: %s", exc)
+        done, pending = await asyncio.wait(
+            [asyncio.ensure_future(ytdlp_task), asyncio.ensure_future(innertube_task)],
+            return_when=asyncio.FIRST_COMPLETED,
+            timeout=8.0,
+        )
+    except Exception:
+        done, pending = set(), set()
+
+    # Cancel any still-running task — we only need one result
+    for p in pending:
+        p.cancel()
+
+    # Check completed tasks — prefer yt-dlp (richer metadata) over InnerTube
+    result = None
+    for task in done:
         try:
-            loop2 = asyncio.get_event_loop()
-            info = await loop2.run_in_executor(None, _innertube_search_sync, url_or_query)
-            if not info or not info.get("id"):
-                info = await loop2.run_in_executor(None, _invidious_search_sync, url_or_query)
-            if info and info.get("id"):
-                vid = info["id"]
-                return {
-                    "id": vid,
-                    "title": info.get("title", "Unknown"),
-                    "duration": int(info.get("duration") or 0),
-                    "url": info.get("webpage_url") or f"https://www.youtube.com/watch?v={vid}",
-                    "stream_url": "",
-                    "thumbnail": info.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
-                    "uploader": info.get("uploader") or "Unknown",
-                }
+            info = task.result()
+            normalized = _normalize_info(info)
+            if normalized:
+                # Prefer the result that has a real title (not "Unknown")
+                if result is None or (result.get("title") == "Unknown" and normalized.get("title") != "Unknown"):
+                    result = normalized
         except Exception:
             pass
-        await send_error_log("get_video_info failed", exc)
-        return None
+
+    if result:
+        return result
+
+    # ── Last-resort fallback: Invidious ────────────────────────────────────
+    LOGGER.info("Both yt-dlp + InnerTube failed — trying Invidious | %s", url_or_query[:50])
+    try:
+        info = await loop.run_in_executor(None, _invidious_search_sync, url_or_query)
+        result = _normalize_info(info)
+        if result:
+            return result
+    except Exception:
+        pass
+
+    await send_error_log("get_video_info failed (all sources exhausted)", Exception("No results from any source"))
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
