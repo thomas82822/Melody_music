@@ -577,59 +577,65 @@ def _extract_video_id(url: str) -> str | None:
 def _innertube_search_sync(query: str) -> dict | None:
     """Search YouTube via InnerTube API — Heroku-safe, no yt-dlp needed.
 
-    WHY THIS WORKS ON HEROKU:
-    YouTube's own search API (used internally by all YouTube clients) accepts
-    POST requests from the Android app client. The Android client path is
-    NOT subject to the same bot-detection as the web player — it is served by
-    a completely different API endpoint that doesn't require login or cookies.
-
-    This is the same API yt-dlp uses for its ytsearch extractor, but called
-    directly so we bypass yt-dlp's player-client selection entirely.
+    BUG FIX ("autoplay nahi ho raha / search nahi mil raha"): the old
+    ANDROID client version 20.10.35 is deprecated — YouTube still returns
+    HTTP 200 but the response no longer contains any videoRenderer nodes,
+    so every search silently returns zero results. Now tries multiple
+    client contexts (WEB, ANDROID, IOS) with current versions, returning
+    the first that yields actual video results.
     """
     import json
     import urllib.request
 
-    _API_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"   # public Android API key
-    _SEARCH_URL = f"https://www.youtube.com/youtubei/v1/search?key={_API_KEY}&prettyPrint=false"
+    _ANDROID_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
+    _WEB_KEY = "AIzaSyAO_FJ2SlqU8Q4STEhlGCjw-FfWAH9IrJg"
+    _SEARCH_URL = "https://www.youtube.com/youtubei/v1/search"
 
-    # Android client context — not bot-challenged, no sign-in required
-    payload = json.dumps({
-        "context": {
-            "client": {
-                "clientName": "ANDROID",
-                "clientVersion": "20.10.35",
-                "androidSdkVersion": 30,
-                "hl": "en",
-                "gl": "US",
-                "utcOffsetMinutes": 0,
-            }
-        },
-        "query": query,
-        "params": "EgIQAQ==",   # filter: videos only (base64, NOT url-encoded)
-    }).encode("utf-8")
+    _CLIENT_CONTEXTS = [
+        ("WEB", _WEB_KEY, "2.20240807.01.00",
+         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"),
+        ("ANDROID", _ANDROID_KEY, "19.29.37",
+         "com.google.android.youtube/19.29.37 (Linux; U; Android 11) gzip"),
+        ("IOS", _ANDROID_KEY, "19.29.1",
+         "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)"),
+    ]
 
-    req = urllib.request.Request(
-        _SEARCH_URL,
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "User-Agent": "com.google.android.youtube/20.10.35 (Linux; U; Android 11) gzip",
-            "X-YouTube-Client-Name": "3",
-            "X-YouTube-Client-Version": "20.10.35",
-            "Accept-Language": "en-US,en;q=0.9",
-        },
-        method="POST",
-    )
+    data = None
+    for client_name, api_key, client_ver, ua in _CLIENT_CONTEXTS:
+        url = f"{_SEARCH_URL}?key={api_key}&prettyPrint=false"
+        client_ctx = {"clientName": client_name, "clientVersion": client_ver,
+                      "hl": "en", "gl": "US", "utcOffsetMinutes": 0}
+        if client_name == "ANDROID":
+            client_ctx["androidSdkVersion"] = 30
+        elif client_name == "IOS":
+            client_ctx["deviceMake"] = "Apple"
+            client_ctx["deviceModel"] = "iPhone16,2"
+        payload = json.dumps({
+            "context": {"client": client_ctx},
+            "query": query,
+            "params": "EgIQAQ==",
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json",
+                    "User-Agent": ua,
+                    "Accept-Language": "en-US,en;q=0.9"},
+            method="POST",
+        )
+        try:
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            with opener.open(req, timeout=12) as resp:
+                if resp.status != 200:
+                    continue
+                data = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            continue
+        if data:
+            break
 
-    try:
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(req, timeout=12) as resp:
-            if resp.status != 200:
-                LOGGER.warning("InnerTube search HTTP %s for: %s", resp.status, query[:50])
-                return None
-            data = json.loads(resp.read().decode("utf-8"))
-    except Exception as exc:
-        LOGGER.warning("InnerTube search network error: %s", exc)
+    if not data:
+        LOGGER.warning("InnerTube search: all client contexts failed for: %s", query[:50])
         return None
 
     # Parse InnerTube response — walk the renderer tree
@@ -785,49 +791,56 @@ def _normalize_info(info: "dict | None") -> "dict | None":
 
 
 def _innertube_next_sync(video_id: str) -> "dict | None":
-    """Fetch single-video metadata via InnerTube /next endpoint (ANDROID client).
+    """Fetch single-video metadata via InnerTube /next endpoint.
 
-    Faster and more reliable on Heroku than yt-dlp for direct YouTube URLs —
-    a single HTTP POST returns title, duration, thumbnail etc. without any
-    bot-detection wall, because the ANDROID client path is not subject to
-    the same checks as the web player.
+    BUG FIX: old ANDROID client 20.10.35 deprecated — YouTube returns 200
+    but empty results. Now tries multiple client contexts (WEB, ANDROID,
+    IOS) with current versions.
     """
     import json, urllib.request
 
-    _API_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
-    _NEXT_URL = f"https://www.youtube.com/youtubei/v1/next?key={_API_KEY}&prettyPrint=false"
+    _ANDROID_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
+    _WEB_KEY = "AIzaSyAO_FJ2SlqU8Q4STEhlGCjw-FfWAH9IrJg"
+    _NEXT_URL = "https://www.youtube.com/youtubei/v1/next"
 
-    payload = json.dumps({
-        "context": {
-            "client": {
-                "clientName": "ANDROID",
-                "clientVersion": "20.10.35",
-                "androidSdkVersion": 30,
-                "hl": "en",
-                "gl": "US",
-                "utcOffsetMinutes": 0,
-            }
-        },
-        "videoId": video_id,
-    }).encode("utf-8")
+    _CLIENT_CONTEXTS = [
+        ("WEB", _WEB_KEY, "2.20240807.01.00",
+         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"),
+        ("ANDROID", _ANDROID_KEY, "19.29.37",
+         "com.google.android.youtube/19.29.37 (Linux; U; Android 11) gzip"),
+        ("IOS", _ANDROID_KEY, "19.29.1",
+         "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)"),
+    ]
 
-    req = urllib.request.Request(
-        _NEXT_URL, data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "User-Agent": "com.google.android.youtube/20.10.35 (Linux; U; Android 11) gzip",
-            "X-YouTube-Client-Name": "3",
-            "X-YouTube-Client-Version": "20.10.35",
-        },
-        method="POST",
-    )
-    try:
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(req, timeout=6) as resp:
-            if resp.status != 200:
-                return None
-            data = json.loads(resp.read().decode("utf-8"))
-    except Exception:
+    data = None
+    for client_name, api_key, client_ver, ua in _CLIENT_CONTEXTS:
+        url = f"{_NEXT_URL}?key={api_key}&prettyPrint=false"
+        client_ctx = {"clientName": client_name, "clientVersion": client_ver,
+                      "hl": "en", "gl": "US", "utcOffsetMinutes": 0}
+        if client_name == "ANDROID":
+            client_ctx["androidSdkVersion"] = 30
+        elif client_name == "IOS":
+            client_ctx["deviceMake"] = "Apple"
+            client_ctx["deviceModel"] = "iPhone16,2"
+        payload = json.dumps({"context": {"client": client_ctx}, "videoId": video_id}).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json", "User-Agent": ua},
+            method="POST",
+        )
+        try:
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            with opener.open(req, timeout=6) as resp:
+                if resp.status != 200:
+                    continue
+                data = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            continue
+        if data:
+            break
+
+    if not data:
         return None
 
     # Walk the response tree for the first videoRenderer that matches video_id
@@ -1499,44 +1512,49 @@ def _innertube_related_sync(video_id: str, exclude: set) -> list[dict]:
     import json
     import urllib.request
 
-    _API_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
-    _NEXT_URL = f"https://www.youtube.com/youtubei/v1/next?key={_API_KEY}&prettyPrint=false"
+    _ANDROID_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w"
+    _WEB_KEY = "AIzaSyAO_FJ2SlqU8Q4STEhlGCjw-FfWAH9IrJg"
+    _NEXT_URL = "https://www.youtube.com/youtubei/v1/next"
 
-    payload = json.dumps({
-        "context": {
-            "client": {
-                "clientName": "ANDROID",
-                "clientVersion": "20.10.35",
-                "androidSdkVersion": 30,
-                "hl": "en",
-                "gl": "US",
-                "utcOffsetMinutes": 0,
-            }
-        },
-        "videoId": video_id,
-    }).encode("utf-8")
+    _CLIENT_CONTEXTS = [
+        ("WEB", _WEB_KEY, "2.20240807.01.00",
+         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"),
+        ("ANDROID", _ANDROID_KEY, "19.29.37",
+         "com.google.android.youtube/19.29.37 (Linux; U; Android 11) gzip"),
+        ("IOS", _ANDROID_KEY, "19.29.1",
+         "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)"),
+    ]
 
-    req = urllib.request.Request(
-        _NEXT_URL,
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "User-Agent": "com.google.android.youtube/20.10.35 (Linux; U; Android 11) gzip",
-            "X-YouTube-Client-Name": "3",
-            "X-YouTube-Client-Version": "20.10.35",
-        },
-        method="POST",
-    )
+    data = None
+    for client_name, api_key, client_ver, ua in _CLIENT_CONTEXTS:
+        url = f"{_NEXT_URL}?key={api_key}&prettyPrint=false"
+        client_ctx = {"clientName": client_name, "clientVersion": client_ver,
+                      "hl": "en", "gl": "US", "utcOffsetMinutes": 0}
+        if client_name == "ANDROID":
+            client_ctx["androidSdkVersion"] = 30
+        elif client_name == "IOS":
+            client_ctx["deviceMake"] = "Apple"
+            client_ctx["deviceModel"] = "iPhone16,2"
+        payload = json.dumps({"context": {"client": client_ctx}, "videoId": video_id}).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json", "User-Agent": ua},
+            method="POST",
+        )
+        try:
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            with opener.open(req, timeout=10) as resp:
+                if resp.status != 200:
+                    continue
+                data = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            continue
+        if data:
+            break
 
-    try:
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(req, timeout=10) as resp:
-            if resp.status != 200:
-                LOGGER.warning("InnerTube related HTTP %s for video_id=%s", resp.status, video_id)
-                return []
-            data = json.loads(resp.read().decode("utf-8"))
-    except Exception as exc:
-        LOGGER.warning("InnerTube related network error: %s", exc)
+    if not data:
+        LOGGER.warning("InnerTube related: all client contexts failed for %s", video_id)
         return []
 
     def _walk(node, out):
