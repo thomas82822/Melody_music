@@ -9,7 +9,7 @@ import html
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from melody import bot
-from melody.core.queue import format_queue, clear_queue, remove_from_queue
+from melody.core.queue import format_queue, clear_queue, remove_from_queue, is_autoplay_on
 from utils.decorators import admin_or_auth, error_handler
 from utils.formatters import send_quote
 
@@ -18,7 +18,8 @@ from utils.formatters import send_quote
 @error_handler
 async def queue_cmd(client: Client, message: Message):
     # format_queue() already wraps its own <blockquote> — send as-is.
-    text = format_queue(message.chat.id)
+    autoplay_on = await is_autoplay_on(message.chat.id)
+    text = format_queue(message.chat.id, autoplay_on=autoplay_on)
     await send_quote(message, text, client=client)
 
 

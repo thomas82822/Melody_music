@@ -35,13 +35,29 @@ async def _pick_related_track(chat_id: int) -> "Track | None":
     get_related_videos() already returns id, title, duration, url, thumbnail,
     and uploader for each candidate, so there is no reason to re-fetch via
     get_video_info() at all. Build the Track directly from that data.
-    """
-    history = await get_history(chat_id)
-    if not history:
-        return None
 
-    last_id = history[-1]["id"]
-    exclude_ids = [h["id"] for h in history]
+    BUG FIX ("autoplay on kiya but queue is empty dikha raha"):
+    This used to return None immediately when history was empty — which
+    happens on the very first song (history is only written AFTER play
+    starts) or when the DB call fails. That made AutoPlay silently do
+    nothing: no track was predicted, nothing was queued, and /queue showed
+    "Queue is empty" even though AutoPlay was ON. Now: when history is
+    empty, fall back to the currently playing track's video_id as the
+    seed for related-videos lookup, so AutoPlay works from the very first
+    song instead of waiting for a history entry that may never come.
+    """
+    from melody.core.queue import get_current
+
+    history = await get_history(chat_id)
+    exclude_ids = [h["id"] for h in history] if history else []
+
+    if history:
+        last_id = history[-1]["id"]
+    else:
+        current = get_current(chat_id)
+        if not current or not current.video_id:
+            return None
+        last_id = current.video_id
 
     related = await get_related_videos(last_id, exclude_ids=exclude_ids)
     if not related:

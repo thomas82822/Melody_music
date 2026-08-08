@@ -157,7 +157,8 @@ async def stop_callback(client: Client, cb: CallbackQuery):
 @error_handler
 async def queue_callback(client: Client, cb: CallbackQuery):
     await cb.answer()
-    text = format_queue(cb.message.chat.id)
+    autoplay_on = await is_autoplay_on(cb.message.chat.id)
+    text = format_queue(cb.message.chat.id, autoplay_on=autoplay_on)
     await send_quote(cb.message, text, client=client)
 
 

@@ -154,12 +154,20 @@ async def set_autoplay(chat_id: int, enabled: bool):
 
 # ─── Queue display (HTML) ─────────────────────────────────────────────────────
 
-def format_queue(chat_id: int) -> str:
+def format_queue(chat_id: int, autoplay_on: bool = False) -> str:
     """
     Returns an HTML-formatted queue string, wrapped in a native Telegram
     <blockquote> so /queue always renders as a quote card.
     Song titles / requester names are html.escape()'d so characters like
     & < > ' " never break Telegram's HTML entity parser.
+
+    BUG FIX ("autoplay on kiya but queue is empty dikha raha"): when the
+    manual queue is empty AND no predownloaded track exists yet, this used
+    to unconditionally print "Queue is empty" — even when AutoPlay was ON
+    and a related track was being predicted/downloaded in the background.
+    That misleading message made users think AutoPlay was broken. Now:
+    when AutoPlay is ON, show "🤖 AutoPlay is ON — next song will be picked
+    automatically" instead of the dead-end "Queue is empty" text.
     """
     current = _current.get(chat_id)
     q = _queues.get(chat_id, [])
@@ -187,6 +195,8 @@ def format_queue(chat_id: int) -> str:
         lines.append("<b>⏳ Up Next (AutoPlay):</b>")
         lines.append(f"<code>{safe_p}</code>")
         lines.append("🙋 Requested by: <i>AutoPlay</i>")
+    elif autoplay_on:
+        lines.append("🤖 <b>AutoPlay is ON</b> — next song will be picked automatically")
     else:
         lines.append("<i>Queue is empty</i>")
 
